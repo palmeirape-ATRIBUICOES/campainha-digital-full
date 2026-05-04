@@ -71,10 +71,9 @@ export default function LandingPage() {
             <div className="animate-fade-up delay-400" style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
               <Link to="/auth" style={{ textDecoration: 'none' }}>
                 <button className="btn-primary" style={{ padding: '16px 24px', fontSize: '16px' }}>
-                  Assinatura Única Anual <ArrowRight size={20} />
+                  Começar Agora <ArrowRight size={20} />
                 </button>
               </Link>
-              <span style={{ color: '#10B981', fontSize: '13px', fontWeight: 600, marginTop: '-8px' }}>* Descontos especiais progressivos para Condomínios e Vilas de casas.</span>
               <a href="#features" style={{ textDecoration: 'none' }}>
                 <button className="btn-secondary" style={{ padding: '16px 24px', fontSize: '16px' }}>
                   Conheça as 8 Vantagens
