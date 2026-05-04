@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Bell, CheckCircle, ShieldCheck, MapPin, User, ChevronRight } from 'lucide-react';
 
-const socket = io('http://localhost:3001');
+const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3001');
 
 export default function VisitorCall() {
   const { id } = useParams();
@@ -40,7 +40,7 @@ export default function VisitorCall() {
 
   const fetchProperty = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/api/properties/${id}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/properties/${id}`);
       const data = await res.json();
       setProperty(data);
     } catch (err) {

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Video, Phone, MicOff, PhoneOff, User, Bell, MapPin, ShieldCheck, EyeOff, Download, Settings, Save } from 'lucide-react';
 
-const socket = io('http://localhost:3001');
+const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3001');
 
 export default function ResidentDashboard() {
   const { id } = useParams(); // this is the unitId

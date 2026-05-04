@@ -30,7 +30,7 @@ export default function AdminPanel() {
 
   const fetchProperties = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/properties');
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/properties`);
       const data = await res.json();
       setProperties(data);
     } catch (err) {
@@ -68,7 +68,7 @@ export default function AdminPanel() {
     }
     
     try {
-      const res = await fetch('http://localhost:3001/api/properties', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/properties`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, units: parsedUnits })
@@ -87,7 +87,7 @@ export default function AdminPanel() {
   const deleteProperty = async (id) => {
     if (!window.confirm('Tem certeza que deseja excluir esta placa permanentemente?')) return;
     try {
-      await fetch(`http://localhost:3001/api/properties/${id}`, { method: 'DELETE' });
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/properties/${id}`, { method: 'DELETE' });
       fetchProperties();
     } catch (err) {
       console.error(err);

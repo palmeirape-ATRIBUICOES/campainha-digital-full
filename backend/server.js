@@ -36,8 +36,8 @@ app.post('/api/properties', async (req, res) => {
   const { type, name, units } = req.body;
   // type: 'individual' | 'collective'
   const id = uuidv4();
-  // Using localhost in dev, but prompt requested the specific URL
-  const url = `https://painel.campainha-digital.com.br/chamada/${id}`;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const url = `${frontendUrl}/chamada/${id}`;
   
   // Generate QR Code
   const qrCodeDataUrl = await QRCode.toDataURL(url, { 
