@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Bell, CheckCircle } from 'lucide-react';
+import { Bell, CheckCircle, ShieldCheck, MapPin, User, ChevronRight } from 'lucide-react';
 
 const socket = io('http://localhost:3001');
 
@@ -56,15 +56,12 @@ export default function VisitorCall() {
           videoRef.current.srcObject = stream;
           videoRef.current.onloadedmetadata = () => {
             videoRef.current.play();
-            // Wait a brief moment for camera to adjust exposure
             setTimeout(() => {
               const canvas = canvasRef.current;
               canvas.width = videoRef.current.videoWidth;
               canvas.height = videoRef.current.videoHeight;
               canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
               const photoData = canvas.toDataURL('image/jpeg', 0.8);
-              
-              // Stop tracks
               stream.getTracks().forEach(t => t.stop());
               resolve(photoData);
             }, 500);
@@ -74,7 +71,7 @@ export default function VisitorCall() {
         }
       } catch (err) {
         console.error("Camera access denied or failed", err);
-        resolve(null); // Proceed without photo if denied
+        resolve(null);
       }
     });
   };
@@ -92,62 +89,101 @@ export default function VisitorCall() {
     });
   };
 
-  if (!property) return <div className="mobile-container fade-in"><p>Carregando...</p></div>;
+  if (!property) return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+         <div style={{ width: '40px', height: '40px', border: '3px solid rgba(0, 229, 255, 0.1)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'mesh-pulse 1s linear infinite', margin: '0 auto 16px' }} />
+         <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Verificando segurança...</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="mobile-container fade-in" style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
       {/* Hidden elements for silent capture */}
       <video ref={videoRef} style={{ display: 'none' }} playsInline muted />
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      <img src="https://i.imgur.com/your-logo.png" alt="Logo" style={{ width: '80px', height: '80px', borderRadius: '16px', marginBottom: '24px' }} onError={(e) => e.target.style.display='none'}/>
-      
-      <h1 className="text-gradient" style={{ fontSize: '28px', marginBottom: '8px' }}>Campainha-Digital</h1>
-      <p className="text-muted" style={{ marginBottom: '40px' }}>Você está em: {property.name}</p>
+      <header style={{ textAlign: 'center', marginBottom: '60px' }}>
+         <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(0, 229, 255, 0.05)', borderRadius: '16px', border: '1px solid var(--border-subtle)', marginBottom: '20px' }}>
+            <ShieldCheck size={32} color="var(--primary)" />
+         </div>
+         <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '8px' }}>Campainha Digital</h1>
+         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', justifyContent: 'center', fontSize: '14px' }}>
+            <MapPin size={14} /> {property.name}
+         </div>
+      </header>
 
       {status === 'idle' && (
-        <div style={{ width: '100%' }}>
+        <div className="fade-in" style={{ width: '100%', maxWidth: '400px' }}>
           {property.type === 'individual' ? (
-            <button className="btn-primary pulse-btn" style={{ width: '100%', padding: '24px', fontSize: '20px', borderRadius: '16px', flexDirection: 'column', gap: '16px' }} onClick={() => handleCall(property.units[0])}>
+            <button 
+              className="btn-primary" 
+              style={{ width: '100%', padding: '32px 24px', fontSize: '20px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 12px 40px rgba(0, 229, 255, 0.3)' }} 
+              onClick={() => handleCall(property.units[0])}
+            >
               <Bell size={48} />
               TOCAR CAMPAINHA
             </button>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <p style={{ fontWeight: 600 }}>Selecione a Unidade:</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <p style={{ fontWeight: 700, fontSize: '16px', textAlign: 'center', color: 'var(--text-muted)' }}>Para quem é a visita?</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
                 {property.units.map(unit => (
-                  <button key={unit.id} className="btn-glass" style={{ padding: '16px' }} onClick={() => handleCall(unit)}>
-                    {unit.name}
+                  <button 
+                    key={unit.id} 
+                    className="btn-secondary" 
+                    style={{ width: '100%', padding: '20px 24px', borderRadius: '16px', justifyContent: 'space-between' }} 
+                    onClick={() => handleCall(unit)}
+                  >
+                    <span style={{ fontSize: '18px', fontWeight: 700 }}>{unit.name}</span>
+                    <ChevronRight size={20} color="var(--primary)" />
                   </button>
                 ))}
               </div>
             </div>
           )}
+          <div style={{ marginTop: '60px', textAlign: 'center' }}>
+             <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>Segurança Monitorada Ativa</p>
+          </div>
         </div>
       )}
 
       {status === 'calling' && (
-        <div className="glass-panel fade-in" style={{ padding: '32px', width: '100%' }}>
-          <div className="pulse-btn" style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-            <Bell size={40} color="#fff" />
+        <div className="glass-panel fade-in" style={{ padding: '48px 24px', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+          <div style={{ position: 'relative', width: '100px', height: '100px', margin: '0 auto 32px' }}>
+             <div style={{ position: 'absolute', inset: 0, border: '4px solid var(--primary)', borderRadius: '50%', animation: 'mesh-pulse 2s infinite ease-in-out', opacity: 0.2 }}></div>
+             <div style={{ position: 'absolute', inset: '10px', background: 'var(--primary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 30px var(--primary-glow)' }}>
+                <Bell size={40} color="#000" />
+             </div>
           </div>
-          <h2 style={{ marginBottom: '8px' }}>Notificando Morador...</h2>
-          <p className="text-muted" style={{ marginBottom: '24px' }}>Unidade: {callingUnit?.name}</p>
           
-          <div style={{ fontSize: '48px', fontWeight: 'bold', color: 'var(--accent-cyan)', fontFamily: 'monospace' }}>
-            00:{countdown.toString().padStart(2, '0')}
+          <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '12px' }}>Notificando Morador...</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '32px' }}>Unidade: <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>{callingUnit?.name}</span></p>
+          
+          <div style={{ display: 'inline-block', padding: '12px 24px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
+             <span style={{ fontSize: '32px', fontWeight: 800, color: 'var(--primary)', fontFamily: 'monospace' }}>
+               00:{countdown.toString().padStart(2, '0')}
+             </span>
           </div>
+          
+          <p style={{ marginTop: '32px', fontSize: '13px', color: 'var(--text-muted)' }}>Aguarde alguns segundos enquanto a conexão é estabelecida.</p>
         </div>
       )}
 
       {status === 'answered' && (
-        <div className="glass-panel fade-in" style={{ padding: '32px', width: '100%' }}>
-          <CheckCircle size={80} color="var(--success)" style={{ margin: '0 auto 24px' }} />
-          <h2 style={{ marginBottom: '8px', color: 'var(--success)' }}>Chamada Atendida</h2>
-          <p className="text-muted">Aguarde instruções do morador.</p>
+        <div className="glass-panel fade-in" style={{ padding: '48px 24px', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+          <div style={{ width: '100px', height: '100px', background: '#10B981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px', boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)' }}>
+             <CheckCircle size={48} color="#000" />
+          </div>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '12px', color: '#10B981' }}>Chamada Atendida</h2>
+          <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>O morador visualizou sua chamada. Aguarde a comunicação via áudio/vídeo.</p>
         </div>
       )}
+
+      <footer style={{ marginTop: 'auto', paddingTop: '40px' }}>
+         <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>Tecnologia Campainha Digital®</p>
+      </footer>
     </div>
   );
 }
