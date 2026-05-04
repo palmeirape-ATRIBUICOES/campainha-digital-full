@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Smartphone, Zap, Clock, Check, X, ArrowRight, Video, MapPin, EyeOff, Lock, Globe2, BellRing, UserCheck } from 'lucide-react';
+import { Shield, Smartphone, Zap, Clock, Check, X, ArrowRight, Video, MapPin, EyeOff, Lock, Globe2, BellRing, UserCheck, Home } from 'lucide-react';
 
 export default function LandingPage() {
   const advantages = [
@@ -8,7 +8,7 @@ export default function LandingPage() {
     { icon: <Shield size={24} />, title: "Mais Segurança", desc: "Não precisa ir até o portão. Veja quem é antes de se expor." },
     { icon: <EyeOff size={24} />, title: "Monitoramento Oculto", desc: "Câmera ao vivo em modo furtivo. O visitante não sabe que você está olhando." },
     { icon: <UserCheck size={24} />, title: "Registro Fotográfico", desc: "Foto silenciosa automática de cada pessoa que toca a campainha." },
-    { icon: <Clock size={24} />, title: "Instalação em Minutos", desc: "Esqueça obras, quebra-quebra e fios pelo condomínio." },
+    { icon: <Clock size={24} />, title: "Instalação em Minutos", desc: "Esqueça obras, quebra-quebra e fios pela casa ou condomínio." },
     { icon: <Lock size={24} />, title: "Criptografia Avançada", desc: "Comunicação de áudio e vídeo blindada ponta a ponta." },
     { icon: <Zap size={24} />, title: "Sistema em Nuvem", desc: "Sem manutenções caras de hardwares analógicos antigos." },
     { icon: <BellRing size={24} />, title: "Notificação Imediata", desc: "Receba alertas no seu smartphone assim que o QR Code for lido." }
@@ -30,7 +30,7 @@ export default function LandingPage() {
             <Link to="/auth" style={{ color: '#fff', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>Entrar</Link>
             <Link to="/auth" style={{ textDecoration: 'none' }}>
               <button style={{ background: 'var(--text-main)', color: 'var(--bg-deep)', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
-                Começar Agora
+                Assine Agora
               </button>
             </Link>
           </div>
@@ -63,13 +63,18 @@ export default function LandingPage() {
             <p className="animate-fade-up delay-200" style={{ fontSize: 'clamp(16px, 2vw, 20px)', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '24px', maxWidth: '540px' }}>
               <strong style={{ color: '#fff' }}>Agora você vai poder atender de longe, mesmo estando na rua.</strong> Não precisa ir até o portão para ver quem está chamando. Receba a imagem no seu celular instantaneamente.
             </p>
+
+            <div className="animate-fade-up delay-300" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px', color: '#10B981', fontWeight: 600, fontSize: '14px' }}>
+              <Home size={16} /> Ideal para casas simples, vilas e grandes condomínios.
+            </div>
             
-            <div className="animate-fade-up delay-300" style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
+            <div className="animate-fade-up delay-400" style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
               <Link to="/auth" style={{ textDecoration: 'none' }}>
                 <button className="btn-primary" style={{ padding: '16px 24px', fontSize: '16px' }}>
-                  Proteger Meu Condomínio <ArrowRight size={20} />
+                  Assinatura Única Anual <ArrowRight size={20} />
                 </button>
               </Link>
+              <span style={{ color: '#10B981', fontSize: '13px', fontWeight: 600, marginTop: '-8px' }}>* Descontos especiais progressivos para Condomínios e Vilas de casas.</span>
               <a href="#features" style={{ textDecoration: 'none' }}>
                 <button className="btn-secondary" style={{ padding: '16px 24px', fontSize: '16px' }}>
                   Conheça as 8 Vantagens
@@ -90,13 +95,12 @@ export default function LandingPage() {
                 <div style={{ padding: '60px 24px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{ fontWeight: 700, fontSize: '18px' }}>Visita Externa</span>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={12} /> Portaria Principal</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={12} /> Portão Principal</span>
                   </div>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 10px #10B981' }}></div>
                 </div>
                 {/* Video Area */}
                 <div style={{ flex: 1, margin: '0 16px', background: '#111A2C', borderRadius: '24px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-subtle)' }}>
-                  {/* Substituir por um rosto profissional de entrega/visitante simulado */}
                   <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=500&q=80" alt="Visitante" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
                   <div style={{ position: 'absolute', top: '16px', left: '16px', background: 'rgba(0,0,0,0.7)', padding: '6px 12px', borderRadius: '100px', fontSize: '11px', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444' }} /> AO VIVO
@@ -124,17 +128,6 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            
-            {/* Floating QR Card - Hidden on very small screens */}
-            <div style={{ position: 'absolute', bottom: '15%', left: '-10%', background: 'rgba(17, 26, 44, 0.95)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.1)', padding: '16px', borderRadius: '20px', display: 'none', alignItems: 'center', gap: '12px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', animation: 'float 5s ease-in-out infinite reverse' }} className="desktop-nav-links">
-              <div style={{ width: '56px', height: '56px', background: '#fff', padding: '4px', borderRadius: '12px' }}>
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=example" alt="QR" style={{ width: '100%', height: '100%' }} />
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '13px' }}>Placa QR Code</div>
-                <div style={{ fontSize: '11px', color: 'var(--primary)' }}>Instalada no portão</div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -147,7 +140,7 @@ export default function LandingPage() {
               O sistema que traz <span className="text-gradient">paz de espírito.</span>
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(16px, 2vw, 18px)', maxWidth: '700px', margin: '0 auto' }}>
-              8 vantagens cruciais que fazem as portarias tradicionais parecerem da idade da pedra.
+              Ideal para casas simples, vilas e condomínios. Conheça as 8 vantagens cruciais.
             </p>
           </div>
 
@@ -172,7 +165,7 @@ export default function LandingPage() {
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: '16px' }}>Por que somos a <span className="text-gradient">escolha certa?</span></h2>
           </div>
 
-          <div className="comparison-table-wrapper" style={{ background: 'var(--bg-surface-elevated)', borderRadius: '24px', border: '1px solid var(--border-subtle)' }}>
+          <div className="comparison-table-wrapper">
             <table className="comparison-table">
               <thead>
                 <tr>
@@ -183,24 +176,24 @@ export default function LandingPage() {
               </thead>
               <tbody>
                 <tr>
-                  <td>Sair de casa para ver quem é</td>
-                  <td style={{ textAlign: 'center', color: '#EF4444' }}>Obrigatório</td>
-                  <td className="highlight" style={{ textAlign: 'center', color: '#10B981' }}>Nunca Mais</td>
+                  <td data-label="Recurso">Sair de casa para ver quem é</td>
+                  <td data-label="Interfone Comum" style={{ textAlign: 'center', color: '#EF4444' }}>Obrigatório</td>
+                  <td data-label="Campainha Digital" className="highlight" style={{ textAlign: 'center', color: '#10B981' }}>Nunca Mais</td>
                 </tr>
                 <tr>
-                  <td>Visualização Antes de Atender</td>
-                  <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}><X size={20} color="#EF4444" style={{ display: 'inline-block' }} /></td>
-                  <td className="highlight" style={{ textAlign: 'center' }}><Check size={20} color="#10B981" style={{ display: 'inline-block' }} /> Câmera ao Vivo</td>
+                  <td data-label="Recurso">Visualização Antes de Atender</td>
+                  <td data-label="Interfone Comum" style={{ textAlign: 'center', color: 'var(--text-muted)' }}><X size={20} color="#EF4444" style={{ display: 'inline-block' }} /></td>
+                  <td data-label="Campainha Digital" className="highlight" style={{ textAlign: 'center' }}><Check size={20} color="#10B981" style={{ display: 'inline-block' }} /> Câmera ao Vivo</td>
                 </tr>
                 <tr>
-                  <td>Atender Estando na Rua</td>
-                  <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}><X size={20} color="#EF4444" style={{ display: 'inline-block' }} /></td>
-                  <td className="highlight" style={{ textAlign: 'center' }}><Check size={20} color="#10B981" style={{ display: 'inline-block' }} /> Global via App</td>
+                  <td data-label="Recurso">Atender Estando na Rua</td>
+                  <td data-label="Interfone Comum" style={{ textAlign: 'center', color: 'var(--text-muted)' }}><X size={20} color="#EF4444" style={{ display: 'inline-block' }} /></td>
+                  <td data-label="Campainha Digital" className="highlight" style={{ textAlign: 'center' }}><Check size={20} color="#10B981" style={{ display: 'inline-block' }} /> Global via App</td>
                 </tr>
                 <tr>
-                  <td>Registro Automático (Foto)</td>
-                  <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}><X size={20} color="#EF4444" style={{ display: 'inline-block' }} /></td>
-                  <td className="highlight" style={{ textAlign: 'center' }}><Check size={20} color="#10B981" style={{ display: 'inline-block' }} /> Salvo na Nuvem</td>
+                  <td data-label="Recurso">Registro Automático (Foto)</td>
+                  <td data-label="Interfone Comum" style={{ textAlign: 'center', color: 'var(--text-muted)' }}><X size={20} color="#EF4444" style={{ display: 'inline-block' }} /></td>
+                  <td data-label="Campainha Digital" className="highlight" style={{ textAlign: 'center' }}><Check size={20} color="#10B981" style={{ display: 'inline-block' }} /> Salvo na Nuvem</td>
                 </tr>
               </tbody>
             </table>
@@ -213,12 +206,17 @@ export default function LandingPage() {
         <div className="container" style={{ textAlign: 'center' }}>
           <Shield size={48} color="var(--primary)" style={{ margin: '0 auto 24px', opacity: 0.8 }} />
           <h2 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: '24px' }}>Sua segurança não pode esperar.</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(16px, 2vw, 20px)', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px' }}>Cadastre-se agora mesmo e elimine o risco de ir até o portão sem saber quem está lá fora.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(16px, 2vw, 20px)', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px' }}>
+            Proteja sua casa, vila ou condomínio com uma assinatura única anual. Sem surpresas e sem manutenção.
+          </p>
           <Link to="/auth" style={{ textDecoration: 'none' }}>
             <button className="btn-primary" style={{ padding: '18px 40px', fontSize: '18px' }}>
-              Proteger Minha Casa Agora <ArrowRight size={20} />
+              Assinar Plano Anual <ArrowRight size={20} />
             </button>
           </Link>
+          <p style={{ color: '#10B981', fontSize: '14px', fontWeight: 600, marginTop: '24px' }}>
+            * Possui múltiplas unidades? Oferecemos descontos exclusivos para Condomínios e Vilas de casas.
+          </p>
         </div>
       </section>
       
