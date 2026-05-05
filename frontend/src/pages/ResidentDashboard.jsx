@@ -20,19 +20,51 @@ export default function ResidentDashboard() {
   const localStream = useRef(null);
 
   useEffect(() => {
-    // Attempt to register service worker for push notifications if we wanted background,
-    // but for now we rely on the open PWA.
+    // Request notification permission
+    if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+
     socket.emit('register_resident', { unitId: id });
 
     socket.on('incoming_call', (data) => {
       setCall(data);
       setStatus('ringing');
+      
+      // Attempt audio
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(e => {
           console.log('Audio play blocked. User must interact first.', e);
           setAudioError(true);
         });
+      }
+
+      // Trigger System Notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(registration => {
+              registration.showNotification('CHAMADA RECEBIDA 🔔', {
+                body: `${unitName} - Alguém está tocando sua campainha!`,
+                icon: '/logo.png',
+                vibrate: [200, 100, 200, 100, 200, 100, 400],
+                tag: 'campainha-call',
+                renotify: true,
+                requireInteraction: true
+              });
+            });
+          } else {
+            // Fallback for non-service worker contexts
+            const notif = new Notification('CHAMADA RECEBIDA 🔔', {
+              body: `${unitName} - Alguém está tocando sua campainha!`,
+              icon: '/logo.png'
+            });
+            notif.onclick = () => window.focus();
+          }
+        } catch (e) {
+          console.error('Failed to show notification', e);
+        }
       }
     });
 
