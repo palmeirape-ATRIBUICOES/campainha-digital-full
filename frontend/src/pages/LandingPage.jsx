@@ -47,7 +47,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section style={{ paddingTop: '120px', paddingBottom: '80px', position: 'relative' }}>
+      <section style={{ paddingTop: '100px', paddingBottom: '48px', position: 'relative' }}>
         <div style={{ position: 'absolute', top: '-10%', left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '1000px', height: '800px', background: 'radial-gradient(circle, rgba(0, 229, 255, 0.08) 0%, transparent 60%)', zIndex: -1 }}></div>
 
         <div className="container hero-grid">
@@ -132,9 +132,9 @@ export default function LandingPage() {
       </section>
 
       {/* 8 Features Grid */}
-      <section id="features" style={{ padding: '100px 0', background: 'var(--bg-surface)' }}>
+      <section id="features" style={{ padding: '48px 0', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)' }}>
         <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: '16px' }}>
               O sistema que traz <span className="text-gradient">paz de espírito.</span>
             </h2>
@@ -158,7 +158,7 @@ export default function LandingPage() {
       </section>
 
       {/* Comparison Section */}
-      <section id="compare" style={{ padding: '100px 0' }}>
+      <section id="compare" style={{ padding: '48px 0', borderTop: '1px solid var(--border-subtle)' }}>
         <div className="container" style={{ maxWidth: '900px' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: '16px' }}>Por que somos a <span className="text-gradient">escolha certa?</span></h2>
@@ -201,7 +201,7 @@ export default function LandingPage() {
       </section>
 
       {/* Product Photo Section */}
-      <section style={{ padding: '80px 0', background: 'var(--bg-deep)', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ padding: '48px 0', background: 'var(--bg-deep)', position: 'relative', overflow: 'hidden', borderTop: '1px solid var(--border-subtle)' }}>
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '800px', height: '800px', background: 'radial-gradient(circle, rgba(0, 229, 255, 0.06) 0%, transparent 60%)', zIndex: 0 }}></div>
         <div className="container" style={{ position: 'relative', zIndex: 1, maxWidth: '700px' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
@@ -246,7 +246,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Footer */}
-      <section style={{ padding: '80px 0', borderTop: '1px solid var(--border-subtle)', background: 'radial-gradient(ellipse at bottom, rgba(0, 229, 255, 0.08) 0%, var(--bg-deep) 100%)' }}>
+      <section style={{ padding: '48px 0', borderTop: '1px solid var(--border-subtle)', background: 'radial-gradient(ellipse at bottom, rgba(0, 229, 255, 0.08) 0%, var(--bg-deep) 100%)' }}>
         <div className="container" style={{ textAlign: 'center' }}>
           <Shield size={48} color="var(--primary)" style={{ margin: '0 auto 24px', opacity: 0.8 }} />
           <h2 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: '24px' }}>Sua segurança não pode esperar.</h2>
