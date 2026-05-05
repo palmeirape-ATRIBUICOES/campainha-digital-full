@@ -201,52 +201,44 @@ export default function LandingPage() {
       </section>
 
       {/* Product Photo Section */}
-      <section style={{ padding: '100px 0', background: 'var(--bg-deep)', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ padding: '80px 0', background: 'var(--bg-deep)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '800px', height: '800px', background: 'radial-gradient(circle, rgba(0, 229, 255, 0.06) 0%, transparent 60%)', zIndex: 0 }}></div>
-        <div className="container" style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: '16px' }}>
+        <div className="container" style={{ position: 'relative', zIndex: 1, maxWidth: '700px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <h2 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: '12px' }}>
               Veja como fica <span className="text-gradient">no muro da sua casa.</span>
             </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(16px, 2vw, 18px)', maxWidth: '650px', margin: '0 auto' }}>
-              Uma placa elegante, discreta e profissional. O visitante só precisa escanear para falar com você.
+            <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '500px', margin: '0 auto' }}>
+              Uma placa elegante e discreta. O visitante só precisa escanear.
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'center', maxWidth: '1000px', margin: '0 auto' }} className="hero-grid">
-            <div style={{ borderRadius: '24px', overflow: 'hidden', border: '1px solid var(--border-subtle)', boxShadow: '0 24px 64px rgba(0, 0, 0, 0.4)' }}>
-              <img src="/placa-muro.jpg" alt="Placa Campainha Digital instalada no muro" style={{ width: '100%', height: 'auto', display: 'block' }} />
+          {/* Photo */}
+          <div style={{ borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border-subtle)', boxShadow: '0 24px 64px rgba(0, 0, 0, 0.4)', marginBottom: '32px' }}>
+            <img src="/placa-muro.jpg" alt="Placa Campainha Digital instalada no muro" style={{ width: '100%', height: 'auto', display: 'block' }} />
+          </div>
+
+          {/* Privacy Info - Simple horizontal items */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'rgba(16, 185, 129, 0.06)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+              <Lock size={22} color="#10B981" style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ color: '#10B981', fontSize: '14px' }}>Zero Dados Expostos</strong>
+                <span style={{ color: 'var(--text-muted)', fontSize: '13px', display: 'block' }}>Ao escanear, nenhuma informação do morador é revelada.</span>
+              </div>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-              <div className="premium-card" style={{ padding: '24px', borderLeft: '4px solid #10B981' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <Lock size={24} color="#10B981" />
-                  <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Zero Dados Expostos</h3>
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>
-                  Ao escanear o QR Code, <strong style={{ color: '#10B981' }}>nenhuma informação pessoal do morador é exibida</strong>. O visitante vê apenas a interface de chamada. Seu nome, telefone e endereço permanecem totalmente ocultos.
-                </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'rgba(0, 229, 255, 0.04)', borderRadius: '12px', border: '1px solid rgba(0, 229, 255, 0.12)' }}>
+              <EyeOff size={22} color="var(--primary)" style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ color: 'var(--primary)', fontSize: '14px' }}>Privacidade Total</strong>
+                <span style={{ color: 'var(--text-muted)', fontSize: '13px', display: 'block' }}>QR Code criptografado. Apenas você decide se quer se identificar.</span>
               </div>
-
-              <div className="premium-card" style={{ padding: '24px', borderLeft: '4px solid var(--primary)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <EyeOff size={24} color="var(--primary)" />
-                  <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Privacidade Total</h3>
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>
-                  O QR Code é criptografado e não contém dados pessoais. A conexão é anônima para o visitante — <strong style={{ color: 'var(--primary)' }}>apenas você decide se quer se identificar</strong>.
-                </p>
-              </div>
-
-              <div className="premium-card" style={{ padding: '24px', borderLeft: '4px solid #F59E0B' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                  <Shield size={24} color="#F59E0B" />
-                  <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Foto Automática do Visitante</h3>
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>
-                  Ao escanear, a câmera do visitante captura uma foto silenciosa. Você recebe a imagem no celular <strong style={{ color: '#F59E0B' }}>antes mesmo de decidir se quer atender</strong>.
-                </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'rgba(245, 158, 11, 0.04)', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.12)' }}>
+              <Shield size={22} color="#F59E0B" style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ color: '#F59E0B', fontSize: '14px' }}>Foto Automática</strong>
+                <span style={{ color: 'var(--text-muted)', fontSize: '13px', display: 'block' }}>Câmera captura o visitante antes mesmo de você decidir atender.</span>
               </div>
             </div>
           </div>
