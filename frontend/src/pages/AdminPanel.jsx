@@ -36,6 +36,7 @@ export default function AdminPanel() {
   const [visitors, setVisitors]     = useState([]);
   const [loadingVisitors, setLoadingVisitors] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [showPaywall, setShowPaywall] = useState(false);
   const videoRef = useRef(null);
 
   useEffect(() => { fetchProperties(); }, []);
@@ -213,6 +214,38 @@ export default function AdminPanel() {
   // ── Dashboard Principal ────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', paddingBottom: '60px' }}>
+
+      {/* ── Modal Paywall: Nova Placa R$15 ── */}
+      {showPaywall && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: 'var(--bg-surface-elevated)', borderRadius: '24px', padding: '32px', maxWidth: '380px', width: '100%', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(0,229,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px' }}>🏠</div>
+            <h2 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px' }}>Novo Endereço</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1.6, marginBottom: '24px' }}>
+              Cada endereço adicional tem o custo de <strong style={{ color: 'var(--primary)', fontSize: '18px' }}>R$ 15,00</strong> por mês.<br/>
+              Após o pagamento, seu novo endereço será ativado automaticamente.
+            </p>
+
+            {/* Benefícios */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '14px', padding: '16px', marginBottom: '24px', textAlign: 'left' }}>
+              {['✅ QR Code exclusivo para o novo endereço', '✅ Histórico de visitantes separado', '✅ Notificações independentes', '✅ Suporte a múltiplas unidades'].map((b, i) => (
+                <div key={i} style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: i < 3 ? '8px' : 0 }}>{b}</div>
+              ))}
+            </div>
+
+            <button className="btn-primary" onClick={() => {
+              setShowPaywall(false);
+              alert('Em breve: integração com pagamento via Pix. Entre em contato para ativar manualmente.');
+            }} style={{ width: '100%', padding: '16px', fontSize: '16px', fontWeight: 800, marginBottom: '12px', background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 8px 24px rgba(16,185,129,0.3)' }}>
+              💳 Pagar R$ 15,00 e Adicionar
+            </button>
+            <button onClick={() => setShowPaywall(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', width: '100%', padding: '8px' }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
       <header style={{ background: 'var(--bg-surface-elevated)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <ShieldCheck size={28} color="var(--primary)" />
@@ -245,7 +278,10 @@ export default function AdminPanel() {
                 <h2 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px' }}>Minhas Propriedades</h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Gerencie placas e unidades</p>
               </div>
-              <button className="btn-primary" onClick={() => setOnboardingStep('scan')} style={{ padding: '12px 24px' }}>
+              <button className="btn-primary" onClick={() => {
+                if (properties.length >= 1) { setShowPaywall(true); }
+                else { setOnboardingStep('scan'); }
+              }} style={{ padding: '12px 24px' }}>
                 <Plus size={20} /> Nova Placa
               </button>
             </div>
