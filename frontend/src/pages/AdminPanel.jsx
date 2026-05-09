@@ -45,9 +45,14 @@ export default function AdminPanel() {
     try {
       const res  = await fetch(`${API}/api/properties`);
       const data = await res.json();
-      setProperties(data);
-      if (data.length === 0) setOnboardingStep('scan');
-      if (data.length > 0) setSelectedProperty(data[0].id);
+      
+      // Filtro de privacidade: mostra apenas propriedades criadas neste dispositivo
+      const myProps = JSON.parse(localStorage.getItem('cd_admin_props') || '[]');
+      const filtered = data.filter(p => myProps.includes(p.id));
+      
+      setProperties(filtered);
+      if (filtered.length === 0) setOnboardingStep('scan');
+      if (filtered.length > 0) setSelectedProperty(filtered[0].id);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -98,7 +103,15 @@ export default function AdminPanel() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: propertyType === 'individual' ? 'individual' : 'collective', name: propertyName, units })
       });
-      if (res.ok) { setOnboardingStep(null); fetchProperties(); }
+      if (res.ok) { 
+        const newProp = await res.json();
+        const myProps = JSON.parse(localStorage.getItem('cd_admin_props') || '[]');
+        myProps.push(newProp.id);
+        localStorage.setItem('cd_admin_props', JSON.stringify(myProps));
+        
+        setOnboardingStep(null); 
+        fetchProperties(); 
+      }
     } catch (err) { console.error(err); }
   };
 

@@ -72,6 +72,7 @@ export default function ResidentDashboard() {
   const [camOn, setCamOn] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [unitName, setUnitName] = useState(() => localStorage.getItem('cd_unit_name') || 'Minha Casa');
+  const [accessCode, setAccessCode] = useState('');
   const [visitorSocketId, setVisitorSocketId] = useState(null);
   const [quickMsgs] = useState(() => {
     try { return JSON.parse(localStorage.getItem('cd_quick_msgs') || 'null') || DEFAULT_CATEGORIES; } catch { return DEFAULT_CATEGORIES; }
@@ -87,6 +88,16 @@ export default function ResidentDashboard() {
   const socketRef = useRef(null);
 
   useEffect(() => {
+    // Busca código de acesso
+    fetch(`${API}/api/properties`)
+      .then(r => r.json())
+      .then(props => {
+        for (const p of props) {
+          const unit = p.units?.find(u => u.id === id);
+          if (unit) { setAccessCode(unit.accessCode); break; }
+        }
+      }).catch(console.warn);
+
     const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 20 });
     socketRef.current = s;
     s.emit('register_resident', { unitId: id });
@@ -231,11 +242,32 @@ export default function ResidentDashboard() {
           {/* IDLE */}
           {status === 'idle' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 160px)', textAlign: 'center', padding: '24px' }}>
-              <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-                <Bell size={40} style={{ opacity: 0.3 }} />
+              <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', boxShadow: '0 0 40px rgba(16,185,129,0.05)' }}>
+                <Bell size={40} style={{ opacity: 0.3 }} color="#10B981" />
               </div>
-              <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Aguardando Chamadas</h3>
-              <p style={{ color: 'var(--text-muted)', maxWidth: '240px', fontSize: '14px' }}>Você será notificado assim que alguém tocar a campainha.</p>
+              <h3 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px' }}>Aguardando Chamadas</h3>
+              <p style={{ color: 'var(--text-muted)', maxWidth: '240px', fontSize: '14px', marginBottom: '32px' }}>Você será notificado assim que alguém tocar a campainha.</p>
+              
+              {/* Box de Informações e Sair */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', width: '100%', maxWidth: '300px' }}>
+                <div style={{ marginBottom: '20px' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', marginBottom: '8px' }}>SEU CÓDIGO DE ACESSO</p>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '10px', border: '1px dashed rgba(255,255,255,0.1)', fontSize: '24px', fontWeight: 900, color: 'var(--primary)', letterSpacing: '4px', fontFamily: 'monospace' }}>
+                    {accessCode || '...'}
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => {
+                    localStorage.removeItem('residentUnitId');
+                    navigate('/morador-login');
+                  }} 
+                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: 'none', background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
+                >
+                  <LogOut size={18} /> Sair do App
+                </button>
+              </div>
+
               <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px', color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '8px 16px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981' }} />Conectado
               </div>
