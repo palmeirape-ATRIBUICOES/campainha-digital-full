@@ -14,50 +14,56 @@ const io = new Server(server, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST']
-  }
+  },
+  // Configurações para Render Free Tier
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  upgradeTimeout: 30000,
+  transports: ['websocket', 'polling']
 });
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// In-memory db for simplicity. In production this should be a DB.
-const dbPath = path.join(__dirname, 'db.json');
-const residentsDbPath = path.join(__dirname, 'residents.json');
+// ─── Paths dos bancos JSON ────────────────────────────────────────────────────
+const dbPath           = path.join(__dirname, 'db.json');
+const residentsDbPath  = path.join(__dirname, 'residents.json');
+const visitorsDbPath   = path.join(__dirname, 'visitors.json');
+
 let properties = [];
-let residents = [];
+let residents  = [];
+let visitors   = []; // histórico de visitantes
 
-if (fs.existsSync(dbPath)) {
-  properties = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+function loadDb() {
+  if (fs.existsSync(dbPath))          properties = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+  if (fs.existsSync(residentsDbPath)) residents  = JSON.parse(fs.readFileSync(residentsDbPath, 'utf8'));
+  if (fs.existsSync(visitorsDbPath))  visitors   = JSON.parse(fs.readFileSync(visitorsDbPath, 'utf8'));
 }
-if (fs.existsSync(residentsDbPath)) {
-  residents = JSON.parse(fs.readFileSync(residentsDbPath, 'utf8'));
-}
+loadDb();
 
-const saveDb = () => {
-  fs.writeFileSync(dbPath, JSON.stringify(properties, null, 2));
-};
-const saveResidents = () => {
-  fs.writeFileSync(residentsDbPath, JSON.stringify(residents, null, 2));
-};
+const saveDb        = () => fs.writeFileSync(dbPath,          JSON.stringify(properties, null, 2));
+const saveResidents = () => fs.writeFileSync(residentsDbPath, JSON.stringify(residents,  null, 2));
+const saveVisitors  = () => fs.writeFileSync(visitorsDbPath,  JSON.stringify(visitors,   null, 2));
 
-// Generate a 6-char uppercase access code
+// ─── Keep-Alive endpoint (previne spin-down no Render Free) ──────────────────
+app.get('/api/ping', (_req, res) => res.json({ ok: true, ts: Date.now() }));
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 const generateAccessCode = () => crypto.randomBytes(3).toString('hex').toUpperCase();
 
-// Admin Routes
+// ─── Properties Routes ───────────────────────────────────────────────────────
 app.post('/api/properties', async (req, res) => {
   const { type, name, units } = req.body;
-  // type: 'individual' | 'collective'
   const id = uuidv4();
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const url = `${frontendUrl}/chamada/${id}`;
-  
-  // Generate QR Code
-  const qrCodeDataUrl = await QRCode.toDataURL(url, { 
-    width: 500, 
-    margin: 2, 
-    color: { dark: '#000', light: '#FFF' } 
+
+  const qrCodeDataUrl = await QRCode.toDataURL(url, {
+    width: 500,
+    margin: 2,
+    color: { dark: '#000', light: '#FFF' }
   });
-  
+
   const property = {
     id,
     type,
@@ -69,16 +75,13 @@ app.post('/api/properties', async (req, res) => {
     url,
     createdAt: new Date().toISOString()
   };
-  
+
   properties.push(property);
   saveDb();
-  
   res.status(201).json(property);
 });
 
-app.get('/api/properties', (req, res) => {
-  res.json(properties);
-});
+app.get('/api/properties', (_req, res) => res.json(properties));
 
 app.get('/api/properties/:id', (req, res) => {
   const prop = properties.find(p => p.id === req.params.id);
@@ -92,100 +95,166 @@ app.delete('/api/properties/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// === Resident Auth Routes ===
+// ─── Visitor History Routes ───────────────────────────────────────────────────
+// Retorna histórico por unitId
+app.get('/api/visitors/:unitId', (req, res) => {
+  const unitVisitors = visitors
+    .filter(v => v.unitId === req.params.unitId)
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 100); // últimas 100 visitas
+  res.json(unitVisitors);
+});
 
-// Register a resident to a unit using the access code
+// Retorna histórico por propertyId (todos as unidades)
+app.get('/api/visitors/property/:propertyId', (req, res) => {
+  // Busca todas as unidades da propriedade
+  const prop = properties.find(p => p.id === req.params.propertyId);
+  if (!prop) return res.status(404).json({ error: 'Property not found' });
+  
+  const unitIds = prop.units.map(u => u.id);
+  const propVisitors = visitors
+    .filter(v => unitIds.includes(v.unitId))
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 200);
+  res.json(propVisitors);
+});
+
+// ─── Resident Auth Routes ─────────────────────────────────────────────────────
 app.post('/api/resident/register', (req, res) => {
   const { email, accessCode } = req.body;
-  if (!email || !accessCode) return res.status(400).json({ error: 'E-mail e código de acesso são obrigatórios.' });
+  if (!email || !accessCode)
+    return res.status(400).json({ error: 'E-mail e código de acesso são obrigatórios.' });
 
-  // Find the unit with this access code
-  let foundUnit = null;
-  let foundProperty = null;
+  let foundUnit = null, foundProperty = null;
   for (const prop of properties) {
     const unit = prop.units.find(u => u.accessCode === accessCode);
     if (unit) { foundUnit = unit; foundProperty = prop; break; }
   }
   if (!foundUnit) return res.status(404).json({ error: 'Código de acesso inválido.' });
 
-  // Check if already registered
   const existing = residents.find(r => r.email === email && r.unitId === foundUnit.id);
-  if (existing) return res.json({ unitId: foundUnit.id, unitName: foundUnit.name, propertyName: foundProperty.name, message: 'Já registrado.' });
+  if (existing)
+    return res.json({ unitId: foundUnit.id, unitName: foundUnit.name, propertyName: foundProperty.name, propertyId: foundProperty.id, message: 'Já registrado.' });
 
-  residents.push({ email, unitId: foundUnit.id, unitName: foundUnit.name, propertyId: foundProperty.id, propertyName: foundProperty.name, createdAt: new Date().toISOString() });
+  residents.push({
+    email, unitId: foundUnit.id, unitName: foundUnit.name,
+    propertyId: foundProperty.id, propertyName: foundProperty.name,
+    createdAt: new Date().toISOString()
+  });
   saveResidents();
-  res.status(201).json({ unitId: foundUnit.id, unitName: foundUnit.name, propertyName: foundProperty.name });
+  res.status(201).json({ unitId: foundUnit.id, unitName: foundUnit.name, propertyName: foundProperty.name, propertyId: foundProperty.id });
 });
 
-// Login resident
 app.post('/api/resident/login', (req, res) => {
   const { email, accessCode } = req.body;
-  if (!email || !accessCode) return res.status(400).json({ error: 'E-mail e código de acesso são obrigatórios.' });
+  if (!email || !accessCode)
+    return res.status(400).json({ error: 'E-mail e código de acesso são obrigatórios.' });
 
-  // Find unit by access code
-  let foundUnit = null;
-  let foundProperty = null;
+  let foundUnit = null, foundProperty = null;
   for (const prop of properties) {
     const unit = prop.units.find(u => u.accessCode === accessCode);
     if (unit) { foundUnit = unit; foundProperty = prop; break; }
   }
   if (!foundUnit) return res.status(401).json({ error: 'Código de acesso inválido.' });
 
-  // Auto-register on first login
   const existing = residents.find(r => r.email === email && r.unitId === foundUnit.id);
   if (!existing) {
-    residents.push({ email, unitId: foundUnit.id, unitName: foundUnit.name, propertyId: foundProperty.id, propertyName: foundProperty.name, createdAt: new Date().toISOString() });
+    residents.push({
+      email, unitId: foundUnit.id, unitName: foundUnit.name,
+      propertyId: foundProperty.id, propertyName: foundProperty.name,
+      createdAt: new Date().toISOString()
+    });
     saveResidents();
   }
-
-  res.json({ unitId: foundUnit.id, unitName: foundUnit.name, propertyName: foundProperty.name });
+  res.json({ unitId: foundUnit.id, unitName: foundUnit.name, propertyName: foundProperty.name, propertyId: foundProperty.id });
 });
 
-// WebSockets for Real-time Signaling
+// ─── Mapa de sockets de moradores ativos ─────────────────────────────────────
+// unitId → Set<socketId>
+const residentSockets = new Map();
+
+// ─── WebSockets ───────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  
-  // Resident connects and joins their unit's room
+  console.log('[WS] conectado:', socket.id);
+
+  // Morador entra na sala da sua unidade
   socket.on('register_resident', ({ unitId }) => {
     socket.join(`unit_${unitId}`);
-    console.log(`Resident ${socket.id} joined unit_${unitId}`);
+    if (!residentSockets.has(unitId)) residentSockets.set(unitId, new Set());
+    residentSockets.get(unitId).add(socket.id);
+    console.log(`[WS] Morador ${socket.id} → unit_${unitId}`);
   });
-  
-  // Visitor initiates a call
+
+  // Visitante toca a campainha
   socket.on('initiate_call', ({ unitId, photoBase64 }) => {
-    console.log(`Visitor initiating call to unit_${unitId}`);
-    // Notify residents of the unit
+    console.log(`[WS] Chamada para unit_${unitId} de ${socket.id}`);
+
+    // Salva o visitante no histórico
+    const visit = {
+      id: uuidv4(),
+      unitId,
+      visitorSocketId: socket.id,
+      photo: photoBase64 || null,
+      timestamp: new Date().toISOString()
+    };
+    visitors.push(visit);
+    // Mantém apenas as últimas 500 visitas para não inflar o JSON
+    if (visitors.length > 500) visitors = visitors.slice(-500);
+    saveVisitors();
+
+    // Notifica moradores da unidade
     io.to(`unit_${unitId}`).emit('incoming_call', {
       visitorSocketId: socket.id,
       photo: photoBase64,
-      timestamp: Date.now()
+      timestamp: visit.timestamp,
+      visitId: visit.id
     });
   });
-  
-  // Resident answers call
+
+  // Morador atende a chamada
   socket.on('answer_call', ({ visitorSocketId, mode, unitId }) => {
-    io.to(visitorSocketId).emit('call_answered', { residentSocketId: socket.id, mode, unitId });
+    console.log(`[WS] Morador ${socket.id} atende ${visitorSocketId} modo=${mode}`);
+    io.to(visitorSocketId).emit('call_answered', {
+      residentSocketId: socket.id,
+      mode,
+      unitId
+    });
   });
-  
-  // WebRTC Signaling
+
+  // ─── WebRTC Signaling puro (sem PeerJS) ─────────────────────────────────
+  // O visitante envia offer para o morador
   socket.on('webrtc_offer', ({ target, offer }) => {
+    console.log(`[WRTc] offer de ${socket.id} para ${target}`);
     io.to(target).emit('webrtc_offer', { sender: socket.id, offer });
   });
-  
+
+  // O morador responde com answer
   socket.on('webrtc_answer', ({ target, answer }) => {
+    console.log(`[WRTc] answer de ${socket.id} para ${target}`);
     io.to(target).emit('webrtc_answer', { sender: socket.id, answer });
   });
-  
+
+  // Troca de ICE candidates (ambos os lados)
   socket.on('webrtc_ice_candidate', ({ target, candidate }) => {
     io.to(target).emit('webrtc_ice_candidate', { sender: socket.id, candidate });
   });
 
+  // Sinaliza encerramento de chamada
+  socket.on('call_ended', ({ target }) => {
+    if (target) io.to(target).emit('call_ended');
+  });
+
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    console.log('[WS] desconectado:', socket.id);
+    // Remove morador dos maps
+    residentSockets.forEach((sockets, unitId) => {
+      sockets.delete(socket.id);
+      if (sockets.size === 0) residentSockets.delete(unitId);
+    });
   });
 });
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Servidor rodando na porta ${PORT}`);
 });
