@@ -53,7 +53,7 @@ const generateAccessCode = () => crypto.randomBytes(3).toString('hex').toUpperCa
 
 // ─── Properties Routes ───────────────────────────────────────────────────────
 app.post('/api/properties', async (req, res) => {
-  const { type, name, units } = req.body;
+  const { type, name, units, adminEmail } = req.body;
   const id = uuidv4();
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const url = `${frontendUrl}/chamada/${id}`;
@@ -73,6 +73,7 @@ app.post('/api/properties', async (req, res) => {
       : [{ id: uuidv4(), name: 'Principal', accessCode: generateAccessCode() }],
     qrCodeUrl: qrCodeDataUrl,
     url,
+    adminEmail: adminEmail || null,
     createdAt: new Date().toISOString()
   };
 
@@ -81,8 +82,12 @@ app.post('/api/properties', async (req, res) => {
   res.status(201).json(property);
 });
 
-app.get('/api/properties', (_req, res) => res.json(properties));
-
+app.get('/api/properties', (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.json(properties);
+  const filtered = properties.filter(p => p.adminEmail === email);
+  res.json(filtered);
+});
 app.get('/api/properties/:id', (req, res) => {
   const prop = properties.find(p => p.id === req.params.id);
   if (!prop) return res.status(404).json({ error: 'Property not found' });

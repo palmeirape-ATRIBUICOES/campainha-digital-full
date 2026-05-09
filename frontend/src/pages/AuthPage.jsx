@@ -13,12 +13,14 @@ export default function AuthPage() {
 
   const handleLogin = (e) => {
     e.preventDefault();
+    if (email) localStorage.setItem('cd_admin_email', email);
     navigate('/admin');
   };
 
   const handleRegisterStep1 = (e) => {
     e.preventDefault();
     if (!name || !email || !password) return;
+    localStorage.setItem('cd_admin_email', email);
     setStep(2);
   };
 

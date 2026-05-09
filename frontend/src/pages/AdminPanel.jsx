@@ -43,16 +43,14 @@ export default function AdminPanel() {
 
   const fetchProperties = async () => {
     try {
-      const res  = await fetch(`${API}/api/properties`);
+      const adminEmail = localStorage.getItem('cd_admin_email');
+      const url = adminEmail ? `${API}/api/properties?email=${encodeURIComponent(adminEmail)}` : `${API}/api/properties`;
+      const res  = await fetch(url);
       const data = await res.json();
       
-      // Filtro de privacidade: mostra apenas propriedades criadas neste dispositivo
-      const myProps = JSON.parse(localStorage.getItem('cd_admin_props') || '[]');
-      const filtered = data.filter(p => myProps.includes(p.id));
-      
-      setProperties(filtered);
-      if (filtered.length === 0) setOnboardingStep('scan');
-      if (filtered.length > 0) setSelectedProperty(filtered[0].id);
+      setProperties(data);
+      if (data.length === 0) setOnboardingStep('scan');
+      if (data.length > 0) setSelectedProperty(data[0].id);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -98,17 +96,20 @@ export default function AdminPanel() {
   const handleSubmit = async () => {
     const units = propertyType !== 'individual' ? unitsList.filter(u => u.name.trim()) : [];
     if (propertyType !== 'individual' && units.length === 0) return alert('Adicione pelo menos uma unidade.');
+    
+    const adminEmail = localStorage.getItem('cd_admin_email');
+    
     try {
       const res = await fetch(`${API}/api/properties`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: propertyType === 'individual' ? 'individual' : 'collective', name: propertyName, units })
+        body: JSON.stringify({ 
+          type: propertyType === 'individual' ? 'individual' : 'collective', 
+          name: propertyName, 
+          units,
+          adminEmail 
+        })
       });
       if (res.ok) { 
-        const newProp = await res.json();
-        const myProps = JSON.parse(localStorage.getItem('cd_admin_props') || '[]');
-        myProps.push(newProp.id);
-        localStorage.setItem('cd_admin_props', JSON.stringify(myProps));
-        
         setOnboardingStep(null); 
         fetchProperties(); 
       }
