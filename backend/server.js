@@ -169,6 +169,27 @@ app.post('/api/resident/login', (req, res) => {
   res.json({ unitId: foundUnit.id, unitName: foundUnit.name, propertyName: foundProperty.name, propertyId: foundProperty.id });
 });
 
+// Login por CÓDIGO apenas (para condomínios e vilas — sem precisar de e-mail)
+app.post('/api/resident/login-by-code', (req, res) => {
+  const { accessCode } = req.body;
+  if (!accessCode) return res.status(400).json({ error: 'Código de acesso é obrigatório.' });
+
+  let foundUnit = null, foundProperty = null;
+  for (const prop of properties) {
+    const unit = prop.units.find(u => u.accessCode === accessCode.trim().toUpperCase());
+    if (unit) { foundUnit = unit; foundProperty = prop; break; }
+  }
+  if (!foundUnit) return res.status(401).json({ error: 'Código de acesso inválido. Verifique com o síndico/proprietário.' });
+
+  res.json({
+    unitId: foundUnit.id,
+    unitName: foundUnit.name,
+    propertyName: foundProperty.name,
+    propertyId: foundProperty.id,
+    propertyType: foundProperty.type
+  });
+});
+
 // ─── Mapa de sockets de moradores ativos ─────────────────────────────────────
 // unitId → Set<socketId>
 const residentSockets = new Map();
