@@ -5,6 +5,7 @@
 [![Deploy](https://img.shields.io/badge/Deploy-Render-46E3B7?logo=render)](https://render.com)
 [![Stack](https://img.shields.io/badge/Stack-React%20%2B%20Node.js%20%2B%20WebRTC-blue)](#)
 [![Version](https://img.shields.io/badge/Versão-2.0.0-green)](#)
+[![License](https://img.shields.io/badge/Licença-MIT-gray)](#)
 
 ---
 
@@ -12,11 +13,12 @@
 
 Campainha Digital é uma plataforma SaaS que transforma um simples QR Code em uma campainha inteligente com **videochamada P2P em tempo real** entre visitante e morador — sem aplicativo, sem hardware adicional.
 
-**Fluxo:**
-1. Visitante escaneia o QR Code na porta
-2. Tira uma foto e toca a campainha
-3. Morador recebe alerta com foto + opção de Atender ou Monitorar
-4. Videochamada P2P é estabelecida via WebRTC
+**Fluxo básico:**
+1. Visitante escaneia o QR Code na porta do imóvel
+2. Câmera captura foto automática para identificação
+3. Morador recebe alerta instantâneo com a foto do visitante
+4. Morador escolhe **Atender** (áudio bidirecional) ou **Monitorar** (furtivo)
+5. Videochamada P2P é estabelecida diretamente entre os dispositivos
 
 ---
 
@@ -26,76 +28,93 @@ Campainha Digital é uma plataforma SaaS que transforma um simples QR Code em um
 |--------|-----------|
 | Frontend | React 19 + Vite + Socket.io-client |
 | Backend | Node.js + Express + Socket.io |
-| Realtime | **WebRTC Nativo** (sem PeerJS) |
-| Signaling | Socket.io (servidor próprio) |
-| ICE/STUN | Google STUN + OpenRelay TURN |
+| Realtime | **WebRTC Nativo** (sem bibliotecas externas) |
+| Signaling | Socket.io no próprio servidor |
+| ICE/STUN | Google STUN servers |
+| TURN (fallback) | OpenRelay (redes NAT restritivas) |
 | Deploy | Render.com |
-| DB | JSON file (em migração para PostgreSQL) |
+| Persistência | JSON files (roadmap: PostgreSQL/Neon) |
 
 ---
 
-## ⚡ WebRTC P2P — Como Funciona
+## ⚡ Como a Videochamada P2P Funciona
+
+O servidor atua **apenas como mensageiro de sinalização** — a mídia (áudio/vídeo) flui diretamente entre os dispositivos sem passar pelo servidor.
 
 ```
-[Visitante]                    [Servidor Socket.io]              [Morador]
-    |  initiate_call (foto)  →  |                                    |
-    |                           |  → incoming_call (foto)            |
-    |                           |                ← answer_call       |
-    |  ← call_answered          |                                    |
-    |  webrtc_offer →           |  → webrtc_offer                    |
-    |                           |                ← webrtc_answer     |
-    |  ← webrtc_answer          |                                    |
-    |  webrtc_ice_candidate ↔   |  ↔ webrtc_ice_candidate           |
-    |                                                                 |
-    |◄══════════════ Conexão P2P Direta Estabelecida ══════════════►|
+[Visitante]            [Servidor Render]          [Morador]
+     │                        │                       │
+     │── initiate_call ───────►│                       │
+     │   (foto do visitante)   │── incoming_call ─────►│
+     │                         │        (alerta toca)  │
+     │                         │◄── answer_call ───────│
+     │◄── call_answered ───────│  (morador clicou)     │
+     │                         │                       │
+     │── webrtc_offer ─────────►────────────────────── ►│
+     │◄── webrtc_answer ────── ◄──────────────────────  │
+     │◄══ ICE candidates ══════════════════════════════►│
+     │                                                   │
+     │◄═══════ CONEXÃO P2P DIRETA (áudio/vídeo) ════════►│
 ```
 
-O servidor atua apenas como **mensageiro de sinalização** — a mídia flui diretamente entre os dispositivos.
+**Por que funciona em qualquer rede:**
+- **STUN servers do Google** — descobre o IP público do dispositivo
+- **TURN server OpenRelay** — relay de fallback para redes corporativas/móveis com NAT restritivo
+- **Sem servidor externo** — toda sinalização passa pelo seu próprio backend no Render
 
 ---
 
 ## 🌐 Deploy no Render (Conta Free)
 
-### Backend
-1. Novo Web Service → conectar repositório GitHub
-2. **Build Command:** `npm install`
-3. **Start Command:** `node server.js`
-4. **Diretório:** `backend/`
-5. **Variáveis de ambiente:**
-   - `FRONTEND_URL=https://seu-frontend.onrender.com`
+### Backend — Web Service
+| Campo | Valor |
+|-------|-------|
+| Diretório | `backend/` |
+| Build Command | `npm install` |
+| Start Command | `node server.js` |
+| Variável de ambiente | `FRONTEND_URL=https://seu-frontend.onrender.com` |
 
-### Frontend
-1. Novo Static Site → conectar repositório GitHub
-2. **Build Command:** `npm install && npm run build`
-3. **Publish Directory:** `frontend/dist`
-4. **Variáveis de ambiente:**
-   - `VITE_API_URL=https://seu-backend.onrender.com`
+### Frontend — Static Site
+| Campo | Valor |
+|-------|-------|
+| Diretório | `frontend/` |
+| Build Command | `npm install --legacy-peer-deps && npm run build` |
+| Publish Directory | `frontend/dist` |
+| Variável de ambiente | `VITE_API_URL=https://seu-backend.onrender.com` |
 
-> **ℹ️ Render Free Tier:** O backend possui endpoint `/api/ping` para keep-alive. Configure um serviço de ping externo (ex: UptimeRobot) para chamar esse endpoint a cada 10 minutos e evitar o spin-down automático.
+### ⚠️ Keep-Alive (Render Free Tier)
+O Render gratuito suspende o servidor após 15min sem requisições. Para manter online:
+
+1. Crie conta gratuita em [uptimerobot.com](https://uptimerobot.com)
+2. Adicione monitor HTTP apontando para: `https://seu-backend.onrender.com/api/ping`
+3. Intervalo: **10 minutos**
+
+O endpoint `/api/ping` responde `{ok: true}` instantaneamente, mantendo o servidor vivo.
 
 ---
 
-## 📱 Tipos de Imóvel Suportados
+## 📱 Tipos de Imóvel
 
-| Tipo | Acesso do Morador | Unidades |
-|------|-------------------|----------|
-| Casa Simples | Email + código de acesso | 1 |
-| Vila de Casas | Código da casa | N casas |
-| Condomínio | Código do apartamento | N aptos |
+| Tipo | Descrição | Acesso do Morador |
+|------|-----------|-------------------|
+| Casa Simples | 1 unidade | Código de acesso |
+| Vila de Casas | N casas, 1 QR Code | Código por casa |
+| Condomínio | N apartamentos, 1 QR Code | Código por apartamento |
 
 ---
 
 ## 📋 Funcionalidades
 
-- ✅ QR Code único por propriedade
-- ✅ Foto automática do visitante
-- ✅ Videochamada P2P via WebRTC
-- ✅ Modo Furtivo (morador vê, visitante não sabe)
-- ✅ Notificação push via Service Worker
+- ✅ QR Code único por propriedade (gerado automaticamente)
+- ✅ Foto automática do visitante no momento da chamada
+- ✅ Videochamada P2P via WebRTC (sem PeerJS, sem servidor de mídia)
+- ✅ Modo Furtivo — morador monitora sem o visitante saber
 - ✅ Histórico de visitantes com foto, data e hora
-- ✅ PWA instalável (Android/iOS)
+- ✅ Notificação push via Service Worker (mesmo com app minimizado)
+- ✅ PWA instalável (Android e iOS)
+- ✅ Códigos de acesso copiáveis com feedback visual
 - ✅ Suporte a múltiplas unidades (condomínio/vila)
-- ✅ Códigos de acesso copiáveis
+- ✅ Encerramento de chamada sinalizado para ambos os lados
 
 ---
 
@@ -105,18 +124,18 @@ O servidor atua apenas como **mensageiro de sinalização** — a mídia flui di
 campainha-digital/
 ├── backend/
 │   ├── server.js          # Express + Socket.io + WebRTC signaling
-│   ├── db.json            # Propriedades
-│   ├── residents.json     # Moradores
-│   └── visitors.json      # Histórico de visitas
+│   ├── db.json            # Propriedades e QR Codes
+│   ├── residents.json     # Moradores registrados
+│   └── visitors.json      # Histórico de visitas (foto + timestamp)
 └── frontend/
     └── src/
         └── pages/
-            ├── LandingPage.jsx
+            ├── LandingPage.jsx       # Página inicial (B2B)
             ├── AdminPanel.jsx        # Painel do proprietário + histórico
-            ├── ResidentDashboard.jsx # App do morador (WebRTC)
-            ├── VisitorCall.jsx       # Interface do visitante (WebRTC)
-            ├── ResidentLogin.jsx
-            └── AuthPage.jsx
+            ├── ResidentDashboard.jsx # App do morador (WebRTC answer)
+            ├── VisitorCall.jsx       # Interface do visitante (WebRTC offer)
+            ├── ResidentLogin.jsx     # Login do morador
+            └── AuthPage.jsx          # Cadastro/Login do proprietário
 ```
 
 ---
