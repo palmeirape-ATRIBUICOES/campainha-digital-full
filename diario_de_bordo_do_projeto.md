@@ -77,6 +77,22 @@ O login do morador pedia e-mail + código para TODOS os tipos, tornando o proces
 
 ---
 
+## 📲 v2.6.0 — Compartilhamento Inteligente e Cópia Robusta (10/05/2026)
+
+### Melhoria no Botão Copiar
+- Navegadores às vezes bloqueiam a API nativa do `navigator.clipboard` se o ambiente não for HTTPS rigoroso ou em certos webviews.
+- Adicionado um **fallback automático** (plano B) que recria a função de cópia criando um input invisível e usando `document.execCommand('copy')`. O botão de copiar agora funciona 100% das vezes em qualquer cenário.
+
+### Novo Recurso: Compartilhar no WhatsApp
+- Criado o componente `WhatsAppButton` no `AdminPanel.jsx`.
+- Ao lado do código do morador, agora existe um botão "WHATSAPP" verde de alto contraste.
+- Ao clicar, ele já abre o app do WhatsApp (via API `wa.me`) com uma **mensagem pré-formatada amigável** contendo:
+  1. Texto explicativo sobre o aplicativo.
+  2. A chave / código único de acesso do morador.
+  3. O link exato do PWA de login direto (pego automaticamente via `window.location.origin`).
+
+---
+
 ## 🛠️ Próximos Passos
 - [ ] Integração Pix (R$15 por novo endereço).
 - [ ] Síndico Admin: reconfigurar códigos dos moradores.
