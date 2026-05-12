@@ -8,39 +8,7 @@ import jsQR from 'jsqr';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-const SidebarLink = ({ icon: Icon, label, active, onClick }) => (
-  <button 
-    onClick={onClick}
-    style={{
-      width: '100%',
-      padding: '12px 16px',
-      borderRadius: '12px',
-      background: active ? '#EFF6FF' : 'transparent',
-      border: 'none',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      color: active ? '#3B82F6' : '#64748B',
-      fontWeight: 600,
-      cursor: 'pointer',
-      fontSize: '14px',
-      marginBottom: '4px'
-    }}
-  >
-    <Icon size={18} /> {label}
-  </button>
-);
 
-const SectionTitle = ({ icon: Icon, title }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#0F172A' }}>
-    <Icon size={20} color="#3B82F6" />
-    <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>{title}</h4>
-  </div>
-);
-
-const Label = ({ children }) => <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase' }}>{children}</label>;
-const Input = (props) => <input {...props} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '14px', outline: 'none' }} />;
-const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '14px', outline: 'none', background: '#FFF' };
 
 export default function MasterAdminDashboard() {
   const [activeTab, setActiveTab] = useState('clients');
