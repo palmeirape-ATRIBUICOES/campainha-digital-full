@@ -80,49 +80,54 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Premium UI Mockup */}
+          {/* Avatar Video Section */}
           <div className="animate-fade-up delay-400" style={{ display: 'flex', justifyContent: 'center', position: 'relative', marginTop: '40px' }}>
             <div style={{ position: 'absolute', top: '10%', right: '10%', width: '150px', height: '150px', background: 'var(--primary)', filter: 'blur(100px)', opacity: 0.3, zIndex: -1 }}></div>
             
-            <div className="iphone-mockup">
-              <div className="iphone-notch"></div>
-              {/* Fake App Screen */}
-              <div style={{ width: '100%', height: '100%', background: '#0A111F', display: 'flex', flexDirection: 'column' }}>
-                {/* Header */}
-                <div style={{ padding: '60px 24px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontWeight: 700, fontSize: '18px' }}>Visita Externa</span>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={12} /> Portão Principal</span>
-                  </div>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 10px #10B981' }}></div>
-                </div>
-                {/* Video Area */}
-                <div style={{ flex: 1, margin: '0 16px', background: '#111A2C', borderRadius: '24px', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-subtle)' }}>
-                  <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=500&q=80" alt="Visitante" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
-                  <div style={{ position: 'absolute', top: '16px', left: '16px', background: 'rgba(0,0,0,0.7)', padding: '6px 12px', borderRadius: '100px', fontSize: '11px', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                     <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444' }} /> AO VIVO
-                  </div>
-
-                  {/* Call Actions */}
-                  <div style={{ position: 'absolute', bottom: '24px', left: '0', width: '100%', display: 'flex', justifyContent: 'center', gap: '24px', padding: '0 20px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                      <button style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                        <EyeOff size={24} color="#fff" />
-                      </button>
-                      <span style={{ fontSize: '11px', fontWeight: 600, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>OCULTAR</span>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                      <button style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)', border: 'none', cursor: 'pointer' }}>
-                        <Video size={28} color="#000" />
-                      </button>
-                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>ATENDER</span>
-                    </div>
-                  </div>
-                </div>
-                <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                  Conexão Criptografada Segura
-                </div>
+            <div style={{ 
+              width: '100%', 
+              maxWidth: '340px', 
+              aspectRatio: '9/16', 
+              background: '#000', 
+              borderRadius: '32px', 
+              overflow: 'hidden', 
+              border: '4px solid var(--border-subtle)',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
+              position: 'relative'
+            }}>
+              <video 
+                autoPlay 
+                loop 
+                muted 
+                playsInline 
+                style={{ 
+                  width: '100%', 
+                  height: '140%', // Scale up to allow cropping
+                  objectFit: 'cover',
+                  marginTop: '-20%' // Shift up to crop top
+                }}
+              >
+                <source src="/avatar.mp4" type="video/mp4" />
+              </video>
+              
+              {/* Badge Overlay */}
+              <div style={{ 
+                position: 'absolute', 
+                bottom: '24px', 
+                left: '50%', 
+                transform: 'translateX(-50%)',
+                background: 'rgba(0, 229, 255, 0.1)',
+                backdropFilter: 'blur(12px)',
+                padding: '12px 20px',
+                borderRadius: '100px',
+                border: '1px solid rgba(0, 229, 255, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                whiteSpace: 'nowrap'
+              }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)', boxShadow: '0 0 10px var(--primary)' }}></div>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>Apresentação Oficial</span>
               </div>
             </div>
           </div>
