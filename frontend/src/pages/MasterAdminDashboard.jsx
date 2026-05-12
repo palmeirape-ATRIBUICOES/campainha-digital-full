@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, LayoutDashboard, Database, Activity, History, Settings2, Search, Bell, AlertTriangle
+  Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, LayoutDashboard, Database, Activity, History, Settings2, Search, Bell, AlertTriangle, Briefcase, ExternalLink, PieChart, Server, Shield, Globe, FileText, Headphones, BarChart3
 } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useNavigate } from 'react-router-dom';
@@ -188,14 +188,22 @@ export default function MasterAdminDashboard() {
       
       {/* SIDEBAR */}
       <aside style={{ width: '280px', background: '#FFF', borderRight: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', zIndex: 100 }}>
-        <div style={{ padding: '32px 24px', borderBottom: '1px solid #F1F5F9' }}>
-          <Logo size={40} />
-          <p style={{ fontSize: '10px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>SISTEMA DE CONTROLE DIGITAL</p>
+        <div style={{ padding: '24px', borderBottom: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <Logo size={32} />
+          <p style={{ fontSize: '9px', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>SISTEMA DE CONTROLE DIGITAL</p>
         </div>
 
-        <nav style={{ padding: '24px 16px', flex: 1 }}>
+        <nav style={{ padding: '24px 16px', flex: 1, overflowY: 'auto' }}>
           <SidebarLink icon={Users} label="Gerenciar Clientes" active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
           <SidebarLink icon={Plus} label="Novo Registro" active={activeTab === 'register'} onClick={() => setActiveTab('register')} />
+          <div style={{ height: '1px', background: '#F1F5F9', margin: '16px 0' }} />
+          <SidebarLink icon={PieChart} label="Analytics & Uso" active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
+          <SidebarLink icon={Shield} label="Equipe / Porteiros" active={activeTab === 'doormen'} onClick={() => setActiveTab('doormen')} />
+          <SidebarLink icon={History} label="Logs do Sistema" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
+          <SidebarLink icon={CreditCard} label="Financeiro / Pix" active={activeTab === 'billing'} onClick={() => setActiveTab('billing')} />
+          <SidebarLink icon={Headphones} label="Suporte & Tickets" active={activeTab === 'support'} onClick={() => setActiveTab('support')} />
+          <SidebarLink icon={Settings2} label="Config. Globais" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
+          <SidebarLink icon={Database} label="API / Integrações" active={activeTab === 'api'} onClick={() => setActiveTab('api')} />
         </nav>
 
         <div style={{ padding: '24px', borderTop: '1px solid #F1F5F9', background: '#F8FAFC' }}>
@@ -447,18 +455,115 @@ export default function MasterAdminDashboard() {
           )}
 
           {activeTab === 'analytics' && (
-            <div style={{ textAlign: 'center', padding: '100px 0' }}>
-               <BarChart3 size={64} color="#CBD5E1" style={{ marginBottom: '24px' }} />
-               <h3 style={{ fontSize: '24px', fontWeight: 800 }}>Módulo de BI & Analytics</h3>
-               <p style={{ color: '#64748B' }}>Em desenvolvimento: visualize tráfego, chamadas atendidas e métricas de engajamento.</p>
+            <div style={{ padding: '20px' }}>
+              <SectionTitle icon={PieChart} title="Analytics de Produção" />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginTop: '24px' }}>
+                <div style={{ padding: '24px', background: '#F8FAFC', borderRadius: '16px', textAlign: 'center' }}>
+                  <h4 style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>Chamadas Hoje</h4>
+                  <div style={{ fontSize: '32px', fontWeight: 800, marginTop: '8px' }}>1.284</div>
+                </div>
+                <div style={{ padding: '24px', background: '#F8FAFC', borderRadius: '16px', textAlign: 'center' }}>
+                  <h4 style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>Uptime Servidores</h4>
+                  <div style={{ fontSize: '32px', fontWeight: 800, marginTop: '8px', color: '#10B981' }}>99.98%</div>
+                </div>
+                <div style={{ padding: '24px', background: '#F8FAFC', borderRadius: '16px', textAlign: 'center' }}>
+                  <h4 style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>Clientes Onboarding</h4>
+                  <div style={{ fontSize: '32px', fontWeight: 800, marginTop: '8px' }}>14</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'doormen' && (
+            <div style={{ padding: '20px' }}>
+              <SectionTitle icon={Shield} title="Gerenciamento de Equipes de Portaria" />
+              <p style={{ color: '#64748B' }}>Controle centralizado de acessos para porteiros de todos os condomínios.</p>
+              <div style={{ marginTop: '24px', padding: '40px', textAlign: 'center', background: '#F8FAFC', borderRadius: '20px', border: '1px dashed #E2E8F0' }}>
+                <Users size={48} color="#CBD5E1" style={{ marginBottom: '16px' }} />
+                <h3>Nenhum porteiro registrado globalmente</h3>
+                <button style={{ padding: '12px 24px', borderRadius: '12px', background: '#3B82F6', color: '#FFF', border: 'none', fontWeight: 700, cursor: 'pointer', marginTop: '16px' }}>ADICIONAR PORTEIRO MASTER</button>
+              </div>
             </div>
           )}
 
           {activeTab === 'logs' && (
-            <div style={{ textAlign: 'center', padding: '100px 0' }}>
-               <Activity size={64} color="#CBD5E1" style={{ marginBottom: '24px' }} />
-               <h3 style={{ fontSize: '24px', fontWeight: 800 }}>Auditoria de Sistema</h3>
-               <p style={{ color: '#64748B' }}>Logs em tempo real de tentativas de acesso, erros de WebRTC e registros de novos usuários.</p>
+            <div style={{ padding: '20px' }}>
+              <SectionTitle icon={History} title="Auditoria e Logs de Segurança" />
+              <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {[1,2,3,4,5].map(i => (
+                  <div key={i} style={{ padding: '16px', background: '#F8FAFC', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <span style={{ fontWeight: 700, color: '#3B82F6' }}>14:0{i}:22</span>
+                      <span>Admin Master removeu registro de placa ID: SCAN_99218</span>
+                    </div>
+                    <span style={{ color: '#94A3B8' }}>IP: 189.12.33.XX</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'billing' && (
+            <div style={{ padding: '20px' }}>
+              <SectionTitle icon={CreditCard} title="Financeiro & Assinaturas" />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '24px' }}>
+                <div style={{ padding: '24px', background: 'linear-gradient(135deg, #0F172A, #1E293B)', borderRadius: '24px', color: '#FFF' }}>
+                  <span style={{ fontSize: '14px', opacity: 0.7 }}>Receita Mensal Recorrente (MRR)</span>
+                  <div style={{ fontSize: '36px', fontWeight: 800, marginTop: '8px' }}>R$ 142.850</div>
+                  <div style={{ marginTop: '20px', fontSize: '12px', color: '#10B981' }}>+8.4% em relação ao mês anterior</div>
+                </div>
+                <div style={{ padding: '24px', background: '#FFF', borderRadius: '24px', border: '1px solid #E2E8F0' }}>
+                  <span style={{ fontSize: '14px', color: '#64748B' }}>Próximos Pagamentos (7 dias)</span>
+                  <div style={{ fontSize: '36px', fontWeight: 800, marginTop: '8px' }}>42 Clientes</div>
+                  <button style={{ marginTop: '20px', color: '#3B82F6', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>Gerar Relatório de Inadimplência →</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'support' && (
+            <div style={{ padding: '20px' }}>
+              <SectionTitle icon={Headphones} title="Central de Suporte" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
+                <div style={{ padding: '20px', background: '#FFF5F5', border: '1px solid #FEE2E2', borderRadius: '16px', display: 'flex', justifyContent: 'space-between' }}>
+                  <div>
+                    <span style={{ fontSize: '11px', background: '#EF4444', color: '#FFF', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>URGENTE</span>
+                    <h4 style={{ margin: '8px 0 4px', fontWeight: 800 }}>Problema na conexão de áudio - Condomínio Solar</h4>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>Aberto há 12 minutos por Porteiro Joâo</p>
+                  </div>
+                  <button style={{ alignSelf: 'center', padding: '10px 20px', borderRadius: '10px', background: '#FFF', border: '1px solid #EF4444', color: '#EF4444', fontWeight: 700 }}>ASSUMIR TICKET</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div style={{ padding: '20px' }}>
+              <SectionTitle icon={Settings2} title="Configurações Globais do SaaS" />
+              <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div>
+                  <Label>Versão do Sistema</Label>
+                  <Input value="v2.9.8-stable" disabled />
+                </div>
+                <div>
+                  <Label>Limite de Unidades por Cliente (Global)</Label>
+                  <Input type="number" defaultValue={500} />
+                </div>
+                <button style={{ padding: '14px', borderRadius: '12px', background: '#0F172A', color: '#FFF', border: 'none', fontWeight: 700 }}>SALVAR CONFIGURAÇÕES</button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'api' && (
+            <div style={{ padding: '20px' }}>
+              <SectionTitle icon={Database} title="API & Integrações" />
+              <div style={{ padding: '24px', background: '#F8FAFC', borderRadius: '16px', marginTop: '24px' }}>
+                <Label>API KEY MESTRE</Label>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <Input value="sk_live_51MvVq6L9y1..." readOnly type="password" />
+                  <button style={{ padding: '12px', borderRadius: '12px', background: '#FFF', border: '1px solid #E2E8F0' }}><Copy size={18}/></button>
+                </div>
+              </div>
             </div>
           )}
 
