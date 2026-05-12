@@ -193,6 +193,16 @@ export default function ResidentDashboard() {
     }
   };
 
+  const authorizeEntry = () => {
+    if (!socketRef.current || !call) return;
+    socketRef.current.emit('authorize_entry', { 
+      unitId: id, 
+      propertyId: call.propertyId,
+      visitorId: call.visitId 
+    });
+    alert('Entrada autorizada! Notificação enviada à portaria.');
+  };
+
   const sendQuickMsg = (msg) => {
     if (!visitorSocketId) return;
     socketRef.current.emit('send_quick_message', { target: visitorSocketId, message: msg });
@@ -364,6 +374,9 @@ export default function ResidentDashboard() {
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button onClick={() => handleAnswer(false)} className="btn-primary" style={{ flex: 1, padding: '14px', background: '#10B981', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <Phone size={18} /> Falar
+                </button>
+                <button onClick={authorizeEntry} style={{ flex: 1, padding: '14px', background: 'rgba(16,185,129,0.1)', color: '#10B981', border: '1px solid #10B981', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 700 }}>
+                  <KeyRound size={18} /> Abrir
                 </button>
                 <button onClick={handleEnd} style={{ width: '56px', height: '52px', borderRadius: '14px', border: 'none', background: 'rgba(239,68,68,0.15)', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <PhoneOff size={20} />

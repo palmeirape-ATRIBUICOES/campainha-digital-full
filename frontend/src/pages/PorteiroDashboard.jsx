@@ -50,15 +50,21 @@ export default function PorteiroDashboard() {
 
       setAuthorizedEntry({ unitName: uName, timestamp });
       
+      // Play alert sound
+      try {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        audio.play().catch(() => {});
+      } catch {}
+
       // Vibrate if on tablet
       if ('vibrate' in navigator) {
         navigator.vibrate([200, 100, 200, 100, 200]);
       }
 
-      // Hide after 10 seconds
+      // Hide after 15 seconds (longer visibility)
       setTimeout(() => {
         setAuthorizedEntry(null);
-      }, 10000);
+      }, 15000);
     });
 
     return () => {

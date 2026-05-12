@@ -256,14 +256,29 @@ app.post('/api/resident/login-by-code', (req, res) => {
   const { accessCode } = req.body;
   if (!accessCode) return res.status(400).json({ error: 'Código de acesso é obrigatório.' });
 
+  const code = accessCode.trim().toUpperCase();
+
+  // 1. Check if it's a doorman code first
+  const doormanProp = properties.find(p => p.doormanCode === code);
+  if (doormanProp) {
+    return res.json({
+      role: 'doorman',
+      propertyId: doormanProp.id,
+      propertyName: doormanProp.name
+    });
+  }
+
+  // 2. Check if it's a resident unit code
   let foundUnit = null, foundProperty = null;
   for (const prop of properties) {
-    const unit = prop.units.find(u => u.accessCode === accessCode.trim().toUpperCase());
+    const unit = prop.units.find(u => u.accessCode === code);
     if (unit) { foundUnit = unit; foundProperty = prop; break; }
   }
+
   if (!foundUnit) return res.status(401).json({ error: 'Código de acesso inválido. Verifique com o síndico/proprietário.' });
 
   res.json({
+    role: 'resident',
     unitId: foundUnit.id,
     unitName: foundUnit.name,
     propertyName: foundProperty.name,
@@ -351,7 +366,11 @@ io.on('connection', (socket) => {
   socket.on('authorize_entry', ({ unitId, propertyId, visitorId }) => {
     // Notify the doorman that entry was authorized by the resident
     io.to(`doorman_${propertyId}`).emit('entry_authorized', { unitId, visitorId, timestamp: new Date().toISOString() });
-    // Notify visitor if needed
+    
+    // Notify the visitor as well
+    if (visitorId) {
+      io.to(visitorId).emit('entry_authorized', { unitId, timestamp: new Date().toISOString() });
+    }
   });
 
   socket.on('disconnect', () => {

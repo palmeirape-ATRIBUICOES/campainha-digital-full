@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Bell, CheckCircle, ShieldCheck, MapPin, ChevronRight, Mic, Video, PhoneOff, WifiOff } from 'lucide-react';
+import { Bell, CheckCircle, ShieldCheck, MapPin, ChevronRight, Mic, Video, PhoneOff, WifiOff, KeyRound } from 'lucide-react';
 
 // ─── Configuração do Socket.io ────────────────────────────────────────────────
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -102,6 +102,16 @@ export default function VisitorCall() {
     socket.on('call_ended', () => {
       setStatus('ended');
       stopAll();
+    });
+
+    // Portão liberado pelo morador
+    socket.on('entry_authorized', () => {
+      setStatus('authorized');
+      setTimeout(() => {
+        setStatus('idle');
+        setCallingUnit(null);
+        stopAll();
+      }, 8000); // Back to idle after 8s
     });
 
     return () => {
@@ -427,6 +437,18 @@ export default function VisitorCall() {
           >
             <PhoneOff size={18} /> Encerrar
           </button>
+        </div>
+      )}
+
+      {/* ── Portão Liberado ─────────────────────────────────────────────── */}
+      {status === 'authorized' && (
+        <div className="glass-panel fade-in" style={{ padding: '48px 24px', width: '100%', maxWidth: '400px', textAlign: 'center', border: '2px solid #10B981', background: 'rgba(16,185,129,0.05)' }}>
+          <div style={{ width: '100px', height: '100px', background: '#10B981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px', boxShadow: '0 0 40px rgba(16,185,129,0.5)', animation: 'mesh-pulse 1.5s infinite' }}>
+            <KeyRound size={48} color="#000" />
+          </div>
+          <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#10B981', marginBottom: '12px', textTransform: 'uppercase' }}>Portão Liberado!</h2>
+          <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px' }}>Seja bem-vindo!</p>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>O morador autorizou sua entrada. A portaria já foi notificada.</p>
         </div>
       )}
 

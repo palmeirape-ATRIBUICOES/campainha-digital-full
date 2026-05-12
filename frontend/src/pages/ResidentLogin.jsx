@@ -56,8 +56,20 @@ export default function ResidentLogin() {
         body: JSON.stringify({ accessCode: accessCode.trim().toUpperCase() })
       });
       const data = await res.json();
-      if (res.ok && data.unitId) saveAndNavigate(data);
-      else setError(data.error || 'Código inválido. Verifique com o síndico.');
+      
+      if (res.ok) {
+        if (data.role === 'doorman') {
+          localStorage.setItem('cd_doorman_propertyId', data.propertyId);
+          localStorage.setItem('cd_doorman_propertyName', data.propertyName);
+          navigate('/portaria');
+        } else if (data.unitId) {
+          saveAndNavigate(data);
+        } else {
+          setError('Ocorreu um erro inesperado.');
+        }
+      } else {
+        setError(data.error || 'Código inválido. Verifique com o síndico.');
+      }
     } catch { setError('Erro de conexão. Verifique sua internet.'); }
     finally { setLoading(false); }
   };
