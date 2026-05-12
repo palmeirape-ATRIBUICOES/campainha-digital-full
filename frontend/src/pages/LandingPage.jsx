@@ -44,42 +44,7 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Avatar Video - Top Feature */}
-      <section style={{ paddingTop: '80px', paddingBottom: '24px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)' }}>
-        <div className="container" style={{ display: 'flex', justifyContent: 'center' }}>
-          <div style={{ 
-            width: '100%', 
-            maxWidth: '800px', 
-            borderRadius: '24px', 
-            overflow: 'hidden', 
-            background: '#000',
-            position: 'relative',
-            aspectRatio: '16/9',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.1)'
-          }}>
-            <video 
-              autoPlay 
-              loop 
-              playsInline 
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                objectFit: 'cover',
-                transform: 'scale(1.3)' // Crop bars by zooming in
-              }}
-              onClick={(e) => { e.target.muted = !e.target.muted; e.target.play(); }}
-            >
-              <source src="/avatar.mp4" type="video/mp4" />
-            </video>
-            <div style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', padding: '8px', borderRadius: '50%', color: '#fff', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }} onClick={(e) => { const v = e.currentTarget.previousSibling; v.muted = !v.muted; v.play(); }}>
-               <Smartphone size={16} />
-            </div>
-            <div style={{ position: 'absolute', bottom: '20px', left: '20px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', padding: '8px 16px', borderRadius: '100px', color: '#fff', fontSize: '12px', fontWeight: 700, border: '1px solid rgba(255,255,255,0.1)' }}>
-               Apresentação por IA (Clique para Som)
-            </div>
-          </div>
-        </div>
-      </section>
+
 
       {/* Hero Section */}
       <section style={{ paddingTop: '64px', paddingBottom: '48px', position: 'relative' }}>
@@ -101,6 +66,36 @@ export default function LandingPage() {
 
             <div className="animate-fade-up delay-300" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px', color: '#10B981', fontWeight: 600, fontSize: '14px' }}>
               <Home size={16} /> Ideal para casas simples, vilas e grandes condomínios.
+            </div>
+
+            {/* Avatar Video - Moved here, below text */}
+            <div className="animate-fade-up delay-350" style={{ marginBottom: '32px' }}>
+              <div style={{ 
+                width: '100%', 
+                maxWidth: '540px', 
+                borderRadius: '24px', 
+                overflow: 'hidden', 
+                background: '#000',
+                position: 'relative',
+                aspectRatio: '16/9',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.1)'
+              }}>
+                <video 
+                  autoPlay 
+                  loop 
+                  playsInline 
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'cover',
+                    transform: 'scale(1.3)' 
+                  }}
+                  onMouseOver={(e) => { e.target.volume = 1.0; e.target.play(); }}
+                  id="hero-video"
+                >
+                  <source src="/avatar.mp4" type="video/mp4" />
+                </video>
+              </div>
             </div>
             
             <div className="animate-fade-up delay-400" style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
