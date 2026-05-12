@@ -167,6 +167,14 @@ O login do morador pedia e-mail + código para TODOS os tipos, tornando o proces
 
 ---
 
+## 📸 v2.9.4 — Escaneamento Obrigatório de Placas (12/05/2026)
+
+### Lógica de Registro
+- **Remoção de Auto-Geração de ID**: O sistema agora exige obrigatoriamente que um ID de QR Code seja fornecido via escaneamento no Painel Master. A função de fallback que gerava IDs aleatórios (`uuidv4`) foi removida para garantir que o sistema apenas vincule IDs de placas físicas já existentes e entregues aos clientes.
+- **Validação Rigorosa**: O backend agora retorna erro caso tente-se criar uma propriedade sem um ID escaneado, reforçando o fluxo de trabalho físico-digital.
+
+---
+
 ## 🛠️ Próximos Passos
 - [ ] Implementação real dos gráficos no módulo de Analytics.
 - [ ] Integração Pix automatizada via API de pagamentos.
