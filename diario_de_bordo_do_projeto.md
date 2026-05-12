@@ -200,6 +200,18 @@ O login do morador pedia e-mail + código para TODOS os tipos, tornando o proces
 
 ---
 
+## 🎨 v2.9.7 — Ajuste de Precisão no Logo (12/05/2026)
+
+### Branding & Fixes
+- **Correção de Layout**: Resolvido o problema onde o texto do logo quebrava em duas linhas em telas menores. Agora o logo é estritamente de uma única linha (`whiteSpace: 'nowrap'`).
+- **Fidelidade Visual**: Ajustado o SVG para corresponder exatamente à imagem original da marca:
+    - Ícone à esquerda com ondas saindo para a direita.
+    - Espaçamento (viewBox) corrigido para evitar que as ondas pareçam "cortadas".
+    - Cores sincronizadas com o azul escuro e ciano originais.
+- **Redimensionamento**: Ajustado o tamanho base do logo nas telas de login (42px) para garantir que caiba perfeitamente dentro dos painéis de vidro (`glass-panel`) sem transbordar.
+
+---
+
 ## 🛠️ Próximos Passos
 - [ ] Implementação real dos gráficos no módulo de Analytics.
 - [ ] Integração Pix automatizada via API de pagamentos.
