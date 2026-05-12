@@ -49,7 +49,7 @@ export default function PorteiroLogin() {
         
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <div style={{ marginBottom: '24px' }}>
-             <Logo size={60} />
+             <Logo size={42} />
           </div>
           <h2 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px', marginBottom: '12px', color: 'var(--text-main)' }}>Acesso Portaria</h2>
           <p style={{ fontSize: '14px', lineHeight: 1.5, color: 'var(--text-muted)' }}>Painel exclusivo para controle e comunicação da portaria.</p>

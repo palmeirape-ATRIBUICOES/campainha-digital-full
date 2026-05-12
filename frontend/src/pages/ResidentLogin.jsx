@@ -125,7 +125,7 @@ export default function ResidentLogin() {
         {/* Logo superior */}
         <div style={{ textAlign: 'center', marginBottom: '40px', zIndex: 1 }}>
         <div style={{ marginBottom: '24px' }}>
-          <Logo size={60} />
+          <Logo size={42} />
         </div>
         <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#0F172A', letterSpacing: '-1.5px', marginBottom: '8px' }}>
           Acesso Morador

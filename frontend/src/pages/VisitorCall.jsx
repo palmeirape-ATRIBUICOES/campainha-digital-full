@@ -294,7 +294,7 @@ export default function VisitorCall() {
       {/* Header */}
       <header style={{ textAlign: 'center', marginBottom: '40px' }}>
         <div style={{ marginBottom: '16px' }}>
-          <Logo size={50} showText={false} />
+          <Logo size={42} showText={false} />
         </div>
         <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '8px' }}>Campainha Digital</h1>
         {property && (
