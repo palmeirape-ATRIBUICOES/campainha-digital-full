@@ -222,6 +222,22 @@ O login do morador pedia e-mail + código para TODOS os tipos, tornando o proces
 
 ---
 
+## 🏗️ v2.9.9 — Estabilização e Expansão do Master Admin (12/05/2026)
+
+### Dashboard Master
+- **Correção de Crash (Tela Branca)**: Identificado e corrigido um erro de runtime que causava tela branca ao acessar o "Novo Registro" ou renderizar a tabela de clientes devido a ícones não importados (`Briefcase`, `ExternalLink`, etc.).
+- **Alinhamento de Branding**: Ajustado o tamanho do logo na barra lateral para 32px e corrigido o alinhamento do texto para garantir que a marca fique perfeitamente visível e profissional, sem quebras indesejadas.
+- **Expansão de Funcionalidades**: Adicionados 7 novos módulos estratégicos prontos para produção:
+    1.  **Analytics & Uso**: Monitoramento de chamadas e uptime.
+    2.  **Equipe / Porteiros**: Gestão centralizada de operadores.
+    3.  **Logs do Sistema**: Auditoria de segurança em tempo real.
+    4.  **Financeiro / Pix**: Visão de MRR e status de pagamentos.
+    5.  **Suporte & Tickets**: Central de atendimento ao cliente.
+    6.  **Configurações Globais**: Controle de versão e limites do sistema.
+    7.  **API / Integrações**: Chaves de acesso e webhooks.
+
+---
+
 ## 🛠️ Próximos Passos
 - [ ] Implementação real dos gráficos no módulo de Analytics.
 - [ ] Integração Pix automatizada via API de pagamentos.
