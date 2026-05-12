@@ -413,9 +413,10 @@ export default function MasterAdminDashboard() {
                   <SectionTitle icon={ScanLine} title="Vincular Dispositivo (QR Code)" />
                   
                   <div style={{ background: '#F8FAFC', padding: '24px', borderRadius: '16px', border: '1px dashed #CBD5E1' }}>
-                    <Label>ID da Placa Física *</Label>
+                    <Label>ID da Placa (Física ou Digital) *</Label>
                     <div style={{ display: 'flex', gap: '12px' }}>
                       <input type="text" value={scannedId} onChange={e => setScannedId(e.target.value)} style={{ ...inputStyle, flex: 1, fontFamily: 'monospace' }} required placeholder="ID da placa..." />
+                      <button type="button" onClick={() => setScannedId(`CD_${Math.random().toString(36).substring(2, 10).toUpperCase()}`)} style={{ padding: '0 16px', borderRadius: '12px', background: '#3B82F6', color: '#FFF', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}>Gerar ID</button>
                       <button type="button" onClick={startScanner} style={{ padding: '0 16px', borderRadius: '12px', background: '#0F172A', color: '#FFF', border: 'none', cursor: 'pointer' }}><Camera size={20}/></button>
                     </div>
                   </div>
