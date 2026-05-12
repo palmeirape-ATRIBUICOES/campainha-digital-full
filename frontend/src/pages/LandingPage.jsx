@@ -52,30 +52,17 @@ export default function LandingPage() {
 
         <div className="container hero-grid">
           <div style={{ zIndex: 1, textAlign: 'left' }}>
-            <div className="animate-fade-up" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.2)', borderRadius: '100px', color: 'var(--primary)', fontSize: '12px', fontWeight: 600, marginBottom: '24px', whiteSpace: 'nowrap' }}>
-              <Shield size={14} /> Mais segurança para você
-            </div>
-            
-            <h1 className="animate-fade-up delay-100" style={{ fontSize: 'clamp(48px, 6vw, 72px)', lineHeight: 1, fontWeight: 900, letterSpacing: '-3px', marginBottom: '24px', textTransform: 'uppercase' }}>
+            <h1 className="animate-fade-up delay-100" style={{ fontSize: 'clamp(40px, 5vw, 56px)', lineHeight: 1.1, fontWeight: 900, letterSpacing: '-2px', marginBottom: '32px', textTransform: 'uppercase' }}>
               Atenda o portão de <br/>
               <span className="text-gradient-primary">qualquer lugar.</span>
             </h1>
-            
-            <p className="animate-fade-up delay-200" style={{ fontSize: 'clamp(18px, 2.5vw, 22px)', color: 'var(--text-muted)', lineHeight: 1.4, marginBottom: '32px', maxWidth: '600px', fontWeight: 500 }}>
-              <strong style={{ color: '#fff' }}>Segurança definitiva sem fios ou obras.</strong> Receba chamadas de vídeo instantâneas no seu celular.
-            </p>
 
-            <div className="animate-fade-up delay-300" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '40px', color: '#10B981', fontWeight: 700, fontSize: '14px', letterSpacing: '0.5px' }}>
-              <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#10B981', boxShadow: '0 0 10px #10B981' }}></div>
-              IDEAL PARA CASAS, VILAS E CONDOMÍNIOS
-            </div>
-
-            {/* Avatar Video - Positioned BELOW text as requested */}
-            <div className="animate-fade-up delay-350" style={{ marginBottom: '40px', position: 'relative' }}>
+            {/* Avatar Video - Positioned IMMEDIATELY BELOW heading */}
+            <div className="animate-fade-up delay-200" style={{ marginBottom: '32px', position: 'relative' }}>
               <div style={{ 
                 width: '100%', 
                 maxWidth: '540px', 
-                borderRadius: '0', // Sharp geometry for technical feel
+                borderRadius: '2px', 
                 overflow: 'hidden', 
                 background: '#000',
                 position: 'relative',
@@ -91,31 +78,40 @@ export default function LandingPage() {
                     width: '100%', 
                     height: '100%', 
                     objectFit: 'cover',
-                    transform: 'scale(1.4)' // Even more crop to ensure no bars
+                    transform: 'scale(1.4)' 
                   }}
                   onMouseOver={(e) => { e.target.volume = 1.0; e.target.play(); }}
                   id="hero-video"
                 >
                   <source src="/avatar.mp4" type="video/mp4" />
                 </video>
-                
-                {/* Visual Depth Overlay */}
-                <div style={{ position: 'absolute', inset: 0, border: '1px solid rgba(255,255,255,0.05)', pointerEvents: 'none' }}></div>
               </div>
             </div>
 
-
+            <div className="animate-fade-up delay-300" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.2)', borderRadius: '100px', color: 'var(--primary)', fontSize: '12px', fontWeight: 600, marginBottom: '24px', whiteSpace: 'nowrap' }}>
+              <Shield size={14} /> Mais segurança para você
+            </div>
             
-            <div className="animate-fade-up delay-400" style={{ display: 'flex', gap: '16px', flexDirection: 'row', alignItems: 'center' }}>
+            <p className="animate-fade-up delay-400" style={{ fontSize: 'clamp(16px, 2vw, 20px)', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '24px', maxWidth: '600px', fontWeight: 500 }}>
+              <strong style={{ color: '#fff' }}>Segurança definitiva sem fios ou obras.</strong> Receba chamadas de vídeo instantâneas no seu celular.
+            </p>
+
+            <div className="animate-fade-up delay-500" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '40px', color: '#10B981', fontWeight: 700, fontSize: '14px', letterSpacing: '0.5px' }}>
+              <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: '#10B981', boxShadow: '0 0 10px #10B981' }}></div>
+              IDEAL PARA CASAS, VILAS E CONDOMÍNIOS
+            </div>
+            
+            <div className="animate-fade-up delay-600" style={{ display: 'flex', gap: '16px', flexDirection: 'row', alignItems: 'center' }}>
               <Link to="/auth" style={{ textDecoration: 'none' }}>
-                <button className="btn-primary" style={{ padding: '20px 40px', fontSize: '18px', borderRadius: '2px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <button className="btn-primary" style={{ padding: '18px 36px', fontSize: '16px', borderRadius: '2px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                   Assinar R$ 39,90 <ArrowRight size={20} />
                 </button>
               </Link>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '200px', lineHeight: 1.3, fontWeight: 600 }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', maxWidth: '180px', lineHeight: 1.3, fontWeight: 600 }}>
                  Planos especiais para condomínios sob consulta.
               </div>
             </div>
+          </div>
           </div>
 
           {/* Premium UI Mockup (iPhone) */}
