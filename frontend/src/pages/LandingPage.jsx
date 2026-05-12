@@ -93,7 +93,7 @@ export default function LandingPage() {
             </div>
             
             <p className="animate-fade-up delay-400" style={{ fontSize: 'clamp(16px, 2vw, 20px)', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '24px', maxWidth: '600px', fontWeight: 500 }}>
-              <strong style={{ color: '#fff' }}>Segurança definitiva sem fios ou obras.</strong> Receba chamadas de vídeo instantâneas no seu celular.
+              <strong>Segurança definitiva sem fios ou obras.</strong> Receba chamadas de vídeo instantâneas no seu celular.
             </p>
 
             <div className="animate-fade-up delay-500" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '40px', color: '#10B981', fontWeight: 700, fontSize: '14px', letterSpacing: '0.5px' }}>
@@ -104,11 +104,11 @@ export default function LandingPage() {
             <div className="animate-fade-up delay-600" style={{ display: 'flex', gap: '16px', flexDirection: 'row', alignItems: 'center' }}>
               <Link to="/auth" style={{ textDecoration: 'none' }}>
                 <button className="btn-primary" style={{ padding: '18px 36px', fontSize: '16px', borderRadius: '2px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  Assinar R$ 39,90 <ArrowRight size={20} />
+                  Assinar R$ 39,90/ano <ArrowRight size={20} />
                 </button>
               </Link>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', maxWidth: '180px', lineHeight: 1.3, fontWeight: 600 }}>
-                 Planos especiais para condomínios sob consulta.
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', maxWidth: '200px', lineHeight: 1.3, fontWeight: 600 }}>
+                 Pagamento único anual. Condomínios: assinatura mensal por unidade.
               </div>
             </div>
           </div>
@@ -175,35 +175,47 @@ export default function LandingPage() {
                 <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Casa Simples</h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Ideal para quem busca segurança e praticidade individual.</p>
               </div>
-              <div style={{ marginBottom: '32px' }}>
+              <div style={{ marginBottom: '16px' }}>
                 <span style={{ fontSize: '48px', fontWeight: 800 }}>R$ 39,90</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '16px' }}>/mês</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '16px' }}>/ano</span>
+              </div>
+              <div style={{ marginBottom: '32px', background: 'rgba(16,185,129,0.1)', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', color: '#10B981', fontWeight: 700 }}>
+                💰 Pagamento único anual — sem mensalidade!
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> 1 Placa QR Code Premium</li>
                 <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Chamadas de Vídeo Ilimitadas</li>
                 <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> App PWA Gratuito</li>
+                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> 12 meses de acesso completo</li>
               </ul>
               <Link to="/auth" style={{ textDecoration: 'none' }}>
-                <button className="btn-primary w-full">Começar Agora</button>
+                <button className="btn-primary w-full">Assinar Agora</button>
               </Link>
             </div>
 
             {/* Condos */}
             <div className="premium-card" style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', height: '100%', border: '2px solid var(--primary)', transform: 'scale(1.05)' }}>
-              <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'var(--primary)', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 700 }}>ECONÔMICO</div>
+              <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'var(--primary)', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 700 }}>MELHOR CUSTO-BENEFÍCIO</div>
               <div style={{ marginBottom: '24px' }}>
                 <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Condomínios & Vilas</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Planos otimizados para múltiplas unidades e portarias.</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Assinatura mensal com valores atrativos por unidade.</p>
               </div>
-              <div style={{ marginBottom: '32px' }}>
-                <span style={{ fontSize: '32px', fontWeight: 800 }}>Sob Consulta</span>
-                <p style={{ color: 'var(--primary)', fontSize: '14px', fontWeight: 700, marginTop: '8px' }}>Planos muito mais atrativos por unidade!</p>
+              <div style={{ marginBottom: '16px' }}>
+                <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-muted)', textDecoration: 'line-through' }}>R$ 39,90/un</span>
+                <div style={{ marginTop: '4px' }}>
+                  <span style={{ fontSize: '40px', fontWeight: 800 }}>A partir de R$ 9,90</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '16px' }}>/un/mês</span>
+                </div>
+              </div>
+              <div style={{ marginBottom: '32px', background: 'rgba(0,229,255,0.1)', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', color: 'var(--primary)', fontWeight: 700 }}>
+                📊 Quanto mais unidades, menor o valor por unidade!
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Placas por Unidade ou Portão</li>
                 <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Painel Admin para Síndico</li>
                 <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Suporte 24/7 Prioritário</li>
+                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Cobrança mensal por unidade</li>
+                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Descontos progressivos por volume</li>
               </ul>
               <Link to="/auth" style={{ textDecoration: 'none' }}>
                 <button className="btn-secondary w-full" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>Falar com Consultor</button>
@@ -333,15 +345,15 @@ export default function LandingPage() {
           <Shield size={48} color="var(--primary)" style={{ margin: '0 auto 24px', opacity: 0.8 }} />
           <h2 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: '24px' }}>Sua segurança não pode esperar.</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(16px, 2vw, 20px)', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px' }}>
-            Proteja sua casa, vila ou condomínio com uma assinatura única anual. Sem surpresas e sem manutenção.
+            Casa simples? Pagamento único de R$ 39,90/ano. Condomínio? Assinatura mensal com valores imbatíveis por unidade.
           </p>
           <Link to="/auth" style={{ textDecoration: 'none' }}>
             <button className="btn-primary" style={{ padding: '18px 40px', fontSize: '18px' }}>
-              Assinar Plano Anual <ArrowRight size={20} />
+              Começar Agora <ArrowRight size={20} />
             </button>
           </Link>
           <p style={{ color: '#10B981', fontSize: '14px', fontWeight: 600, marginTop: '24px' }}>
-            * Possui múltiplas unidades? Oferecemos descontos exclusivos para Condomínios e Vilas de casas.
+            * Condomínios e vilas: quanto mais unidades, menor o valor mensal por unidade. Consulte!
           </p>
         </div>
       </section>
