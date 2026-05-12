@@ -84,6 +84,12 @@ app.post('/api/doorman/login', (req, res) => {
 app.post('/api/properties', async (req, res) => {
   const { type, name, units, adminEmail, id: forcedId, clientName, clientPhone, clientDocument, clientAddress, doormanEmail, companyName, plan } = req.body;
   const id = forcedId || uuidv4();
+
+  // Ensure ID is unique
+  if (properties.some(p => p.id === id)) {
+    return res.status(400).json({ error: 'Este QR Code / ID já está em uso por outro cliente.' });
+  }
+
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const url = `${frontendUrl}/chamada/${id}`;
 

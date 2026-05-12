@@ -146,7 +146,8 @@ export default function MasterAdminDashboard() {
         setActiveTab('clients');
         fetchClients();
       } else {
-        alert('Erro ao registrar cliente.');
+        const data = await res.json();
+        alert(data.error || 'Erro ao registrar cliente.');
       }
     } catch (err) {
       console.error(err);
