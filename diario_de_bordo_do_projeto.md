@@ -175,6 +175,18 @@ O login do morador pedia e-mail + código para TODOS os tipos, tornando o proces
 
 ---
 
+## 🏗️ v2.9.5 — Novo Fluxo de Ativação Wizard (12/05/2026)
+
+### Experiência do Usuário (Onboarding)
+- **Wizard de Configuração**: Reestruturei o fluxo inicial do cliente para ser mais lógico e profissional:
+    1. **Tipo**: Seleção do imóvel (Casa, Vila ou Condomínio).
+    2. **Configuração**: Definição de nomes e lista de unidades.
+    3. **Pagamento**: Tela de checkout simulada para o plano de R$ 15,00/mês.
+    4. **Ativação**: O escaneamento da placa física agora é o passo final ("Grand Finale"), vinculando toda a configuração feita ao hardware escaneado.
+- **UX Polida**: Adicionada tela de resumo de pedido e ícones de pagamento para aumentar a percepção de valor e confiança do cliente.
+
+---
+
 ## 🛠️ Próximos Passos
 - [ ] Implementação real dos gráficos no módulo de Analytics.
 - [ ] Integração Pix automatizada via API de pagamentos.
