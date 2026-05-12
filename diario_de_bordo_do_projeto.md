@@ -159,6 +159,14 @@ O login do morador pedia e-mail + código para TODOS os tipos, tornando o proces
 
 ---
 
+## 💎 v2.9.3 — Exclusividade de QR Codes (12/05/2026)
+
+### Segurança & Integridade
+- **Bloqueio de Duplicidade**: Implementada verificação rigorosa no backend para garantir que cada QR Code (Property ID) seja único. O sistema agora impede que um ID já cadastrado seja atribuído a um novo cliente, garantindo exclusividade absoluta.
+- **Feedback de Erro**: O Painel Master agora exibe mensagens de erro detalhadas caso tente-se registrar um QR Code que já pertence a outra placa/cliente.
+
+---
+
 ## 🛠️ Próximos Passos
 - [ ] Implementação real dos gráficos no módulo de Analytics.
 - [ ] Integração Pix automatizada via API de pagamentos.
