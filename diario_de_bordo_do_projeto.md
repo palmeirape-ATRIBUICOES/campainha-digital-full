@@ -93,32 +93,28 @@ O login do morador pedia e-mail + código para TODOS os tipos, tornando o proces
 
 ---
 
-## 👑 v2.7.0 — Master Admin Redesign, Códigos Únicos e PWA da Portaria (11/05/2026)
+## 💎 v2.8.0 — Master Admin White Theme & Dossiê Detalhado (12/05/2026)
 
-### Master Admin Dashboard (Redesign Completo)
-- Substituição do design brutalista por uma interface de alto padrão (SaaS Premium, Glassmorphism, Dark Mode Elegante).
-- Formulário de cadastro expandido para incluir dados vitais do contrato (Nome/Razão Social, E-mail, Telefone, Documento e Endereço).
-- Exibição de cards estatísticos rápidos no topo: **Total de Clientes Ativos**, **Total de Unidades** e **Status do Sistema**.
-- O sistema agora gera automaticamente códigos exclusivos:
-  - **Código do Cliente (Administrador)**: Permite o acesso ao painel de gestão do condomínio.
-  - **Código da Portaria**: Gerado para condomínios/vilas, usado exclusivamente para o tablet do porteiro.
+### Redesign Visual (White Theme)
+- Mudança radical da estética escura/brutalista para um design **White Theme (Clean & Professional)**.
+- Fundo em cinza ultra-claro (`#F8FAFC`) com painéis brancos puros e sombras suaves.
+- Sidebar fixa em branco com tipografia em `Inter` de alto contraste.
+- Cards estatísticos com indicadores de performance (ex: faturamento estimado, variação percentual).
 
-### Autenticação Dinâmica e Segura
-- **Login do Cliente:** A tela de login (`AuthPage.jsx`) agora exige que o cliente informe seu E-mail e o **Código Único de Acesso** gerado pelo Master Admin.
-- **Isolamento de Segurança:** Garante que apenas quem tem o código possa gerenciar a propriedade.
+### Gestão Detalhada de Clientes & Empresas
+- **Dossiê do Cliente**: Adição de campos detalhados para **Razão Social/Empresa**, **CPF/CNPJ**, **Plano de Assinatura** e **Endereço Completo**.
+- **Dashboard Analítico**: Sidebar agora inclui links funcionais para "Análise de Dados", "Logs do Sistema" e "Configurações de Rede".
+- **Visualização Expandida**: Implementado modal de detalhes ("Dossiê") para visualização profunda de todos os dados de um cliente específico sem sair da lista principal.
 
-### 🏢 Novo Módulo: PWA da Portaria (Doorman Dashboard)
-- **Rotas e Login Exclusivos**: Criadas rotas separadas (`/portaria-login` e `/portaria`) para o porteiro acessar com o e-mail da portaria e o **Código da Portaria**.
-- **Painel Tático do Porteiro**: Interface otimizada para tablets, exibindo todas as unidades do condomínio em formato de grid ("blocos/apartamentos").
-- **Comunicação Direta**: O porteiro pode tocar em uma unidade para iniciar uma chamada instantânea com o morador (usando a mesma infraestrutura de WebRTC das placas).
-- **Feedback Visual de Abertura (Acesso Liberado)**:
-  - Adicionado botão verde de alto contraste **"Abrir Portão"** na tela de chamada ativa do morador.
-  - Ao clicar, o morador autoriza a entrada. O tablet do porteiro intercepta via WebSocket (`entry_authorized`) e **pisca uma grande notificação verde na tela**, informando visualmente qual apartamento autorizou a entrada, dispensando interfones físicos.
+### Melhorias de UX
+- Campo de busca global aprimorado (busca por empresa, documento ou código).
+- Sistema de cores semântico para planos (Basic, Pro, Enterprise).
+- Feedback visual de status global (Operacional/Offline) integrado ao Master Admin.
 
 ---
 
 ## 🛠️ Próximos Passos
-- [ ] Integração Pix (R$15 por novo endereço e mensalidade automática).
-- [ ] Síndico Admin: reconfigurar códigos dos moradores e gerar novas unidades.
-- [ ] Migração banco → PostgreSQL/Neon.
-- [ ] Push notifications via FCM (Firebase Cloud Messaging).
+- [ ] Implementação real dos gráficos no módulo de Analytics.
+- [ ] Integração Pix automatizada via API de pagamentos.
+- [ ] Sistema de notificações push (FCM) para o Master Admin sobre novas ativações.
+- [ ] Migração final para PostgreSQL/Neon.

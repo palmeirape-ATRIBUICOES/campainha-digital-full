@@ -110,6 +110,8 @@ app.post('/api/properties', async (req, res) => {
     clientPhone: clientPhone || '',
     clientDocument: clientDocument || '',
     clientAddress: clientAddress || '',
+    companyName: companyName || '',
+    plan: plan || 'PRO',
     clientCode,
     doormanCode,
     doormanEmail: doormanEmail || null,

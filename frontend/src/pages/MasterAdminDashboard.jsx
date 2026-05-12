@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldCheck, Plus, ScanLine, Search, Mail, Building2, Trash2, LogOut, Check, X, Camera, RefreshCw, Copy, ExternalLink, Activity, Users, Globe, Database, Phone, CreditCard, MapPin, User, Key } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { 
+  ShieldCheck, Plus, ScanLine, Search, Mail, Building2, Trash2, 
+  LogOut, Check, X, Camera, RefreshCw, Copy, ExternalLink, 
+  Activity, Users, Globe, Database, Phone, CreditCard, 
+  MapPin, User, Key, BarChart3, Settings, Bell, Briefcase
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import jsQR from 'jsqr';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -11,8 +16,10 @@ export default function MasterAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
   const [scannedId, setScannedId] = useState('');
-  
-  // Expanded form state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+
   const [newClient, setNewClient] = useState({
     name: '', // Property Name
     type: 'house',
@@ -22,12 +29,11 @@ export default function MasterAdminDashboard() {
     clientPhone: '',
     clientDocument: '',
     clientAddress: '',
-    doormanEmail: ''
+    doormanEmail: '',
+    companyName: '',
+    plan: 'Basic'
   });
-  
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const navigate = useNavigate();
@@ -125,6 +131,8 @@ export default function MasterAdminDashboard() {
           clientDocument: newClient.clientDocument,
           clientAddress: newClient.clientAddress,
           doormanEmail: newClient.doormanEmail,
+          companyName: newClient.companyName,
+          plan: newClient.plan,
           units: newClient.type !== 'house' ? Array.from({ length: newClient.numUnits }, (_, i) => ({ name: `Unidade ${i + 1}` })) : []
         })
       });
@@ -133,7 +141,7 @@ export default function MasterAdminDashboard() {
         alert('Cliente registrado com sucesso!');
         setScannedId('');
         setNewClient({
-          name: '', type: 'house', numUnits: 1, clientName: '', email: '', clientPhone: '', clientDocument: '', clientAddress: '', doormanEmail: ''
+          name: '', type: 'house', numUnits: 1, clientName: '', email: '', clientPhone: '', clientDocument: '', clientAddress: '', doormanEmail: '', companyName: '', plan: 'Basic'
         });
         setActiveTab('clients');
         fetchClients();
@@ -156,157 +164,181 @@ export default function MasterAdminDashboard() {
     } catch (err) { console.error(err); }
   };
 
-  const copyToClipboard = (text) => {
-    const input = document.createElement('input');
-    input.value = text;
-    document.body.appendChild(input);
-    input.select();
-    try {
-      document.execCommand('copy');
-      alert('Código copiado: ' + text);
-    } catch (err) {
-      console.error('Failed to copy text', err);
-    }
-    document.body.removeChild(input);
-  };
-
   const filteredClients = clients.filter(c => 
     c.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
     c.adminEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.clientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.companyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.id.includes(searchQuery)
   );
 
   const totalUnits = clients.reduce((acc, c) => acc + (c.units ? c.units.length : 0), 0);
-  
-  const fmtDate = (isoString) => {
-    if (!isoString) return '---';
-    return new Date(isoString).toLocaleDateString('pt-BR');
-  };
+
+  const stats = [
+    { label: 'Clientes Ativos', value: clients.length, icon: Users, color: '#3B82F6' },
+    { label: 'Total de Unidades', value: totalUnits, icon: Building2, color: '#10B981' },
+    { label: 'Status Global', value: 'Operacional', icon: Activity, color: '#6366F1' },
+    { label: 'Faturamento Estimado', value: `R$ ${(totalUnits * 15).toLocaleString()}`, icon: CreditCard, color: '#F59E0B' }
+  ];
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', display: 'flex', position: 'relative', overflow: 'hidden' }}>
-      
-      {/* Background Decor */}
-      <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(0, 229, 255, 0.1) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none', zIndex: 0 }}></div>
-      <div style={{ position: 'absolute', bottom: '-10%', left: '-5%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none', zIndex: 0 }}></div>
-
+    <div style={{ minHeight: '100vh', background: '#F8FAFC', color: '#1E293B', display: 'flex', fontFamily: 'Inter, sans-serif' }}>
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       
       {/* SIDEBAR */}
-      <aside className="glass-panel" style={{ width: '280px', margin: '24px 0 24px 24px', display: 'flex', flexDirection: 'column', borderRadius: '24px', zIndex: 10 }}>
-        <div style={{ padding: '32px 24px', borderBottom: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-          <div style={{ display: 'inline-flex', padding: '12px', background: 'rgba(0, 229, 255, 0.1)', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 0 20px rgba(0, 229, 255, 0.2)' }}>
-            <ShieldCheck size={32} color="var(--primary)" />
+      <aside style={{ width: '280px', background: '#FFF', borderRight: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh', zIndex: 50 }}>
+        <div style={{ padding: '32px 24px', borderBottom: '1px solid #F1F5F9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{ background: '#3B82F6', padding: '8px', borderRadius: '12px' }}>
+              <ShieldCheck size={24} color="#FFF" />
+            </div>
+            <h1 style={{ fontWeight: 800, fontSize: '18px', color: '#0F172A' }}>Master HQ</h1>
           </div>
-          <h2 style={{ fontWeight: 800, fontSize: '20px', letterSpacing: '-0.5px' }}>Master Admin</h2>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Controle Geral do Sistema</span>
+          <p style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>SISTEMA DE CONTROLE DIGITAL</p>
         </div>
 
-        <nav style={{ padding: '24px 12px', flex: 1 }}>
-          <SidebarBtn icon={Users} label="Clientes" active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
-          <SidebarBtn icon={Plus} label="Novo Cliente" active={activeTab === 'register'} onClick={() => setActiveTab('register')} />
-          <SidebarBtn icon={Activity} label="Logs" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
+        <nav style={{ padding: '24px 16px', flex: 1 }}>
+          <SidebarLink icon={Users} label="Gerenciar Clientes" active={activeTab === 'clients'} onClick={() => setActiveTab('clients')} />
+          <SidebarLink icon={Plus} label="Novo Registro" active={activeTab === 'register'} onClick={() => setActiveTab('register')} />
+          <SidebarLink icon={BarChart3} label="Análise de Dados" active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
+          <SidebarLink icon={Activity} label="Logs do Sistema" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
+          <SidebarLink icon={Globe} label="Rede Global" active={activeTab === 'network'} onClick={() => setActiveTab('network')} />
+          <div style={{ margin: '24px 0 12px', padding: '0 12px', fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>Configurações</div>
+          <SidebarLink icon={Settings} label="Preferências" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
+          <SidebarLink icon={Database} label="Banco de Dados" active={activeTab === 'db'} onClick={() => setActiveTab('db')} />
         </nav>
 
-        <div style={{ padding: '24px', borderTop: '1px solid var(--border-subtle)' }}>
-          <div style={{ marginBottom: '16px', textAlign: 'center' }}>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Logado como:</p>
-            <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{localStorage.getItem('cd_admin_email')}</p>
+        <div style={{ padding: '24px', borderTop: '1px solid #F1F5F9', background: '#F8FAFC' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>L</div>
+            <div style={{ overflow: 'hidden' }}>
+              <p style={{ fontSize: '13px', fontWeight: 600, margin: 0, whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>Leandro Palmeira</p>
+              <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>Administrador Master</p>
+            </div>
           </div>
-          <button onClick={() => { localStorage.clear(); navigate('/auth'); }} className="btn-secondary w-full" style={{ padding: '12px', fontSize: '14px', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' }}>
-            <LogOut size={16} /> Sair do Sistema
+          <button onClick={() => { localStorage.clear(); navigate('/auth'); }} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #FECACA', color: '#DC2626', background: '#FFF5F5', fontWeight: 600, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
+            <LogOut size={14} /> Encerrar Sessão
           </button>
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
-      <main style={{ flex: 1, padding: '24px 40px', overflowY: 'auto', zIndex: 1, position: 'relative' }}>
+      {/* CONTENT AREA */}
+      <main style={{ flex: 1, marginLeft: '280px', padding: '40px' }}>
         
-        <header className="fade-in" style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        {/* HEADER */}
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
-            <h1 style={{ fontSize: '36px', fontWeight: 800, letterSpacing: '-1px', marginBottom: '8px' }}>Painel Geral</h1>
-            <p className="text-muted" style={{ fontSize: '15px' }}>Gerenciamento avançado de clientes e propriedades.</p>
+            <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.5px' }}>
+              {activeTab === 'clients' && "Visão Geral de Clientes"}
+              {activeTab === 'register' && "Registrar Nova Placa"}
+              {activeTab === 'analytics' && "Dashboard Analítico"}
+              {activeTab === 'logs' && "Monitoramento de Logs"}
+            </h2>
+            <p style={{ color: '#64748B', fontSize: '16px', marginTop: '4px' }}>Controle total sobre a infraestrutura Campainha Digital.</p>
           </div>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <div style={{ position: 'relative' }}>
-              <Search size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input type="text" placeholder="Buscar clientes..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="input-glass" style={{ paddingLeft: '48px', width: '300px', height: '48px' }} />
-            </div>
-            <button className="btn-primary" onClick={() => setActiveTab('register')} style={{ height: '48px', padding: '0 24px' }}>
-              <Plus size={20} /> Adicionar
-            </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+             <button style={{ padding: '12px', borderRadius: '12px', background: '#FFF', border: '1px solid #E2E8F0', color: '#64748B' }}><Bell size={20}/></button>
+             <button onClick={() => setActiveTab('register')} style={{ padding: '0 24px', height: '48px', borderRadius: '12px', background: '#3B82F6', color: '#FFF', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}>
+               <Plus size={20} /> Novo Cliente
+             </button>
           </div>
         </header>
 
-        {/* STATS */}
-        <div className="fade-in delay-100" style={{ display: 'flex', gap: '24px', marginBottom: '40px' }}>
-           <StatCard title="Clientes Ativos" value={clients.length} icon={Users} color="var(--primary)" />
-           <StatCard title="Total de Unidades" value={totalUnits} icon={Building2} color="#10B981" />
-           <StatCard title="Status do Sistema" value="ONLINE" icon={Activity} color="#F59E0B" />
+        {/* STATS GRID */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '40px' }}>
+          {stats.map((s, i) => (
+            <div key={i} style={{ background: '#FFF', padding: '24px', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ background: `${s.color}15`, padding: '10px', borderRadius: '12px' }}>
+                  <s.icon size={24} color={s.color} />
+                </div>
+                <div style={{ color: '#10B981', fontSize: '12px', fontWeight: 700 }}>+12% ↑</div>
+              </div>
+              <p style={{ color: '#64748B', fontSize: '14px', fontWeight: 600, margin: 0 }}>{s.label}</p>
+              <h3 style={{ fontSize: '28px', fontWeight: 800, color: '#0F172A', margin: '4px 0 0' }}>{s.value}</h3>
+            </div>
+          ))}
         </div>
 
-        {activeTab === 'clients' && (
-          <section className="fade-in delay-200">
-            <div className="glass-panel" style={{ padding: '24px', borderRadius: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: 700 }}>Lista de Clientes</h3>
-                <button onClick={fetchClients} className="btn-secondary" style={{ padding: '8px', borderRadius: '12px' }}><RefreshCw size={18} /></button>
+        {/* MAIN VIEWS */}
+        <div style={{ background: '#FFF', borderRadius: '24px', border: '1px solid #E2E8F0', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+          
+          {activeTab === 'clients' && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+                <div style={{ position: 'relative', width: '400px' }}>
+                  <Search size={18} color="#94A3B8" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <input 
+                    type="text" 
+                    placeholder="Buscar por nome, email, empresa ou documento..." 
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    style={{ width: '100%', padding: '12px 16px 12px 48px', borderRadius: '12px', border: '1px solid #E2E8F0', background: '#F8FAFC', outline: 'none', fontSize: '14px' }}
+                  />
+                </div>
+                <button onClick={fetchClients} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: '#3B82F6', fontWeight: 700, cursor: 'pointer' }}>
+                  <RefreshCw size={16} /> Atualizar Lista
+                </button>
               </div>
-              
+
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
-                      <th style={{ padding: '16px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Cliente / Propriedade</th>
-                      <th style={{ padding: '16px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Contato</th>
-                      <th style={{ padding: '16px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Códigos de Acesso</th>
-                      <th style={{ padding: '16px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Vencimento</th>
-                      <th style={{ padding: '16px', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Ações</th>
+                    <tr style={{ textAlign: 'left', borderBottom: '2px solid #F1F5F9' }}>
+                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Informações do Cliente</th>
+                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Contato & Empresa</th>
+                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Configuração / Plano</th>
+                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Códigos Únicos</th>
+                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Pagamento</th>
+                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Carregando dados...</td></tr>
-                    ) : filteredClients.length === 0 ? (
-                      <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Nenhum cliente encontrado.</td></tr>
-                    ) : filteredClients.map(client => (
-                      <tr key={client.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                      <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: '#94A3B8' }}>Buscando base de dados...</td></tr>
+                    ) : filteredClients.map((client) => (
+                      <tr key={client.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
                         <td style={{ padding: '20px 16px' }}>
-                          <div style={{ fontWeight: 700, fontSize: '15px' }}>{client.clientName || 'Cliente sem nome'}</div>
-                          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}><Building2 size={12} style={{ display: 'inline', marginRight: '4px' }} />{client.name} ({client.type})</div>
-                          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', marginTop: '4px', fontFamily: 'monospace' }}>ID: {client.id}</div>
+                          <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '15px' }}>{client.clientName || "Nome não informado"}</div>
+                          <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>{client.clientDocument || "CPF/CNPJ pendente"}</div>
+                          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px', fontFamily: 'monospace', background: '#F1F5F9', display: 'inline-block', padding: '2px 6px', borderRadius: '4px' }}>{client.id}</div>
                         </td>
                         <td style={{ padding: '20px 16px' }}>
-                          <div style={{ fontSize: '13px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={12} color="var(--primary)" /> {client.adminEmail}</div>
-                          <div style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={12} /> {client.clientPhone || 'N/A'}</div>
+                          <div style={{ fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}><Briefcase size={14} color="#6366F1"/> {client.companyName || "N/A"}</div>
+                          <div style={{ fontSize: '13px', color: '#64748B', marginTop: '4px' }}>{client.adminEmail}</div>
+                          <div style={{ fontSize: '13px', color: '#64748B' }}>{client.clientPhone}</div>
                         </td>
                         <td style={{ padding: '20px 16px' }}>
-                          <div style={{ marginBottom: '8px' }}>
-                            <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Cód. Admin:</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ background: 'rgba(0, 229, 255, 0.1)', color: 'var(--primary)', padding: '4px 8px', borderRadius: '6px', fontWeight: 700, fontSize: '12px', letterSpacing: '1px' }}>{client.clientCode || 'N/A'}</span>
-                              <button onClick={() => copyToClipboard(client.clientCode)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><Copy size={14} /></button>
-                            </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600 }}>
+                            <Building2 size={14} color="#10B981" /> {client.name}
                           </div>
-                          {(client.type === 'condo' || client.type === 'village') && (
-                            <div>
-                              <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Cód. Porteiro:</span>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', padding: '4px 8px', borderRadius: '6px', fontWeight: 700, fontSize: '12px', letterSpacing: '1px' }}>{client.doormanCode || 'N/A'}</span>
-                                <button onClick={() => copyToClipboard(client.doormanCode)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><Copy size={14} /></button>
-                              </div>
+                          <div style={{ marginTop: '4px' }}>
+                             <span style={{ fontSize: '11px', background: '#DBEAFE', color: '#1E40AF', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>{client.type?.toUpperCase()}</span>
+                             <span style={{ fontSize: '11px', background: '#F1F5F9', color: '#475569', padding: '2px 8px', borderRadius: '100px', fontWeight: 700, marginLeft: '4px' }}>{client.plan || "PRO"}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '20px 16px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 800 }}>ADMIN:</span>
+                              <code style={{ background: '#F8FAFC', padding: '2px 6px', border: '1px solid #E2E8F0', borderRadius: '4px', fontWeight: 800, color: '#3B82F6' }}>{client.clientCode}</code>
                             </div>
-                          )}
+                            {client.doormanCode && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 800 }}>PORT:</span>
+                                <code style={{ background: '#F8FAFC', padding: '2px 6px', border: '1px solid #E2E8F0', borderRadius: '4px', fontWeight: 800, color: '#F59E0B' }}>{client.doormanCode}</code>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '20px 16px' }}>
-                          <div style={{ fontSize: '14px', fontWeight: 600 }}>{fmtDate(client.nextPaymentDate)}</div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{client.units?.length || 0} unid.</div>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>{new Date(client.nextPaymentDate).toLocaleDateString('pt-BR')}</div>
+                          <div style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>STATUS: PAGO</div>
                         </td>
                         <td style={{ padding: '20px 16px' }}>
-                          <div style={{ display: 'flex', gap: '12px' }}>
-                            <a href={client.url} target="_blank" rel="noreferrer" className="btn-secondary" style={{ padding: '8px', borderRadius: '8px' }} title="Acessar Campainha"><ExternalLink size={16} /></a>
-                            <button onClick={() => deleteClient(client.id)} className="btn-secondary" style={{ padding: '8px', borderRadius: '8px', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }} title="Excluir"><Trash2 size={16} /></button>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={() => setSelectedClient(client)} style={{ padding: '8px', borderRadius: '8px', background: '#F1F5F9', border: 'none', cursor: 'pointer' }}><ExternalLink size={16} /></button>
+                            <button onClick={() => deleteClient(client.id)} style={{ padding: '8px', borderRadius: '8px', background: '#FFF1F2', border: 'none', cursor: 'pointer', color: '#E11D48' }}><Trash2 size={16} /></button>
                           </div>
                         </td>
                       </tr>
@@ -314,156 +346,223 @@ export default function MasterAdminDashboard() {
                   </tbody>
                 </table>
               </div>
-            </div>
-          </section>
-        )}
+            </>
+          )}
 
-        {activeTab === 'register' && (
-          <section className="fade-in delay-200">
-            <div className="glass-panel" style={{ padding: '40px', borderRadius: '24px', maxWidth: '800px', margin: '0 auto' }}>
-              <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-                <div style={{ display: 'inline-flex', padding: '16px', background: 'rgba(0, 229, 255, 0.05)', borderRadius: '50%', marginBottom: '16px' }}>
-                  <User size={32} color="var(--primary)" />
-                </div>
-                <h2 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px' }}>Cadastro de Cliente</h2>
-                <p className="text-muted">Preencha os dados detalhados para gerar os acessos e códigos únicos.</p>
+          {activeTab === 'register' && (
+            <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                <h3 style={{ fontSize: '24px', fontWeight: 800 }}>Cadastro Detalhado de Empresa/Cliente</h3>
+                <p style={{ color: '#64748B' }}>Vincule a placa física aos dados contratuais do cliente.</p>
               </div>
 
-              <form onSubmit={handleRegisterClient}>
+              <form onSubmit={handleRegisterClient} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
                 
-                {/* Etapa 1: QR Code */}
-                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid var(--border-subtle)' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><ScanLine size={16}/> 1. Vincular Placa Física</h4>
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <input type="text" placeholder="Escaneie o QR Code ou cole o ID..." value={scannedId} onChange={e => setScannedId(e.target.value)} className="input-glass" style={{ flex: 1, fontFamily: 'monospace' }} required />
-                    <button type="button" onClick={startScanner} className="btn-primary" style={{ padding: '0 24px' }}>
-                      <Camera size={20} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Etapa 2: Dados Pessoais */}
-                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', marginBottom: '24px', border: '1px solid var(--border-subtle)' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><User size={16}/> 2. Dados do Cliente / Contrato</h4>
+                {/* Coluna 1: Dados Contratuais */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <SectionTitle icon={Briefcase} title="Dados da Empresa / Cliente" />
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  <div>
+                    <Label>Nome Completo ou Razão Social *</Label>
+                    <Input type="text" value={newClient.clientName} onChange={e => setNewClient({...newClient, clientName: e.target.value})} required />
+                  </div>
+
+                  <div>
+                    <Label>Nome da Empresa (Nome Fantasia)</Label>
+                    <Input type="text" value={newClient.companyName} onChange={e => setNewClient({...newClient, companyName: e.target.value})} />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Nome Completo / Razão Social *</label>
-                      <input type="text" value={newClient.clientName} onChange={e => setNewClient({...newClient, clientName: e.target.value})} className="input-glass" required />
+                      <Label>E-mail Principal *</Label>
+                      <Input type="email" value={newClient.email} onChange={e => setNewClient({...newClient, email: e.target.value})} required />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>E-mail de Acesso (Admin) *</label>
-                      <input type="email" value={newClient.email} onChange={e => setNewClient({...newClient, email: e.target.value})} className="input-glass" required />
+                      <Label>Telefone / WhatsApp *</Label>
+                      <Input type="tel" value={newClient.clientPhone} onChange={e => setNewClient({...newClient, clientPhone: e.target.value})} required />
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Telefone / WhatsApp</label>
-                      <input type="tel" value={newClient.clientPhone} onChange={e => setNewClient({...newClient, clientPhone: e.target.value})} className="input-glass" />
+                      <Label>CPF ou CNPJ</Label>
+                      <Input type="text" value={newClient.clientDocument} onChange={e => setNewClient({...newClient, clientDocument: e.target.value})} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>CPF / CNPJ</label>
-                      <input type="text" value={newClient.clientDocument} onChange={e => setNewClient({...newClient, clientDocument: e.target.value})} className="input-glass" />
+                      <Label>Plano Escolhido</Label>
+                      <select style={inputStyle} value={newClient.plan} onChange={e => setNewClient({...newClient, plan: e.target.value})}>
+                        <option value="Basic">Basic (R$ 49/mês)</option>
+                        <option value="Pro">Pro (R$ 149/mês)</option>
+                        <option value="Enterprise">Enterprise (Custom)</option>
+                      </select>
                     </div>
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Endereço Completo</label>
-                    <input type="text" value={newClient.clientAddress} onChange={e => setNewClient({...newClient, clientAddress: e.target.value})} className="input-glass" />
+                    <Label>Endereço de Faturamento</Label>
+                    <Input type="text" value={newClient.clientAddress} onChange={e => setNewClient({...newClient, clientAddress: e.target.value})} />
                   </div>
                 </div>
 
-                {/* Etapa 3: Propriedade */}
-                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', marginBottom: '32px', border: '1px solid var(--border-subtle)' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><Building2 size={16}/> 3. Configuração da Propriedade</h4>
+                {/* Coluna 2: Configuração Técnica */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <SectionTitle icon={ScanLine} title="Vincular Dispositivo (QR Code)" />
                   
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Nome do Imóvel/Condomínio *</label>
-                    <input type="text" value={newClient.name} onChange={e => setNewClient({...newClient, name: e.target.value})} className="input-glass" required />
+                  <div style={{ background: '#F8FAFC', padding: '24px', borderRadius: '16px', border: '1px dashed #CBD5E1' }}>
+                    <Label>ID da Placa Física *</Label>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <input type="text" value={scannedId} onChange={e => setScannedId(e.target.value)} style={{ ...inputStyle, flex: 1, fontFamily: 'monospace' }} required placeholder="ID da placa..." />
+                      <button type="button" onClick={startScanner} style={{ padding: '0 16px', borderRadius: '12px', background: '#0F172A', color: '#FFF', border: 'none', cursor: 'pointer' }}><Camera size={20}/></button>
+                    </div>
                   </div>
 
-                  <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Tipo de Instalação</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                    {[
-                      { val: 'house', label: 'Casa Simples' },
-                      { val: 'village', label: 'Vila de Casas' },
-                      { val: 'condo', label: 'Condomínio' }
-                    ].map(t => (
-                      <button key={t.val} type="button" onClick={() => setNewClient({ ...newClient, type: t.val })} className="btn-secondary" style={{ padding: '12px', background: newClient.type === t.val ? 'rgba(0,229,255,0.1)' : 'transparent', borderColor: newClient.type === t.val ? 'var(--primary)' : 'var(--border-subtle)', color: newClient.type === t.val ? 'var(--primary)' : 'var(--text-main)' }}>
-                        {t.label}
-                      </button>
-                    ))}
+                  <SectionTitle icon={Building2} title="Instalação Local" />
+
+                  <div>
+                    <Label>Nome do Condomínio / Local da Instalação *</Label>
+                    <Input type="text" value={newClient.name} onChange={e => setNewClient({...newClient, name: e.target.value})} required placeholder="Ex: Edifício Solar das Palmeiras" />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <Label>Tipo de Propriedade</Label>
+                      <select style={inputStyle} value={newClient.type} onChange={e => setNewClient({...newClient, type: e.target.value})}>
+                        <option value="house">Casa Simples</option>
+                        <option value="village">Vila / Village</option>
+                        <option value="condo">Condomínio Vertical</option>
+                        <option value="collective">Escritórios / Coworking</option>
+                      </select>
+                    </div>
+                    {newClient.type !== 'house' && (
+                      <div>
+                        <Label>Quantidade de Unidades</Label>
+                        <Input type="number" min="1" value={newClient.numUnits} onChange={e => setNewClient({...newClient, numUnits: parseInt(e.target.value) || 1})} />
+                      </div>
+                    )}
                   </div>
 
                   {newClient.type !== 'house' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: '1px dashed var(--border-subtle)' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Qtd. Unidades</label>
-                        <input type="number" min="1" value={newClient.numUnits} onChange={e => setNewClient({ ...newClient, numUnits: parseInt(e.target.value) || 1 })} className="input-glass" required />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>E-mail Porteiro (Opcional)</label>
-                        <input type="email" value={newClient.doormanEmail} onChange={e => setNewClient({...newClient, doormanEmail: e.target.value})} className="input-glass" placeholder="Acesso Tablet Portaria" />
-                      </div>
+                    <div>
+                      <Label>E-mail da Portaria (Acesso Tablet)</Label>
+                      <Input type="email" value={newClient.doormanEmail} onChange={e => setNewClient({...newClient, doormanEmail: e.target.value})} placeholder="porteiro@condominio.com" />
                     </div>
                   )}
-                </div>
 
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <button type="submit" disabled={isRegistering} className="btn-primary" style={{ flex: 1, padding: '16px', fontSize: '16px', opacity: isRegistering ? 0.7 : 1 }}>
-                    {isRegistering ? 'Gerando Acessos...' : 'Finalizar Cadastro e Gerar Códigos'}
-                  </button>
+                  <div style={{ marginTop: 'auto', paddingTop: '32px' }}>
+                    <button type="submit" disabled={isRegistering} style={{ width: '100%', padding: '16px', borderRadius: '12px', background: '#3B82F6', color: '#FFF', border: 'none', fontWeight: 700, fontSize: '16px', cursor: 'pointer', opacity: isRegistering ? 0.7 : 1 }}>
+                      {isRegistering ? "Processando Registro..." : "FINALIZAR E GERAR ACESSOS"}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
-          </section>
-        )}
+          )}
 
-        {/* SCANNER MODAL */}
-        {showScanner && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(10px)' }}>
-            <div className="glass-panel" style={{ maxWidth: '500px', width: '100%', position: 'relative', overflow: 'hidden', padding: 0 }}>
-              <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.5)' }}>
-                <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}><ScanLine size={18}/> Escaneamento Óptico</span>
-                <button onClick={stopScanner} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}><X size={24} /></button>
+          {activeTab === 'analytics' && (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+               <BarChart3 size={64} color="#CBD5E1" style={{ marginBottom: '24px' }} />
+               <h3 style={{ fontSize: '24px', fontWeight: 800 }}>Módulo de BI & Analytics</h3>
+               <p style={{ color: '#64748B' }}>Em desenvolvimento: visualize tráfego, chamadas atendidas e métricas de engajamento.</p>
+            </div>
+          )}
+
+          {activeTab === 'logs' && (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+               <Activity size={64} color="#CBD5E1" style={{ marginBottom: '24px' }} />
+               <h3 style={{ fontSize: '24px', fontWeight: 800 }}>Auditoria de Sistema</h3>
+               <p style={{ color: '#64748B' }}>Logs em tempo real de tentativas de acesso, erros de WebRTC e registros de novos usuários.</p>
+            </div>
+          )}
+
+        </div>
+      </main>
+
+      {/* SCANNER MODAL */}
+      {showScanner && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.9)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#FFF', padding: '24px', borderRadius: '24px', width: '90%', maxWidth: '500px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
+              <h3 style={{ margin: 0, fontWeight: 800 }}>Escaneando Placa</h3>
+              <button onClick={stopScanner} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24}/></button>
+            </div>
+            <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden', aspectRatio: '1' }}>
+              <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'absolute', inset: '40px', border: '2px solid #3B82F6', borderRadius: '24px', boxShadow: '0 0 0 1000px rgba(0,0,0,0.5)' }}></div>
+            </div>
+            <p style={{ textAlign: 'center', marginTop: '20px', color: '#64748B', fontSize: '14px' }}>Aproxime a câmera do QR Code da campainha física.</p>
+          </div>
+        </div>
+      )}
+
+      {/* CLIENT DETAIL MODAL */}
+      {selectedClient && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: '#FFF', padding: '40px', borderRadius: '32px', width: '90%', maxWidth: '800px', boxShadow: '0 20px 50px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '32px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>Dossiê do Cliente</h3>
+                <p style={{ color: '#64748B', margin: 0 }}>ID Único: {selectedClient.id}</p>
               </div>
-              <div style={{ position: 'relative', aspectRatio: '1/1' }}>
-                <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '250px', height: '250px', border: '2px solid var(--primary)', borderRadius: '24px', boxShadow: '0 0 0 1000px rgba(0,0,0,0.6)' }}>
-                  <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '2px', background: 'var(--primary)', boxShadow: '0 0 10px var(--primary)', animation: 'scan-anim 2s linear infinite' }}></div>
-                </div>
+              <button onClick={() => setSelectedClient(null)} style={{ padding: '8px', borderRadius: '12px', background: '#F1F5F9', border: 'none', cursor: 'pointer' }}><X size={20}/></button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+              <div>
+                <DetailRow label="NOME COMPLETO" value={selectedClient.clientName} />
+                <DetailRow label="EMPRESA" value={selectedClient.companyName || "Pessoa Física"} />
+                <DetailRow label="CPF / CNPJ" value={selectedClient.clientDocument || "---"} />
+                <DetailRow label="CONTATO" value={`${selectedClient.adminEmail} / ${selectedClient.clientPhone}`} />
+                <DetailRow label="ENDEREÇO" value={selectedClient.clientAddress || "---"} />
               </div>
-              <div style={{ padding: '24px', textAlign: 'center', background: 'rgba(0,0,0,0.5)' }}>
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Aponte a câmera para o QR Code para capturar a chave de segurança física.</p>
+              <div>
+                <DetailRow label="PROPRIEDADE" value={selectedClient.name} />
+                <DetailRow label="TIPO" value={selectedClient.type?.toUpperCase()} />
+                <DetailRow label="UNIDADES" value={selectedClient.units?.length || 0} />
+                <DetailRow label="PLANO" value={selectedClient.plan || "PRO"} />
+                <DetailRow label="ACESSOS" value={`ADMIN: ${selectedClient.clientCode} | PORTARIA: ${selectedClient.doormanCode || 'N/A'}`} />
               </div>
             </div>
-            <style>{`@keyframes scan-anim { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }`}</style>
+
+            <div style={{ marginTop: '40px', display: 'flex', gap: '16px' }}>
+              <button style={{ flex: 1, padding: '14px', borderRadius: '12px', background: '#3B82F6', color: '#FFF', border: 'none', fontWeight: 700, cursor: 'pointer' }}>EDITAR DADOS</button>
+              <button style={{ flex: 1, padding: '14px', borderRadius: '12px', background: '#F1F5F9', color: '#1E293B', border: 'none', fontWeight: 700, cursor: 'pointer' }}>VER HISTÓRICO DE PAGAMENTO</button>
+            </div>
           </div>
-        )}
-      </main>
+        </div>
+      )}
     </div>
   );
 }
 
-function SidebarBtn({ icon: Icon, label, active, onClick }) {
+function SidebarLink({ icon: Icon, label, active, onClick }) {
   return (
-    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '16px', background: active ? 'rgba(0, 229, 255, 0.1)' : 'transparent', color: active ? 'var(--primary)' : 'var(--text-muted)', border: 'none', borderRadius: '12px', cursor: 'pointer', transition: 'var(--transition-fast)', fontWeight: 600, fontSize: '14px', textAlign: 'left', marginBottom: '8px', borderLeft: active ? '4px solid var(--primary)' : '4px solid transparent' }}>
-      <Icon size={18} /> {label}
+    <button onClick={onClick} style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: active ? '#3B82F610' : 'transparent', color: active ? '#3B82F6' : '#64748B', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 600, fontSize: '14px', transition: 'all 0.2s', marginBottom: '4px', textAlign: 'left' }}>
+      <Icon size={18} color={active ? '#3B82F6' : '#94A3B8'} /> {label}
     </button>
   );
 }
 
-function StatCard({ title, value, icon: Icon, color }) {
+function SectionTitle({ icon: Icon, title }) {
   return (
-    <div className="glass-panel" style={{ flex: 1, padding: '24px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '20px', borderTop: `2px solid ${color}` }}>
-      <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: `rgba(255,255,255,0.05)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon size={24} color={color} />
-      </div>
-      <div>
-        <p style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</p>
-        <h3 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>{value}</h3>
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '12px', borderBottom: '1px solid #F1F5F9' }}>
+      <Icon size={18} color="#3B82F6" />
+      <span style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</span>
+    </div>
+  );
+}
+
+function Label({ children }) {
+  return <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{children}</label>;
+}
+
+const inputStyle = { width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid #E2E8F0', background: '#FFF', outline: 'none', fontSize: '14px', color: '#1E293B' };
+function Input(props) { return <input {...props} style={inputStyle} />; }
+
+function DetailRow({ label, value }) {
+  return (
+    <div style={{ marginBottom: '20px' }}>
+      <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', marginBottom: '4px' }}>{label}</div>
+      <div style={{ fontSize: '15px', fontWeight: 600, color: '#1E293B' }}>{value || "---"}</div>
     </div>
   );
 }
