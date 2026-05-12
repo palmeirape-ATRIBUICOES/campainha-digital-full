@@ -82,8 +82,11 @@ app.post('/api/doorman/login', (req, res) => {
 
 // ─── Properties Routes ───────────────────────────────────────────────────────
 app.post('/api/properties', async (req, res) => {
-  const { type, name, units, adminEmail, id: forcedId, clientName, clientPhone, clientDocument, clientAddress, doormanEmail, companyName, plan } = req.body;
-  const id = forcedId || uuidv4();
+  const { type, name, units, adminEmail, id, clientName, clientPhone, clientDocument, clientAddress, doormanEmail, companyName, plan } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ error: 'Nenhum ID de QR Code foi fornecido. O cadastro exige um escaneamento prévio.' });
+  }
 
   // Ensure ID is unique
   if (properties.some(p => p.id === id)) {
