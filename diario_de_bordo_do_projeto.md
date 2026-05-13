@@ -258,6 +258,28 @@ O login do morador pedia e-mail + código para TODOS os tipos, tornando o proces
 
 ---
 
+## 🛠️ v2.9.13 — Estabilização, Login Unificado e Painel Central (13/05/2026)
+
+### Login Unificado & Redirecionamento
+- **Refatoração do Login**: O endpoint `/api/admin/login` e a página `AuthPage.jsx` agora são o ponto de entrada único para Master Admins, Administradores de Propriedade (Clientes) e Porteiros.
+- **Detecção de Cargo**: O sistema detecta automaticamente se o usuário é Master, Cliente ou Porteiro e o redireciona instantaneamente para o dashboard correto (`/master-admin`, `/admin` ou `/portaria`).
+- **Persistência de Sessão**: Correção na gravação do `propertyId` para porteiros, garantindo que o painel carregue os dados corretos após o login.
+
+### Painel de Monitoramento Central (Portaria)
+- **Visão Multi-Imóvel**: Porteiros (especialmente em centrais de monitoramento) agora podem visualizar e pesquisar unidades em todos os condomínios que gerenciam simultaneamente.
+- **Busca Global**: Implementada busca rápida que filtra por nome do morador, número da unidade ou nome do condomínio.
+- **Real-time Centralizado**: O sistema de autorização via Socket.io foi adaptado para monitorar múltiplos canais de autorização ao mesmo tempo.
+
+### Flexibilidade & Onboarding
+- **Casa Simples Descomplicada**: Removida a obrigatoriedade de preencher o nome do condomínio para cadastros do tipo "Casa Simples". O sistema agora gera um nome padrão amigável (ex: "Residência [Nome]") se deixado em branco.
+- **Feedback de Credenciais**: O Master Admin agora recebe um alerta claro com o e-mail e o código único de acesso logo após o registro bem-sucedido de um novo cliente, facilitando o repasse das informações.
+
+### Infraestrutura & Disponibilidade
+- **GitHub Keep-Alive Action**: Criada automação via GitHub Actions (`keepalive.yml`) que realiza um "ping" no backend e frontend a cada 5 minutos. Isso impede que o Render entre em modo "sleep" (hibernação) no plano gratuito, garantindo resposta imediata da campainha.
+- **Isolamento de Dados**: Reforçada a lógica de consulta no backend para garantir que clientes vejam apenas suas propriedades, enquanto o Master Admin mantém visão total.
+
+---
+
 ## 🛠️ Próximos Passos
 - [ ] Implementação real dos gráficos no módulo de Analytics.
 - [ ] Integração Pix automatizada via API de pagamentos.

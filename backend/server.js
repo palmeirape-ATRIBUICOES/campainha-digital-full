@@ -57,19 +57,28 @@ const MASTER_ADMIN_PASSWORD = '27031981';
 
 // ─── Auth Routes ─────────────────────────────────────────────────────────────
 app.post('/api/admin/login', (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, clientCode, doormanCode } = req.body;
+  
+  // 1. Master Admin
   if (email === MASTER_ADMIN_EMAIL && password === MASTER_ADMIN_PASSWORD) {
     return res.json({ success: true, role: 'master', email });
   }
   
-  // Login for clients (property owners) - requires email and clientCode
-  const { clientCode } = req.body;
-  const prop = properties.find(p => p.adminEmail === email && p.clientCode === clientCode);
-  if (prop) {
+  // 2. Property Admin (Client)
+  const codeToUse = clientCode || password;
+  const propAdmin = properties.find(p => p.adminEmail === email && p.clientCode === codeToUse);
+  if (propAdmin) {
     return res.json({ success: true, role: 'admin', email });
   }
 
-  res.status(401).json({ error: 'Credenciais inválidas.' });
+  // 3. Doorman
+  const doorCode = doormanCode || password;
+  const propDoor = properties.find(p => p.doormanEmail === email && p.doormanCode === doorCode);
+  if (propDoor) {
+    return res.json({ success: true, role: 'doorman', email, propertyId: propDoor.id, propertyName: propDoor.name });
+  }
+
+  res.status(401).json({ error: 'Credenciais inválidas. Verifique seu e-mail e código.' });
 });
 
 // ─── Doorman Auth Route ──────────────────────────────────────────────────────
@@ -147,14 +156,15 @@ app.post('/api/properties', async (req, res) => {
 app.get('/api/properties', (req, res) => {
   const { email } = req.query;
   
-  // Master Admin can see everything
+  // Master Admin always sees everything
   if (email === MASTER_ADMIN_EMAIL) {
     return res.json(properties);
   }
 
-  // Isolamento: Se não houver email, não retorna nada ou retorna erro
-  if (!email) return res.status(400).json({ error: 'Email is required for security isolation' });
-  const filtered = properties.filter(p => p.adminEmail === email);
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+  
+  // Filter by adminEmail OR doormanEmail
+  const filtered = properties.filter(p => p.adminEmail === email || p.doormanEmail === email);
   res.json(filtered);
 });
 

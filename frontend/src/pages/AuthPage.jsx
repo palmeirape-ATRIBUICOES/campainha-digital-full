@@ -32,6 +32,11 @@ export default function AuthPage() {
         if (data.role === 'master') {
           localStorage.setItem('cd_admin_role', 'master');
           navigate('/master-admin');
+        } else if (data.role === 'doorman') {
+          localStorage.setItem('cd_admin_role', 'doorman');
+          localStorage.setItem('cd_doorman_propertyId', data.propertyId);
+          localStorage.setItem('cd_doorman_propertyName', data.propertyName);
+          navigate('/portaria');
         } else {
           localStorage.setItem('cd_admin_role', 'client');
           navigate('/admin');

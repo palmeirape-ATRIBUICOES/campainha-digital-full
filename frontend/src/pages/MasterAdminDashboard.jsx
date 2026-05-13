@@ -114,7 +114,16 @@ export default function MasterAdminDashboard() {
 
   const handleRegisterClient = async (e) => {
     e.preventDefault();
-    if (!scannedId || !newClient.email || !newClient.clientName) return;
+    
+    // Auto-generate name for houses if empty
+    const propertyName = newClient.type === 'house' && !newClient.name 
+      ? `Residência ${newClient.clientName}` 
+      : newClient.name;
+
+    if (!scannedId || !newClient.email || !newClient.clientName || (!propertyName && newClient.type !== 'house')) {
+      alert("Por favor, preencha os campos obrigatórios.");
+      return;
+    }
 
     setIsRegistering(true);
     try {
@@ -124,7 +133,7 @@ export default function MasterAdminDashboard() {
         body: JSON.stringify({
           id: scannedId,
           adminEmail: newClient.email,
-          name: newClient.name,
+          name: propertyName,
           type: newClient.type,
           clientName: newClient.clientName,
           clientPhone: newClient.clientPhone,
@@ -138,7 +147,8 @@ export default function MasterAdminDashboard() {
       });
 
       if (res.ok) {
-        alert('Cliente registrado com sucesso!');
+        const savedData = await res.json();
+        alert(`Cliente registrado com sucesso!\n\nDados de Acesso:\nE-mail: ${newClient.email}\nCódigo: ${savedData.clientCode}`);
         setScannedId('');
         setNewClient({
           name: '', type: 'house', numUnits: 1, clientName: '', email: '', clientPhone: '', clientDocument: '', clientAddress: '', doormanEmail: '', companyName: '', plan: 'Basic'
@@ -424,8 +434,8 @@ export default function MasterAdminDashboard() {
                   <SectionTitle icon={Building2} title="Instalação Local" />
 
                   <div>
-                    <Label>Nome do Condomínio / Local da Instalação *</Label>
-                    <Input type="text" value={newClient.name} onChange={e => setNewClient({...newClient, name: e.target.value})} required placeholder="Ex: Edifício Solar das Palmeiras" />
+                    <Label>Nome do Condomínio / Local da Instalação {newClient.type !== 'house' && '*'}</Label>
+                    <Input type="text" value={newClient.name} onChange={e => setNewClient({...newClient, name: e.target.value})} required={newClient.type !== 'house'} placeholder={newClient.type === 'house' ? "Ex: Minha Casa (Opcional)" : "Ex: Edifício Solar das Palmeiras"} />
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
