@@ -148,7 +148,8 @@ export default function MasterAdminDashboard() {
 
       if (res.ok) {
         const savedData = await res.json();
-        alert(`Cliente registrado com sucesso!\n\nDados de Acesso:\nE-mail: ${newClient.email}\nCódigo: ${savedData.clientCode}`);
+        const unitsList = savedData.units.map(u => `${u.name}: ${u.accessCode}`).join('\n');
+        alert(`Cliente registrado com sucesso!\n\nACESSO ADMIN (Painel):\nE-mail: ${newClient.email}\nCódigo: ${savedData.clientCode}\n\nACESSO MORADORES (App):\n${unitsList}`);
         setScannedId('');
         setNewClient({
           name: '', type: 'house', numUnits: 1, clientName: '', email: '', clientPhone: '', clientDocument: '', clientAddress: '', doormanEmail: '', companyName: '', plan: 'Basic'
@@ -725,6 +726,18 @@ export default function MasterAdminDashboard() {
                 <DetailRow label="ACESSOS" value={`ADMIN: ${selectedClient.clientCode} | PORTARIA: ${selectedClient.doormanCode || 'N/A'}`} />
                 <DetailRow label="ID DA PLACA" value={selectedClient.id} />
                 <DetailRow label="URL DE ACESSO" value={`${window.location.origin}/chamada/${selectedClient.id}`} />
+                
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', marginBottom: '8px' }}>CÓDIGOS DE ACESSO (MORADORES)</div>
+                  <div style={{ maxHeight: '120px', overflowY: 'auto', background: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    {selectedClient.units?.map(u => (
+                      <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px', paddingBottom: '4px', borderBottom: '1px solid #F1F5F9' }}>
+                        <span style={{ fontWeight: 600 }}>{u.name}</span>
+                        <code style={{ color: '#10B981', fontWeight: 800 }}>{u.accessCode}</code>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 

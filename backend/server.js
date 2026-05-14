@@ -135,7 +135,7 @@ app.post('/api/properties', async (req, res) => {
     doormanEmail: doormanEmail || null,
     units: isCollective
       ? (units && units.length > 0 ? units.map(u => ({ id: uuidv4(), name: u.name, accessCode: generateAccessCode() })) : [])
-      : [{ id: uuidv4(), name: 'Principal', accessCode: generateAccessCode() }],
+      : [{ id: uuidv4(), name: 'Principal', accessCode: clientCode }], // Use clientCode as accessCode for single units
     qrCodeUrl: qrCodeDataUrl,
     url,
     adminEmail: adminEmail || null,
