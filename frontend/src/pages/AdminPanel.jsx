@@ -152,6 +152,7 @@ export default function AdminPanel() {
     const finalId = idFromScanner || scannedId;
     const units = propertyType !== 'individual' ? unitsList.filter(u => u.name.trim()) : [];
     const adminEmail = localStorage.getItem('cd_admin_email');
+    const adminPassword = localStorage.getItem('cd_admin_password');
     
     try {
       const res = await fetch(`${API}/api/properties`, {
@@ -161,10 +162,13 @@ export default function AdminPanel() {
           type: propertyType === 'individual' ? 'individual' : 'collective', 
           name: propertyName, 
           units,
-          adminEmail 
+          adminEmail,
+          adminPassword
         })
       });
       if (res.ok) { 
+        // Clear password from local storage after using it
+        localStorage.removeItem('cd_admin_password');
         setOnboardingStep(null); 
         fetchProperties(); 
       } else {

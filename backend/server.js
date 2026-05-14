@@ -63,20 +63,25 @@ const MASTER_ADMIN_PASSWORD = '27031981';
 app.post('/api/admin/login', (req, res) => {
   const { email, password, clientCode, doormanCode } = req.body;
   
+  const rawEmail = (email || '').trim().toLowerCase();
+  const rawPassword = (password || '').trim();
+  
   // 1. Master Admin
-  if (email === MASTER_ADMIN_EMAIL && password === MASTER_ADMIN_PASSWORD) {
-    return res.json({ success: true, role: 'master', email });
+  if (rawEmail === MASTER_ADMIN_EMAIL.toLowerCase() && rawPassword === MASTER_ADMIN_PASSWORD) {
+    return res.json({ success: true, role: 'master', email: MASTER_ADMIN_EMAIL });
   }
   
-  // 2. Property Admin (Client) - aceita clientCode OU password como código
+  // 2. Property Admin (Client) - aceita clientCode OU password como código OU adminPassword
   const codeToUse = (clientCode || password || '').trim().toUpperCase();
   const propAdmin = properties.find(p =>
-    p.adminEmail === email &&
-    (p.clientCode === codeToUse || p.clientCode === (clientCode || password || '').trim())
+    (p.adminEmail || '').toLowerCase() === rawEmail &&
+    (p.clientCode === codeToUse || 
+     p.clientCode === rawPassword || 
+     (p.adminPassword && p.adminPassword === rawPassword))
   );
   if (propAdmin) {
     return res.json({
-      success: true, role: 'admin', email,
+      success: true, role: 'admin', email: propAdmin.adminEmail,
       propertyId: propAdmin.id, propertyName: propAdmin.name,
       clientCode: propAdmin.clientCode
     });
@@ -85,17 +90,17 @@ app.post('/api/admin/login', (req, res) => {
   // 3. Doorman - aceita doormanCode OU password
   const doorCode = (doormanCode || password || '').trim().toUpperCase();
   const propDoor = properties.find(p =>
-    p.doormanEmail === email &&
-    (p.doormanCode === doorCode || p.doormanCode === (doormanCode || password || '').trim())
+    (p.doormanEmail || '').toLowerCase() === rawEmail &&
+    (p.doormanCode === doorCode || p.doormanCode === rawPassword)
   );
   if (propDoor) {
     return res.json({
-      success: true, role: 'doorman', email,
+      success: true, role: 'doorman', email: propDoor.doormanEmail,
       propertyId: propDoor.id, propertyName: propDoor.name
     });
   }
 
-  res.status(401).json({ error: 'Credenciais inválidas. Verifique seu e-mail e código de acesso.' });
+  res.status(401).json({ error: 'Credenciais inválidas. Verifique seu e-mail e senha/código.' });
 });
 
 // ─── Doorman Auth Route ──────────────────────────────────────────────────────
@@ -108,7 +113,7 @@ app.post('/api/doorman/login', (req, res) => {
 
 // ─── Properties Routes ───────────────────────────────────────────────────────
 app.post('/api/properties', async (req, res) => {
-  const { type, name, units, adminEmail, id, clientName, clientPhone, clientDocument, clientAddress, doormanEmail, companyName, plan } = req.body;
+  const { type, name, units, adminEmail, adminPassword, id, clientName, clientPhone, clientDocument, clientAddress, doormanEmail, companyName, plan } = req.body;
 
   if (!id) {
     return res.status(400).json({ error: 'Nenhum ID de QR Code foi fornecido. O cadastro exige um escaneamento prévio.' });
@@ -163,11 +168,16 @@ app.post('/api/properties', async (req, res) => {
     qrCodeUrl: qrCodeDataUrl,
     url,
     adminEmail: adminEmail || null,
+    adminPassword: adminPassword || null,
     createdAt: existingIndex > -1 ? properties[existingIndex].createdAt : new Date().toISOString(),
     nextPaymentDate: existingIndex > -1 ? properties[existingIndex].nextPaymentDate : nextPaymentDate.toISOString()
   };
 
   if (existingIndex > -1) {
+    // Preserve existing password if not updated
+    if (properties[existingIndex].adminPassword && !adminPassword) {
+      property.adminPassword = properties[existingIndex].adminPassword;
+    }
     properties[existingIndex] = property;
   } else {
     properties.push(property);

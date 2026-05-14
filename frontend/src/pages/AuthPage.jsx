@@ -64,6 +64,7 @@ export default function AuthPage() {
     e.preventDefault();
     if (!name || !email || !password) return;
     localStorage.setItem('cd_admin_email', email);
+    localStorage.setItem('cd_admin_password', password);
     setStep(2);
   };
 
