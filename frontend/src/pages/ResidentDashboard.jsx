@@ -334,19 +334,29 @@ export default function ResidentDashboard() {
         onClick={() => setShowMenu(false)}
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 1000, opacity: showMenu ? 1 : 0, visibility: showMenu ? 'visible' : 'hidden', transition: 'all 0.3s' }} 
       />
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '280px', background: '#FFF', zIndex: 1001, transform: showMenu ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)', padding: '32px 24px', display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 32px rgba(0,0,0,0.1)' }}>
+      <div style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '280px', background: '#FFF', zIndex: 1001, transform: showMenu ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)', padding: '32px 24px', display: 'flex', flexDirection: 'column', boxShadow: '8px 0 32px rgba(0,0,0,0.1)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <Logo size={32} />
           <button onClick={() => setShowMenu(false)} style={{ background: '#F1F5F9', border: 'none', padding: '8px', borderRadius: '12px', cursor: 'pointer' }}><Settings size={20} color="#64748B" /></button>
         </div>
         
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', marginBottom: '8px' }}>CONTA & SEGURANÇA</p>
+          <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', marginBottom: '8px' }}>FUNCIONALIDADES</p>
+          
+          <button onClick={() => { setTab('intercom'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'intercom' ? '#F0F9FF' : 'transparent', color: tab === 'intercom' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
+            <Building2 size={20} color={tab === 'intercom' ? '#0369A1' : '#64748B'} /> Interfone Digital
+          </button>
+
+          <button onClick={() => { setTab('services'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'services' ? '#F0F9FF' : 'transparent', color: tab === 'services' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
+            <ShoppingBag size={20} color={tab === 'services' ? '#0369A1' : '#64748B'} /> Parceiros da Região
+          </button>
+
+          <div style={{ height: '1px', background: '#F1F5F9', margin: '8px 0' }} />
+          
+          <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', marginBottom: '8px' }}>CONTA</p>
+          
           <button onClick={() => { setTab('settings'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'settings' ? '#F8FAFC' : 'transparent', color: '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
             <Settings size={20} color="#64748B" /> Configurações
-          </button>
-          <button onClick={() => { alert('Central de Ajuda em breve...'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: 'transparent', color: '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
-            <ShieldCheck size={20} color="#64748B" /> Suporte & Segurança
           </button>
         </div>
 
@@ -375,9 +385,13 @@ export default function ResidentDashboard() {
         borderBottom: '1px solid #F1F5F9'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
-            <Logo size={24} showText={false} />
-          </div>
+          <button onClick={() => setShowMenu(true)} style={{ background: '#0F172A', color: '#FFF', border: 'none', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '20px' }}>
+              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+              <div style={{ height: '2px', width: '60%', background: '#FFF', borderRadius: '2px' }} />
+            </div>
+          </button>
           <div>
             <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#0F172A' }}>{unitName}</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -394,13 +408,6 @@ export default function ResidentDashboard() {
               <Download size={14} /> Instalar
             </button>
           )}
-          <button onClick={() => setShowMenu(true)} style={{ background: '#0F172A', color: '#FFF', border: 'none', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '20px' }}>
-              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
-              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
-              <div style={{ height: '2px', width: '60%', background: '#FFF', borderRadius: '2px' }} />
-            </div>
-          </button>
         </div>
       </div>
 
@@ -439,12 +446,6 @@ export default function ResidentDashboard() {
 
               {/* Mensagens do condomínio - colapssável */}
               <MessagesPanel messages={broadcastMessages} unreadCount={unreadCount} onClear={markMessagesRead}/>
-
-              {/* Interfone Digital */}
-              {propertyId && <IntercomPanel propertyId={propertyId} unitId={id} socketRef={socketRef} unitName={unitName}/>}
-
-              {/* Serviços & Parceiros */}
-              <ServicesPanel/>
 
             </div>
           )}
@@ -620,6 +621,20 @@ export default function ResidentDashboard() {
           )}
         </div>
       )}
+      
+      {tab === 'intercom' && (
+        <div style={{ padding: '20px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px' }}>Interfone Digital</h2>
+          {propertyId && <IntercomPanel propertyId={propertyId} unitId={id} socketRef={socketRef} unitName={unitName}/>}
+        </div>
+      )}
+
+      {tab === 'services' && (
+        <div style={{ padding: '20px' }}>
+          <ServicesPanel/>
+        </div>
+      )}
+
       {tab === 'history' && <HistoryPanel unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
       {tab === 'settings' && <SettingsPanel unitName={unitName} setUnitName={setUnitName} onSave={saveSettings} unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
 
