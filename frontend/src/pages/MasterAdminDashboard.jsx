@@ -385,8 +385,17 @@ export default function MasterAdminDashboard() {
                               const res = await fetch(`${API}/api/properties/${client.id}/extend-trial`, { method: 'POST' });
                               if (res.ok) { alert('Teste liberado com sucesso!'); fetchClients(); }
                             } catch {}
-                          }} style={{ marginTop: '8px', background: 'none', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>
+                          }} style={{ marginTop: '8px', background: 'none', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', display: 'block' }}>
                             Liberar +15 Dias Teste
+                          </button>
+                          <button onClick={async () => {
+                            if (!window.confirm('Confirmar recebimento de pagamento e liberar 12 meses de acesso?')) return;
+                            try {
+                              const res = await fetch(`${API}/api/properties/${client.id}/activate-annual`, { method: 'POST' });
+                              if (res.ok) { alert('Acesso anual liberado!'); fetchClients(); }
+                            } catch {}
+                          }} style={{ marginTop: '4px', background: '#10B981', color: '#FFF', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>
+                            Confirmar Pagamento (12 Meses)
                           </button>
                         </td>
                         <td style={{ padding: '20px 16px' }}>

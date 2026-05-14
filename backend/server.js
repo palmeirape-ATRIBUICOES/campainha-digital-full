@@ -270,6 +270,24 @@ app.post('/api/properties/:id/extend-trial', (req, res) => {
   res.json({ success: true, nextPaymentDate: prop.nextPaymentDate });
 });
 
+// Ativar acesso anual (12 meses) após pagamento
+app.post('/api/properties/:id/activate-annual', (req, res) => {
+  const prop = properties.find(p => p.id === req.params.id);
+  if (!prop) return res.status(404).json({ error: 'Property not found' });
+
+  const currentPaymentDate = new Date(prop.nextPaymentDate);
+  const now = new Date();
+  
+  // Se já venceu, começa a contar de hoje. Se não venceu, adiciona ao final.
+  const baseDate = currentPaymentDate > now ? currentPaymentDate : now;
+  baseDate.setFullYear(baseDate.getFullYear() + 1);
+  
+  prop.nextPaymentDate = baseDate.toISOString();
+  prop.plan = 'Anual';
+  saveDb();
+  res.json({ success: true, nextPaymentDate: prop.nextPaymentDate });
+});
+
 // ─── Unit Management Routes (Admin Panel do Condomínio) ───────────────────────
 
 // Adicionar nova unidade a uma propriedade
