@@ -117,14 +117,14 @@ export default function IntercomPanel({ propertyId, unitId, socketRef, unitName 
             <Volume2 size={15}/> {called === 'doorman' ? 'Chamando Portaria...' : 'Interfone com Porteiro'}
           </button>
           {/* Mensagem de texto para portaria */}
-          <DoormanMessage socketRef={socketRef} propertyId={propertyId} unitName={unitName}/>
+          <DoormanMessage socketRef={socketRef} propertyId={propertyId} unitName={unitName} unitId={unitId}/>
         </div>
       </div>
     </div>
   );
 }
 
-function DoormanMessage({ socketRef, propertyId, unitName }) {
+function DoormanMessage({ socketRef, propertyId, unitName, unitId }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [sent, setSent] = useState(false);

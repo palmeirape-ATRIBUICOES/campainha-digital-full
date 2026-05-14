@@ -391,7 +391,11 @@ export default function AdminPanel() {
           { key: 'people',     label: '👥 Pessoas' },
           { key: 'broadcast',  label: '📢 Mensagens' },
           { key: 'history',    label: '📋 Histórico' }
-        ].map(tab => (
+        ].filter(tab => {
+          const isIndividual = properties.some(p => p.type === 'individual');
+          if (isIndividual && ['units', 'people', 'broadcast'].includes(tab.key)) return false;
+          return true;
+        }).map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ padding: '14px 16px', background: 'none', border: 'none', borderBottom: activeTab === tab.key ? '2px solid var(--primary)' : '2px solid transparent', color: activeTab === tab.key ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
             {tab.label}
           </button>
@@ -408,12 +412,14 @@ export default function AdminPanel() {
                 <h2 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px' }}>Minhas Propriedades</h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Gerencie placas e unidades</p>
               </div>
-              <button className="btn-primary" onClick={() => {
-                if (properties.length >= 1) { setShowPaywall(true); }
-                else { setOnboardingStep('scan'); }
-              }} style={{ padding: '12px 24px' }}>
-                <Plus size={20} /> Nova Placa
-              </button>
+              {!properties.some(p => p.type === 'individual') && (
+                <button className="btn-primary" onClick={() => {
+                  if (properties.length >= 1) { setShowPaywall(true); }
+                  else { setOnboardingStep('scan'); }
+                }} style={{ padding: '12px 24px' }}>
+                  <Plus size={20} /> Nova Placa
+                </button>
+              )}
             </div>
 
             {loading ? (
@@ -429,7 +435,9 @@ export default function AdminPanel() {
                           {p.type === 'individual' ? 'Casa Única' : `${p.units.length} unidades`}
                         </span>
                       </div>
-                      <button onClick={() => deleteProperty(p.id)} style={{ background: 'rgba(239,68,68,0.1)', border: 'none', color: '#EF4444', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                      {p.type !== 'individual' && (
+                        <button onClick={() => deleteProperty(p.id)} style={{ background: 'rgba(239,68,68,0.1)', border: 'none', color: '#EF4444', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                      )}
                     </div>
 
                     <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '16px', display: 'flex', justifyContent: 'center', marginBottom: '20px', border: '1px solid var(--border-subtle)' }}>
