@@ -84,7 +84,16 @@ export default function AdminPanel() {
       // Auto-seleciona propriedade salva no login ou a primeira disponível
       const savedPropertyId = localStorage.getItem('cd_admin_propertyId');
       if (data.length === 0) {
-        setOnboardingStep('type');
+        const savedType = localStorage.getItem('cd_property_type');
+        if (savedType) {
+          const mappedType = savedType === 'house' ? 'individual' : savedType;
+          setPropertyType(mappedType);
+          setPropertyName(mappedType === 'individual' ? 'Minha Casa' : '');
+          setUnitsList([{ name: '' }]);
+          setOnboardingStep(mappedType === 'individual' ? 'scan' : 'config');
+        } else {
+          setOnboardingStep('type');
+        }
       } else {
         const toSelect = savedPropertyId && data.find(p => p.id === savedPropertyId)
           ? savedPropertyId
@@ -141,7 +150,7 @@ export default function AdminPanel() {
     setPropertyType(type);
     setPropertyName(type === 'individual' ? 'Minha Casa' : '');
     setUnitsList([{ name: '' }]);
-    setOnboardingStep('config');
+    setOnboardingStep(type === 'individual' ? 'scan' : 'config');
   };
 
   const handleUnitChange = (i, v) => { const u = [...unitsList]; u[i].name = v; setUnitsList(u); };
