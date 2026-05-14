@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound } from 'lucide-react';
+import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Search, User } from 'lucide-react';
 import { HistoryPanel, SettingsPanel, DEFAULT_CATEGORIES } from './ResidentPanels';
 import Logo from '../components/Logo';
 
@@ -80,6 +80,9 @@ export default function ResidentDashboard() {
   });
   const [activeMsgCat, setActiveMsgCat] = useState('general');
   const [sentMsg, setSentMsg] = useState('');
+  const [neighborSearch, setNeighborSearch] = useState('');
+  const [neighbors, setNeighbors] = useState([]);
+  const [propertyId, setPropertyId] = useState(() => localStorage.getItem('residentPropertyId'));
 
   const audioRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -97,6 +100,19 @@ export default function ResidentDashboard() {
     const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 20 });
     socketRef.current = s;
     s.emit('register_resident', { unitId: id, propertyId: savedPropId });
+
+    const fetchNeighbors = async () => {
+      if (!savedPropId) return;
+      try {
+        const res = await fetch(`${API}/api/properties/${savedPropId}/units`);
+        const data = await res.json();
+        // Filter out self
+        setNeighbors(data.filter(u => u.id !== id));
+      } catch (err) {
+        console.error('Failed to fetch neighbors', err);
+      }
+    };
+    fetchNeighbors();
 
 
     s.on('incoming_call', (data) => {
@@ -128,6 +144,18 @@ export default function ResidentDashboard() {
   const stopAll = () => {
     if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t => t.stop()); localStreamRef.current = null; }
     if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
+  };
+
+  const handleIntercomCall = (neighbor) => {
+    if (!socketRef.current || !propertyId) return;
+    setStatus('active'); // Local state to indicate we are calling
+    socketRef.current.emit('initiate_call', {
+      unitId: neighbor.id,
+      propertyId: propertyId,
+      callerName: unitName,
+      photoBase64: null
+    });
+    setVisitorSocketId(null); // We are the "visitor" in this case
   };
 
   const handleOffer = useCallback(async (senderSocketId, offer) => {
@@ -165,9 +193,13 @@ export default function ResidentDashboard() {
   };
 
   const handleOpenGate = () => {
-    const propId = localStorage.getItem('residentPropertyId');
+    const propId = call?.propertyId || localStorage.getItem('residentPropertyId');
     if (socketRef.current && call) {
-      socketRef.current.emit('authorize_entry', { unitId: id, propertyId: propId, visitorId: call.visitId });
+      socketRef.current.emit('authorize_entry', { 
+        unitId: id, 
+        propertyId: propId, 
+        visitorId: visitorSocketId || call.visitorSocketId 
+      });
       sendQuickMsg("Portão Aberto! Pode entrar.");
       setTimeout(() => {
         handleEnd();
@@ -299,6 +331,39 @@ export default function ResidentDashboard() {
               <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px', color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '8px 16px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981' }} />Conectado
               </div>
+
+              {/* Intercom Search */}
+              <div style={{ width: '100%', maxWidth: '300px', marginTop: '32px', textAlign: 'left' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase' }}>Interfone (Vizinhos)</h4>
+                <div style={{ position: 'relative', marginBottom: '12px' }}>
+                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input 
+                    type="text" 
+                    placeholder="Buscar casa, apto ou bloco..." 
+                    value={neighborSearch}
+                    onChange={e => setNeighborSearch(e.target.value)}
+                    style={{ width: '100%', padding: '12px 12px 12px 40px', borderRadius: '12px', border: '1px solid var(--border-subtle)', background: '#FFF', fontSize: '14px', outline: 'none' }}
+                  />
+                </div>
+                <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {neighbors
+                    .filter(n => n.name.toLowerCase().includes(neighborSearch.toLowerCase()))
+                    .map(neighbor => (
+                      <button 
+                        key={neighbor.id}
+                        onClick={() => handleIntercomCall(neighbor)}
+                        style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-subtle)', background: '#FFF', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', textAlign: 'left' }}
+                      >
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(59,130,246,0.1)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <User size={16} />
+                        </div>
+                        <span style={{ fontWeight: 600, fontSize: '14px' }}>{neighbor.name}</span>
+                        <Phone size={14} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
+                      </button>
+                    ))
+                  }
+                </div>
+              </div>
             </div>
           )}
 
@@ -315,8 +380,13 @@ export default function ResidentDashboard() {
                 {call.photo ? <img src={call.photo} alt="Visitante" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}><Bell size={48} style={{ opacity: 0.1 }} /></div>}
                 <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(255,255,255,0.9)', color: '#0F172A', padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, backdropFilter: 'blur(8px)', border: '1px solid var(--border-subtle)' }}>
-                  📷 Visitante na porta
+                  📷 {call.callerName || 'Visitante'} na porta
                 </div>
+              </div>
+
+              {/* Caller Name highlight */}
+              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: 800 }}>{call.callerName === 'Visitante' ? 'Chamada do Portão' : `Interfone: ${call.callerName}`}</h3>
               </div>
 
               {/* Mensagens rápidas */}
@@ -434,7 +504,7 @@ export default function ResidentDashboard() {
               </div>
 
               <button onClick={handleOpenGate} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '16px', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                <KeyRound size={24} /> ABRIR PORTÃO
+                <KeyRound size={24} /> LIBERAR ENTRADA
               </button>
             </div>
           )}

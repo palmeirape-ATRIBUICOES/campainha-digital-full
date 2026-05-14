@@ -174,6 +174,13 @@ app.get('/api/properties/:id', (req, res) => {
   res.json(prop);
 });
 
+app.get('/api/properties/:id/units', (req, res) => {
+  const prop = properties.find(p => p.id === req.params.id);
+  if (!prop) return res.status(404).json({ error: 'Property not found' });
+  // Return just the unit list with names and IDs
+  res.json(prop.units.map(u => ({ id: u.id, name: u.name })));
+});
+
 app.delete('/api/properties/:id', (req, res) => {
   const { adminEmail } = req.query;
   const prop = properties.find(p => p.id === req.params.id);
@@ -326,15 +333,16 @@ io.on('connection', (socket) => {
     console.log(`[WS] Morador ${socket.id} → unit_${unitId}`);
   });
 
-  socket.on('initiate_call', ({ unitId, propertyId, photoBase64 }) => {
-    console.log(`[WS] Chamada para unit_${unitId} na prop_${propertyId} de ${socket.id}`);
+  socket.on('initiate_call', ({ unitId, propertyId, photoBase64, callerName }) => {
+    console.log(`[WS] Chamada para unit_${unitId} na prop_${propertyId} de ${socket.id} (${callerName || 'visitante'})`);
 
     const visit = {
       id: uuidv4(),
       unitId,
-      propertyId, // Isolamento vinculado à propriedade
+      propertyId,
       visitorSocketId: socket.id,
       photo: photoBase64 || null,
+      callerName: callerName || 'Visitante',
       timestamp: new Date().toISOString()
     };
     visitors.push(visit);
@@ -344,6 +352,7 @@ io.on('connection', (socket) => {
     io.to(`unit_${unitId}`).emit('incoming_call', {
       visitorSocketId: socket.id,
       photo: photoBase64,
+      callerName: callerName || 'Visitante',
       timestamp: visit.timestamp,
       visitId: visit.id,
       propertyId
