@@ -231,6 +231,45 @@ app.delete('/api/properties/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// Editar dados do cliente/propriedade (Master Admin ou Admin)
+app.put('/api/properties/:id', (req, res) => {
+  const { adminEmail, clientName, clientPhone, clientDocument, clientAddress, companyName, plan, name } = req.body;
+  const prop = properties.find(p => p.id === req.params.id);
+  if (!prop) return res.status(404).json({ error: 'Property not found' });
+
+  if (adminEmail !== MASTER_ADMIN_EMAIL && prop.adminEmail !== adminEmail) {
+    return res.status(403).json({ error: 'Unauthorized to edit this property' });
+  }
+
+  if (clientName !== undefined) prop.clientName = clientName;
+  if (clientPhone !== undefined) prop.clientPhone = clientPhone;
+  if (clientDocument !== undefined) prop.clientDocument = clientDocument;
+  if (clientAddress !== undefined) prop.clientAddress = clientAddress;
+  if (companyName !== undefined) prop.companyName = companyName;
+  if (plan !== undefined) prop.plan = plan;
+  if (name !== undefined) prop.name = name;
+
+  saveDb();
+  res.json(prop);
+});
+
+// Liberar mais 15 dias de teste
+app.post('/api/properties/:id/extend-trial', (req, res) => {
+  const prop = properties.find(p => p.id === req.params.id);
+  if (!prop) return res.status(404).json({ error: 'Property not found' });
+
+  const currentPaymentDate = new Date(prop.nextPaymentDate);
+  const now = new Date();
+  
+  // Se já venceu, começa a contar de hoje. Se não venceu, adiciona ao final.
+  const baseDate = currentPaymentDate > now ? currentPaymentDate : now;
+  baseDate.setDate(baseDate.getDate() + 15);
+  
+  prop.nextPaymentDate = baseDate.toISOString();
+  saveDb();
+  res.json({ success: true, nextPaymentDate: prop.nextPaymentDate });
+});
+
 // ─── Unit Management Routes (Admin Panel do Condomínio) ───────────────────────
 
 // Adicionar nova unidade a uma propriedade

@@ -19,6 +19,8 @@ export default function MasterAdminDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({});
 
   const [newClient, setNewClient] = useState({
     name: '', // Property Name
@@ -167,6 +169,23 @@ export default function MasterAdminDashboard() {
     }
   };
 
+  const handleSaveEdit = async () => {
+    try {
+      const email = localStorage.getItem('cd_admin_email');
+      const res = await fetch(`${API}/api/properties/${selectedClient.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...editForm, adminEmail: email })
+      });
+      if (res.ok) {
+        alert('Dados atualizados com sucesso!');
+        setIsEditing(false);
+        setSelectedClient(null);
+        fetchClients();
+      }
+    } catch (err) { console.error(err); }
+  };
+
   const deleteClient = async (id) => {
     if (!window.confirm('Excluir este cliente permanentemente?')) return;
     const email = localStorage.getItem('cd_admin_email');
@@ -303,8 +322,8 @@ export default function MasterAdminDashboard() {
                       <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Informações do Cliente</th>
                       <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Contato & Empresa</th>
                       <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Configuração / Plano</th>
-                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Códigos Únicos</th>
-                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Pagamento</th>
+                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>QR Code & Códigos</th>
+                      <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Status / Pagamento</th>
                       <th style={{ padding: '16px', color: '#64748B', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>Ações</th>
                     </tr>
                   </thead>
@@ -334,6 +353,9 @@ export default function MasterAdminDashboard() {
                         </td>
                         <td style={{ padding: '20px 16px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <button onClick={() => setSelectedClient(client)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF', border: '1px solid #E2E8F0', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>
+                              <QrCode size={14} color="#3B82F6" /> Ver QR Code
+                            </button>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F8FAFC', padding: '6px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontSize: '9px', color: '#94A3B8', fontWeight: 800 }}>ADMIN</div>
@@ -346,30 +368,31 @@ export default function MasterAdminDashboard() {
                                 <Copy size={14} />
                               </button>
                             </div>
-                            {client.doormanCode && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#F8FAFC', padding: '6px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ fontSize: '9px', color: '#94A3B8', fontWeight: 800 }}>PORTARIA</div>
-                                  <code style={{ fontWeight: 800, color: '#F59E0B', fontSize: '13px' }}>{client.doormanCode}</code>
-                                </div>
-                                <button 
-                                  onClick={() => { navigator.clipboard.writeText(client.doormanCode); alert('Código Portaria copiado!'); }}
-                                  style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', display: 'flex' }}
-                                >
-                                  <Copy size={14} />
-                                </button>
-                              </div>
-                            )}
                           </div>
                         </td>
                         <td style={{ padding: '20px 16px' }}>
                           <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>{new Date(client.nextPaymentDate).toLocaleDateString('pt-BR')}</div>
-                          <div style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>STATUS: PAGO</div>
+                          {new Date(client.nextPaymentDate) > new Date() ? (
+                            <div style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Clock size={12} /> Faltam {Math.ceil((new Date(client.nextPaymentDate) - new Date()) / (1000 * 60 * 60 * 24))} dias
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '11px', color: '#EF4444', fontWeight: 700 }}>STATUS: VENCIDO</div>
+                          )}
+                          <button onClick={async () => {
+                            if (!window.confirm('Liberar mais 15 dias de teste para este cliente?')) return;
+                            try {
+                              const res = await fetch(`${API}/api/properties/${client.id}/extend-trial`, { method: 'POST' });
+                              if (res.ok) { alert('Teste liberado com sucesso!'); fetchClients(); }
+                            } catch {}
+                          }} style={{ marginTop: '8px', background: 'none', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>
+                            Liberar +15 Dias Teste
+                          </button>
                         </td>
                         <td style={{ padding: '20px 16px' }}>
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={() => setSelectedClient(client)} style={{ padding: '8px', borderRadius: '8px', background: '#F1F5F9', border: 'none', cursor: 'pointer' }}><ExternalLink size={16} /></button>
-                            <button onClick={() => deleteClient(client.id)} style={{ padding: '8px', borderRadius: '8px', background: '#FFF1F2', border: 'none', cursor: 'pointer', color: '#E11D48' }}><Trash2 size={16} /></button>
+                            <button onClick={() => setSelectedClient(client)} style={{ padding: '8px', borderRadius: '8px', background: '#F1F5F9', border: 'none', cursor: 'pointer' }} title="Detalhes/Editar"><ExternalLink size={16} /></button>
+                            <button onClick={() => deleteClient(client.id)} style={{ padding: '8px', borderRadius: '8px', background: '#FFF1F2', border: 'none', cursor: 'pointer', color: '#E11D48' }} title="Excluir"><Trash2 size={16} /></button>
                           </div>
                         </td>
                       </tr>
@@ -709,26 +732,36 @@ export default function MasterAdminDashboard() {
                 <h3 style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>Dossiê do Cliente</h3>
                 <p style={{ color: '#64748B', margin: 0 }}>ID Único: {selectedClient.id}</p>
               </div>
-              <button onClick={() => setSelectedClient(null)} style={{ padding: '8px', borderRadius: '12px', background: '#F1F5F9', border: 'none', cursor: 'pointer' }}><X size={20}/></button>
+              <button onClick={() => { setSelectedClient(null); setIsEditing(false); }} style={{ padding: '8px', borderRadius: '12px', background: '#F1F5F9', border: 'none', cursor: 'pointer' }}><X size={20}/></button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
               <div>
-                <DetailRow label="NOME COMPLETO" value={selectedClient.clientName} />
-                <DetailRow label="EMPRESA" value={selectedClient.companyName || "Pessoa Física"} />
-                <DetailRow label="CPF / CNPJ" value={selectedClient.clientDocument || "---"} />
-                <DetailRow label="CONTATO" value={`${selectedClient.adminEmail} / ${selectedClient.clientPhone}`} />
-                <DetailRow label="ENDEREÇO" value={selectedClient.clientAddress || "---"} />
+                <DetailRow label="NOME COMPLETO" value={selectedClient.clientName} isEdit={isEditing} onChange={v => setEditForm({...editForm, clientName: v})} />
+                <DetailRow label="EMPRESA" value={selectedClient.companyName || "Pessoa Física"} isEdit={isEditing} onChange={v => setEditForm({...editForm, companyName: v})} />
+                <DetailRow label="CPF / CNPJ" value={selectedClient.clientDocument || "---"} isEdit={isEditing} onChange={v => setEditForm({...editForm, clientDocument: v})} />
+                <DetailRow label="CONTATO" value={`${selectedClient.adminEmail} / ${selectedClient.clientPhone}`} isEdit={isEditing} onChange={v => {
+                  const [em, ph] = v.split(' / ');
+                  setEditForm({...editForm, adminEmail: em, clientPhone: ph});
+                }} />
+                <DetailRow label="ENDEREÇO" value={selectedClient.clientAddress || "---"} isEdit={isEditing} onChange={v => setEditForm({...editForm, clientAddress: v})} />
               </div>
               <div>
-                <DetailRow label="PROPRIEDADE" value={selectedClient.name} />
+                <DetailRow label="PROPRIEDADE" value={selectedClient.name} isEdit={isEditing} onChange={v => setEditForm({...editForm, name: v})} />
                 <DetailRow label="TIPO" value={selectedClient.type?.toUpperCase()} />
                 <DetailRow label="UNIDADES" value={selectedClient.units?.length || 0} />
-                <DetailRow label="PLANO" value={selectedClient.plan || "PRO"} />
+                <DetailRow label="PLANO" value={selectedClient.plan || "PRO"} isEdit={isEditing} onChange={v => setEditForm({...editForm, plan: v})} />
                 <DetailRow label="ACESSOS" value={`ADMIN: ${selectedClient.clientCode} | PORTARIA: ${selectedClient.doormanCode || 'N/A'}`} />
                 <DetailRow label="ID DA PLACA" value={selectedClient.id} />
                 <DetailRow label="URL DE ACESSO" value={`${window.location.origin}/chamada/${selectedClient.id}`} />
                 
+                <div style={{ marginTop: '16px', background: '#F8FAFC', padding: '16px', borderRadius: '20px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', marginBottom: '12px' }}>QR CODE DA PLACA</div>
+                  <div style={{ background: '#FFF', padding: '12px', borderRadius: '16px', display: 'inline-block', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                    <img src={selectedClient.qrCode || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${window.location.origin}/chamada/${selectedClient.id}`)}`} alt="QR Code" style={{ width: '150px', height: '150px' }} />
+                  </div>
+                </div>
+
                 <div style={{ marginTop: '16px' }}>
                   <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', marginBottom: '8px' }}>CÓDIGOS DE ACESSO (MORADORES)</div>
                   <div style={{ maxHeight: '120px', overflowY: 'auto', background: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
@@ -738,6 +771,9 @@ export default function MasterAdminDashboard() {
                         <code style={{ color: '#10B981', fontWeight: 800 }}>{u.accessCode}</code>
                       </div>
                     ))}
+                    {!selectedClient.units || selectedClient.units.length === 0 && (
+                      <div style={{ fontSize: '12px', color: '#94A3B8', textAlign: 'center' }}>Nenhuma unidade cadastrada.</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -770,7 +806,11 @@ URL: ${selectedClient.url}
               >
                 <Copy size={18} /> COPIAR TODOS OS DADOS
               </button>
-              <button style={{ flex: 1, padding: '14px', borderRadius: '12px', background: '#3B82F6', color: '#FFF', border: 'none', fontWeight: 700, cursor: 'pointer' }}>EDITAR DADOS</button>
+              {isEditing ? (
+                <button onClick={handleSaveEdit} style={{ flex: 1, padding: '14px', borderRadius: '12px', background: '#10B981', color: '#FFF', border: 'none', fontWeight: 700, cursor: 'pointer' }}>SALVAR ALTERAÇÕES</button>
+              ) : (
+                <button onClick={() => { setIsEditing(true); setEditForm(selectedClient); }} style={{ flex: 1, padding: '14px', borderRadius: '12px', background: '#3B82F6', color: '#FFF', border: 'none', fontWeight: 700, cursor: 'pointer' }}>EDITAR DADOS</button>
+              )}
             </div>
           </div>
         </div>
@@ -803,11 +843,20 @@ function Label({ children }) {
 const inputStyle = { width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid #E2E8F0', background: '#FFF', outline: 'none', fontSize: '14px', color: '#1E293B' };
 function Input(props) { return <input {...props} style={inputStyle} />; }
 
-function DetailRow({ label, value }) {
+function DetailRow({ label, value, isEdit, onChange }) {
   return (
     <div style={{ marginBottom: '20px' }}>
       <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', marginBottom: '4px' }}>{label}</div>
-      <div style={{ fontSize: '15px', fontWeight: 600, color: '#1E293B' }}>{value || "---"}</div>
+      {isEdit && onChange ? (
+        <input 
+          type="text" 
+          defaultValue={value === '---' || value === 'Pessoa Física' ? '' : value} 
+          onChange={e => onChange(e.target.value)} 
+          style={{ ...inputStyle, padding: '8px 12px' }}
+        />
+      ) : (
+        <div style={{ fontSize: '15px', fontWeight: 600, color: '#1E293B' }}>{value || "---"}</div>
+      )}
     </div>
   );
 }

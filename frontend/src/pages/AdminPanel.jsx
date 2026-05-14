@@ -170,6 +170,7 @@ export default function AdminPanel() {
           id: finalId,
           type: propertyType === 'individual' ? 'individual' : 'collective', 
           name: propertyName, 
+          clientName: localStorage.getItem('cd_admin_name') || '',
           units,
           adminEmail,
           adminPassword
@@ -355,6 +356,23 @@ export default function AdminPanel() {
 
       {/* Paywall removido - condomínios gerenciam unidades diretamente */}
 
+
+      {/* Trial Countdown / Upgrade Banner */}
+      {properties.find(p => p.id === selectedProperty)?.type === 'individual' && properties.find(p => p.id === selectedProperty)?.nextPaymentDate && (
+        <div style={{ background: 'linear-gradient(90deg, #3B82F6, #6366F1)', color: '#fff', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, fontSize: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Zap size={18} />
+            {Math.ceil((new Date(properties.find(p => p.id === selectedProperty).nextPaymentDate) - new Date()) / (1000 * 60 * 60 * 24)) > 0 ? (
+              <span>Você está no período de teste: <strong style={{ color: '#FFF' }}>{Math.ceil((new Date(properties.find(p => p.id === selectedProperty).nextPaymentDate) - new Date()) / (1000 * 60 * 60 * 24))} dias restantes</strong></span>
+            ) : (
+              <span>Seu período de teste expirou!</span>
+            )}
+          </div>
+          <button onClick={() => alert('Redirecionando para pagamento Pix (R$ 39,90)...')} style={{ background: '#fff', color: '#3B82F6', border: 'none', padding: '6px 16px', borderRadius: '8px', fontWeight: 800, fontSize: '12px', cursor: 'pointer' }}>
+            ASSINAR AGORA (R$ 39,90/ANO)
+          </button>
+        </div>
+      )}
 
       <header style={{ background: 'var(--bg-surface-elevated)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
