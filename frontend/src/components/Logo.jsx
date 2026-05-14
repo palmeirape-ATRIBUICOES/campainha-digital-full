@@ -9,12 +9,13 @@ export default function Logo({ size = 40, showText = true, light = false, vertic
     <div style={{ 
       display: 'inline-flex', 
       alignItems: 'center', 
+      justifyContent: vertical ? 'center' : 'flex-start',
       gap: '12px',
-      whiteSpace: 'nowrap',
-      flexWrap: 'nowrap',
       userSelect: 'none',
       flexDirection: vertical ? 'column' : 'row',
-      textAlign: vertical ? 'center' : 'left'
+      textAlign: vertical ? 'center' : 'left',
+      maxWidth: '100%',
+      overflow: 'hidden'
     }}>
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <svg 
@@ -23,7 +24,7 @@ export default function Logo({ size = 40, showText = true, light = false, vertic
           viewBox="0 0 120 100" 
           fill="none" 
           xmlns="http://www.w3.org/2000/svg"
-          style={{ overflow: 'visible' }}
+          style={{ overflow: 'visible', maxWidth: '100%' }}
         >
           <circle cx="40" cy="50" r="38" fill={primaryColor} />
           <circle cx="40" cy="50" r="14" fill={accentColor} />
@@ -38,14 +39,19 @@ export default function Logo({ size = 40, showText = true, light = false, vertic
           display: 'flex', 
           flexDirection: 'column', 
           justifyContent: 'center',
-          lineHeight: 1
+          lineHeight: 1,
+          minWidth: 0, // Allow shrinking
+          flexShrink: 1
         }}>
           <span style={{ 
-            fontSize: `${size * 0.65}px`, 
+            fontSize: `clamp(14px, ${size * 0.65}px, 32px)`, 
             fontWeight: 900, 
             color: primaryColor,
-            letterSpacing: '-1.5px',
-            fontFamily: 'Inter, system-ui, sans-serif'
+            letterSpacing: '-0.05em',
+            fontFamily: 'Inter, system-ui, sans-serif',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
           }}>
             Campainha<span style={{ color: secondaryColor }}>-Digital</span>
           </span>
@@ -54,3 +60,4 @@ export default function Logo({ size = 40, showText = true, light = false, vertic
     </div>
   );
 }
+
