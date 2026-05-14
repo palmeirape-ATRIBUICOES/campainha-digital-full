@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, LayoutDashboard, Database, Activity, History, Settings2, Search, Bell, AlertTriangle, Briefcase, ExternalLink, PieChart, Server, Shield, Globe, FileText, Headphones, BarChart3
+  Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, LayoutDashboard, Database, Activity, History, Settings2, Search, Bell, AlertTriangle, Briefcase, ExternalLink, PieChart, Server, Shield, Globe, FileText, Headphones, BarChart3, QrCode
 } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useNavigate } from 'react-router-dom';
