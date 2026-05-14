@@ -68,7 +68,8 @@ function stopDoorbell() {
 export default function ResidentDashboard() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [tab, setTab] = useState('home'); // home | history | settings | messages
+  const [tab, setTab] = useState('home'); // home | history | messages
+  const [showMenu, setShowMenu] = useState(false);
   const [call, setCall] = useState(null);
   const [status, setStatus] = useState('idle'); // idle|ringing|active|monitoring
   const [audioError, setAudioError] = useState(false);
@@ -308,44 +309,99 @@ export default function ResidentDashboard() {
 
   const activeC = quickMsgs.find(c => c.id === activeMsgCat);
 
-  // ── Bottom Nav ───────────────────────────────────────────────────────────
+  // ── Bottom Nav (Only Essentials) ──────────────────────────────────────────
   const NavBar = () => (
-    <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--bg-surface-elevated)', borderTop: '1px solid var(--border-subtle)', display: 'flex', zIndex: 100 }}>
+    <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', borderTop: '1px solid var(--border-subtle)', display: 'flex', zIndex: 100, paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {[
-        { key: 'home', icon: <Home size={20} />, label: 'Campainha' },
-        { key: 'messages', icon: <Mail size={20} />, label: 'Avisos', badge: unreadCount },
-        { key: 'history', icon: <History size={20} />, label: 'Histórico' },
-        { key: 'settings', icon: <Settings size={20} />, label: 'Config.' },
+        { key: 'home', icon: <Home size={22} />, label: 'Início' },
+        { key: 'messages', icon: <Mail size={22} />, label: 'Avisos', badge: unreadCount },
+        { key: 'history', icon: <History size={22} />, label: 'Atividade' },
       ].map(n => (
-        <button key={n.key} onClick={() => { setTab(n.key); if (n.key === 'messages') markMessagesRead(); }} style={{ flex: 1, padding: '12px 4px 8px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: tab === n.key ? 'var(--primary)' : 'var(--text-muted)', fontSize: '10px', fontWeight: 700, transition: 'color 0.2s', position: 'relative' }}>
-          {n.icon}
-          {n.badge > 0 && <div style={{ position:'absolute',top:'6px',right:'calc(50% - 18px)',width:'16px',height:'16px',borderRadius:'50%',background:'#EF4444',color:'#fff',fontSize:'9px',fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center' }}>{n.badge}</div>}
-          {n.label}
+        <button key={n.key} onClick={() => { setTab(n.key); if (n.key === 'messages') markMessagesRead(); }} style={{ flex: 1, padding: '12px 4px 8px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: tab === n.key ? 'var(--primary)' : '#94A3B8', fontSize: '11px', fontWeight: 700, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative' }}>
+          <div style={{ transform: tab === n.key ? 'translateY(-2px)' : 'none', transition: 'transform 0.3s' }}>{n.icon}</div>
+          {n.badge > 0 && <div style={{ position:'absolute',top:'8px',right:'calc(50% - 18px)',width:'16px',height:'16px',borderRadius:'50%',background:'#EF4444',color:'#fff',fontSize:'9px',fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center', border: '2px solid #fff' }}>{n.badge}</div>}
+          <span style={{ opacity: tab === n.key ? 1 : 0.8 }}>{n.label}</span>
+          {tab === n.key && <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '20px', height: '3px', background: 'var(--primary)', borderRadius: '0 0 4px 4px' }} />}
         </button>
       ))}
-      <button onClick={() => navigate('/')} style={{ flex: 1, padding: '12px 4px 8px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700 }}>
-        <LogOut size={20} />Sair
-      </button>
     </nav>
+  );
+
+  // ── Side Menu (Hamburger) ──────────────────────────────────────────────────
+  const HamburgerMenu = () => (
+    <>
+      <div 
+        onClick={() => setShowMenu(false)}
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 1000, opacity: showMenu ? 1 : 0, visibility: showMenu ? 'visible' : 'hidden', transition: 'all 0.3s' }} 
+      />
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '280px', background: '#FFF', zIndex: 1001, transform: showMenu ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)', padding: '32px 24px', display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 32px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+          <Logo size={32} />
+          <button onClick={() => setShowMenu(false)} style={{ background: '#F1F5F9', border: 'none', padding: '8px', borderRadius: '12px', cursor: 'pointer' }}><Settings size={20} color="#64748B" /></button>
+        </div>
+        
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', marginBottom: '8px' }}>CONTA & SEGURANÇA</p>
+          <button onClick={() => { setTab('settings'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'settings' ? '#F8FAFC' : 'transparent', color: '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
+            <Settings size={20} color="#64748B" /> Configurações
+          </button>
+          <button onClick={() => { alert('Central de Ajuda em breve...'); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: 'transparent', color: '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
+            <ShieldCheck size={20} color="#64748B" /> Suporte & Segurança
+          </button>
+        </div>
+
+        <button onClick={() => navigate('/')} style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: '#FFF1F2', color: '#E11D48', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}>
+          <LogOut size={20} /> Sair do App
+        </button>
+      </div>
+    </>
   );
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', paddingBottom: '72px' }} onClick={() => { if (audioRef.current) audioRef.current.play().then(() => audioRef.current.pause()).catch(() => {}); }}>
       <audio ref={audioRef} loop preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" type="audio/mpeg" /></audio>
 
-      {/* Header */}
-      <div style={{ padding: '20px 24px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <Logo size={28} showText={false} />
-        <div>
-          <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>{unitName}</h2>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>ID: {id.slice(0, 8)} • {status === 'idle' ? '🟢 Online' : '🔴 Em chamada'}</p>
+      {/* Header (Premium Sticky) */}
+      <div style={{ 
+        padding: '16px 24px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        background: 'rgba(255, 255, 255, 0.8)', 
+        backdropFilter: 'blur(12px)', 
+        position: 'sticky', 
+        top: 0, 
+        zIndex: 90,
+        borderBottom: '1px solid #F1F5F9'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>
+            <Logo size={24} showText={false} />
+          </div>
+          <div>
+            <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#0F172A' }}>{unitName}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: status === 'idle' ? '#10B981' : '#EF4444' }} />
+              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>{status === 'idle' ? 'Disponível' : 'Em Chamada'}</span>
+            </div>
+          </div>
         </div>
-        {installPrompt && (
-          <button onClick={async () => { installPrompt.prompt(); const r = await installPrompt.userChoice; if (r.outcome === 'accepted') setInstallPrompt(null); }}
-            style={{ marginLeft: 'auto', background: 'var(--primary)', color: '#000', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Download size={14} /> Instalar
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {installPrompt && (
+            <button onClick={async () => { installPrompt.prompt(); const r = await installPrompt.userChoice; if (r.outcome === 'accepted') setInstallPrompt(null); }}
+              style={{ background: '#F1F5F9', color: '#1E293B', border: 'none', padding: '8px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Download size={14} /> Instalar
+            </button>
+          )}
+          <button onClick={() => setShowMenu(true)} style={{ background: '#0F172A', color: '#FFF', border: 'none', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '20px' }}>
+              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+              <div style={{ height: '2px', width: '60%', background: '#FFF', borderRadius: '2px' }} />
+            </div>
           </button>
-        )}
+        </div>
       </div>
 
       {audioError && <div style={{ margin: '12px 24px 0', background: '#EF4444', color: '#fff', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, display: 'flex', gap: '8px', alignItems: 'center' }}><AlertCircle size={16} />Toque na tela para ativar o som!</div>}
@@ -567,6 +623,7 @@ export default function ResidentDashboard() {
       {tab === 'history' && <HistoryPanel unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
       {tab === 'settings' && <SettingsPanel unitName={unitName} setUnitName={setUnitName} onSave={saveSettings} unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
 
+      <HamburgerMenu />
       <NavBar />
     </div>
   );
