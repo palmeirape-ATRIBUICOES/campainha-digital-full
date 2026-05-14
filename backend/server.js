@@ -137,7 +137,8 @@ app.post('/api/properties', async (req, res) => {
   const isCollective = type === 'village' || type === 'condo' || type === 'collective';
   
   const nextPaymentDate = new Date();
-  nextPaymentDate.setDate(nextPaymentDate.getDate() + 30);
+  const trialDays = (type === 'house' || type === 'individual') ? 15 : 30;
+  nextPaymentDate.setDate(nextPaymentDate.getDate() + trialDays);
 
   const clientCode = existingIndex > -1 ? properties[existingIndex].clientCode : generateAccessCode();
   const doormanCode = isCollective ? (existingIndex > -1 && properties[existingIndex].doormanCode ? properties[existingIndex].doormanCode : generateAccessCode()) : null;
