@@ -280,6 +280,17 @@ O login do morador pedia e-mail + código para TODOS os tipos, tornando o proces
 
 ---
 
+## [v2.9.15] - 2026-05-14
+### Adicionado
+- **Interfone entre Moradores**: Implementado sistema de busca e chamada entre unidades do mesmo condomínio.
+- **Liberação de Entrada**: Adicionado botão "LIBERAR ENTRADA" no dashboard do morador que notifica instantaneamente o porteiro e o visitante.
+- **Identificação de Chamada**: Sistema agora diferencia chamadas externas (Portão) de chamadas internas (Interfone entre vizinhos).
+
+### Corrigido
+- **Crash no Dashboard do Morador**: Corrigido erro de "tela branca" causado por importações ausentes de ícones do Lucide (MessageCircle e MapPin).
+
+---
+
 ## 🛠️ Próximos Passos
 - [ ] Implementação real dos gráficos no módulo de Analytics.
 - [ ] Integração Pix automatizada via API de pagamentos.
