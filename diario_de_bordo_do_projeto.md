@@ -332,6 +332,28 @@ O login do morador pedia e-mail + código para TODOS os tipos, tornando o proces
 
 ---
 
+## 🚀 v3.1.0 — Redesign do Painel do Morador e Novo Modelo de Pricing (14/05/2026)
+
+### Painel do Morador Redesenhado
+- **Modularização:** O painel foi refatorado para usar componentes independentes (`MessagesPanel.jsx`, `IntercomPanel.jsx`, `ServicesPanel.jsx`).
+- **Avisos do Condomínio:** Notificações do síndico (broadcast) e da portaria ficam agora num painel recolhível (accordion) logo no topo, sinalizando com "badge" dinâmico a quantidade de itens não lidos, deixando o centro da tela limpo.
+- **Botões de Serviços e Parceiros:** Criado o esqueleto de UI (`ServicesPanel.jsx`) onde futuramente aparecerão parceiros de Farmácia, Gás, Água e Mercado.
+
+### Comunicação Bi-direcional com Portaria
+- **Interfone Morador → Portaria:** O morador agora tem um atalho direto (`resident_call_doorman`) para iniciar chamada de voz para o tablet da portaria.
+- **Mensagem Morador → Portaria:** Adicionado campo de texto no aplicativo do morador para enviar recados de texto diretamente para a portaria.
+- **Alertas no PorteiroDashboard:** O painel da portaria agora reage com banners flutuantes e toques sonoros ao receber chamadas de voz (`incoming_resident_call`) ou mensagens (`resident_message`) do morador.
+
+### Calculadora Interativa na Landing Page e Remoção de Paywall
+- **Simulador de Assinatura:** O cartão estático de R$ 39,90 foi substituído por uma **calculadora de arrastar (range slider)** que calcula automaticamente a regra de negócio para condomínios.
+- **Regra do Simulador:** 
+  - Até 100 unidades: valor fixo de R$ 159,90.
+  - De 101 a 200 unidades: R$ 3,25 por cada unidade extra.
+  - Mais de 200 unidades: R$ 2,25 por cada unidade extra.
+- **Fim do Paywall de R$ 15:** O modal e a tela de pagamento que impediam o síndico de adicionar múltiplas propriedades (blocos/ruas) sem pagar R$ 15 avulsos foram totalmente removidos. O foco agora é gerir as unidades internamente, cobrando o pacote completo.
+
+---
+
 ## 🛠️ Próximos Passos
 - [ ] Integração Pix automatizada via API de pagamentos.
 - [ ] Geração de contrato PDF com assinatura digital.

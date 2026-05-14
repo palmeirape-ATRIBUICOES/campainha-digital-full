@@ -653,6 +653,29 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Morador envia mensagem para a portaria
+  socket.on('resident_message_doorman', ({ propertyId, message, senderName }) => {
+    if (!propertyId || !message) return;
+    console.log(`[WS] Morador → doorman_${propertyId}: ${message}`);
+    io.to(`doorman_${propertyId}`).emit('resident_message', {
+      message,
+      senderName: senderName || 'Morador',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Morador inicia chamada para a portaria
+  socket.on('resident_call_doorman', ({ propertyId, unitId, callerName }) => {
+    if (!propertyId) return;
+    console.log(`[WS] Morador ${unitId} chamando doorman_${propertyId}`);
+    io.to(`doorman_${propertyId}`).emit('incoming_resident_call', {
+      residentSocketId: socket.id,
+      unitId,
+      callerName: callerName || 'Morador',
+      timestamp: new Date().toISOString()
+    });
+  });
+
 
   socket.on('authorize_entry', ({ unitId, propertyId, visitorId }) => {
     // Notify the doorman that entry was authorized by the resident

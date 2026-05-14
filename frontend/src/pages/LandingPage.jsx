@@ -1,7 +1,78 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Smartphone, Zap, Clock, Check, X, ArrowRight, Video, MapPin, EyeOff, Lock, Globe2, BellRing, UserCheck, Home } from 'lucide-react';
+import { Shield, Smartphone, Zap, Clock, Check, X, ArrowRight, Video, MapPin, EyeOff, Lock, Globe2, BellRing, UserCheck, Home, Calculator } from 'lucide-react';
 import Logo from '../components/Logo';
+
+function PricingCalculator() {
+  const [units, setUnits] = useState(100);
+
+  const calculatePrice = (u) => {
+    if (u <= 100) return 159.90;
+    if (u <= 200) return 159.90 + ((u - 100) * 3.25);
+    return 159.90 + (100 * 3.25) + ((u - 200) * 2.25);
+  };
+
+  const total = calculatePrice(units);
+  const perUnit = total / units;
+
+  return (
+    <div className="premium-card" style={{ padding: '32px', textAlign: 'left', background: '#FFF', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 12px 32px rgba(0,0,0,0.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59,130,246,0.1)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Calculator size={24} />
+        </div>
+        <div>
+          <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 4px', color: '#1E293B' }}>Simulador de Assinatura</h3>
+          <p style={{ margin: 0, color: '#64748B', fontSize: '13px' }}>Descontos automáticos por volume de unidades</p>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <label style={{ fontWeight: 700, color: '#1E293B', fontSize: '14px' }}>Quantidade de Unidades</label>
+          <span style={{ fontWeight: 800, color: '#3B82F6', fontSize: '16px' }}>{units} {units === 1 ? 'unidade' : 'unidades'}</span>
+        </div>
+        <input 
+          type="range" 
+          min="1" 
+          max="500" 
+          step="1"
+          value={units} 
+          onChange={(e) => setUnits(Number(e.target.value))}
+          style={{ width: '100%', cursor: 'pointer', accentColor: '#3B82F6' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', color: '#94A3B8', fontSize: '11px', fontWeight: 600 }}>
+          <span>1</span>
+          <span>500+</span>
+        </div>
+      </div>
+
+      <div style={{ background: '#F8FAFC', borderRadius: '16px', padding: '24px', border: '1px solid #E2E8F0', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <span style={{ color: '#64748B', fontSize: '14px', fontWeight: 600 }}>Custo Médio por Unidade:</span>
+          <span style={{ fontSize: '18px', fontWeight: 800, color: '#10B981' }}>R$ {perUnit.toFixed(2).replace('.', ',')}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+          <span style={{ color: '#1E293B', fontSize: '16px', fontWeight: 700 }}>Total Mensal:</span>
+          <span style={{ fontSize: '28px', fontWeight: 900, color: '#1E293B' }}>R$ {total.toFixed(2).replace('.', ',')}</span>
+        </div>
+      </div>
+
+      <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '24px', lineHeight: 1.6, padding: '12px', background: '#FFFBEB', borderRadius: '12px', border: '1px solid #FEF3C7' }}>
+        <strong style={{ color: '#D97706', display: 'block', marginBottom: '4px' }}>Regra de Cobrança:</strong>
+        • Até 100 unidades: R$ 159,90 fixos.<br/>
+        • De 101 a 200: R$ 3,25 por unidade extra.<br/>
+        • Acima de 200: R$ 2,25 por unidade extra.
+      </div>
+
+      <Link to="/auth" style={{ textDecoration: 'none', display: 'block' }}>
+        <button className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '16px', borderRadius: '12px' }}>
+          Iniciar Cadastro do Condomínio
+        </button>
+      </Link>
+    </div>
+  );
+}
 
 export default function LandingPage() {
   const advantages = [
@@ -162,64 +233,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* Pricing Section - Condomínios (Interactive) */}
       <section id="pricing" style={{ padding: '100px 0', background: 'linear-gradient(180deg, var(--bg-surface) 0%, var(--bg-deep) 100%)' }}>
         <div className="container" style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: '40px', fontWeight: 800, marginBottom: '48px' }}>Planos <span className="text-gradient-primary">Acessíveis</span></h2>
+          <h2 style={{ fontSize: '40px', fontWeight: 800, marginBottom: '24px' }}>Planos <span className="text-gradient-primary">Condomínios e Vilas</span></h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '18px', maxWidth: '600px', margin: '0 auto 48px' }}>Preço justo baseado no tamanho do seu condomínio. Calcule abaixo o investimento mensal.</p>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px', maxWidth: '1000px', margin: '0 auto' }}>
-            {/* Simple House */}
-            <div className="premium-card" style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div style={{ marginBottom: '24px' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Casa Simples</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Ideal para quem busca segurança e praticidade individual.</p>
-              </div>
-              <div style={{ marginBottom: '16px' }}>
-                <span style={{ fontSize: '48px', fontWeight: 800 }}>R$ 39,90</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '16px' }}>/ano</span>
-              </div>
-              <div style={{ marginBottom: '32px', background: 'rgba(16,185,129,0.1)', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', color: '#10B981', fontWeight: 700 }}>
-                💰 Pagamento único anual — sem mensalidade!
-              </div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> 1 Placa QR Code Premium</li>
-                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Chamadas de Vídeo Ilimitadas</li>
-                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> App PWA Gratuito</li>
-                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> 12 meses de acesso completo</li>
-              </ul>
-              <Link to="/auth" style={{ textDecoration: 'none' }}>
-                <button className="btn-primary w-full">Assinar Agora</button>
-              </Link>
-            </div>
-
-            {/* Condos */}
-            <div className="premium-card" style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', height: '100%', border: '2px solid var(--primary)', transform: 'scale(1.05)' }}>
-              <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'var(--primary)', color: '#fff', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 700 }}>MELHOR CUSTO-BENEFÍCIO</div>
-              <div style={{ marginBottom: '24px' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Condomínios & Vilas</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Assinatura mensal com valores atrativos por unidade.</p>
-              </div>
-              <div style={{ marginBottom: '16px' }}>
-                <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-muted)', textDecoration: 'line-through' }}>R$ 39,90/un</span>
-                <div style={{ marginTop: '4px' }}>
-                  <span style={{ fontSize: '40px', fontWeight: 800 }}>A partir de R$ 9,90</span>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '16px' }}>/un/mês</span>
-                </div>
-              </div>
-              <div style={{ marginBottom: '32px', background: 'rgba(0,229,255,0.1)', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', color: 'var(--primary)', fontWeight: 700 }}>
-                📊 Quanto mais unidades, menor o valor por unidade!
-              </div>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Placas por Unidade ou Portão</li>
-                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Painel Admin para Síndico</li>
-                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Suporte 24/7 Prioritário</li>
-                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Cobrança mensal por unidade</li>
-                <li style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={16} color="#10B981" /> Descontos progressivos por volume</li>
-              </ul>
-              <Link to="/auth" style={{ textDecoration: 'none' }}>
-                <button className="btn-secondary w-full" style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>Falar com Consultor</button>
-              </Link>
-            </div>
+          <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <PricingCalculator />
           </div>
         </div>
       </section>

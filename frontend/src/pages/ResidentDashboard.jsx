@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Search, User, MapPin, Hash, Building2, Mail } from 'lucide-react';
+import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail } from 'lucide-react';
 import { HistoryPanel, SettingsPanel, DEFAULT_CATEGORIES } from './ResidentPanels';
 import Logo from '../components/Logo';
+import MessagesPanel from '../components/resident/MessagesPanel';
+import IntercomPanel from '../components/resident/IntercomPanel';
+import ServicesPanel from '../components/resident/ServicesPanel';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const ICE = {
@@ -352,79 +355,42 @@ export default function ResidentDashboard() {
         <>
           {/* IDLE */}
           {status === 'idle' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 160px)', textAlign: 'center', padding: '24px' }}>
-              <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: '#FFF', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', boxShadow: '0 8px 30px rgba(0,0,0,0.04)' }}>
-                <Bell size={40} style={{ opacity: 0.3 }} color="#10B981" />
-              </div>
-              <h3 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px' }}>Aguardando Chamadas</h3>
-              <p style={{ color: 'var(--text-muted)', maxWidth: '240px', fontSize: '14px', marginBottom: '32px' }}>Você será notificado assim que alguém tocar a campainha.</p>
-              
-              {/* Box de Informações e Sair */}
-              <div style={{ background: '#FFF', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', width: '100%', maxWidth: '300px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-                <div style={{ marginBottom: '20px' }}>
-                  <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', marginBottom: '8px' }}>SEU CÓDIGO DE ACESSO</p>
-                  <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px dashed #CBD5E1', fontSize: '24px', fontWeight: 900, color: 'var(--primary)', letterSpacing: '4px', fontFamily: 'monospace' }}>
-                    {accessCode || '...'}
-                  </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 20px 32px', gap: '20px' }}>
+
+              {/* Bell hero */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '16px' }}>
+                <div style={{ width: '90px', height: '90px', borderRadius: '50%', background: '#FFF', border: '2px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.06)' }}>
+                  <Bell size={36} color="#10B981" style={{ opacity: 0.8 }}/>
                 </div>
-                
-                <button 
-                  onClick={() => {
-                    localStorage.removeItem('residentUnitId');
-                    navigate('/morador-login');
-                  }} 
-                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: 'none', background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s', marginBottom: '12px' }}
-                >
-                  <LogOut size={18} /> Sair do App
-                </button>
-
-                <button 
-                  onClick={() => {
-                    const text = encodeURIComponent(`Olá vizinho! 👋 Estou usando a Campainha Digital aqui no ${unitName} e recomendo muito! \n\nConsigo atender o portão pelo celular de qualquer lugar e ver quem está chamando por vídeo. \n\nAcesse e veja como funciona: https://campainha-digital.com.br`);
-                    window.open(`https://wa.me/?text=${text}`, '_blank');
-                  }} 
-                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid #10B981', background: '#FFFFFF', color: '#10B981', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}
-                >
-                  <MessageCircle size={18} /> Indicar para um Vizinho
-                </button>
-              </div>
-
-              <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', gap: '8px', color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '8px 16px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981' }} />Conectado
-              </div>
-
-              {/* Intercom Search by Address */}
-              <div style={{ width: '100%', maxWidth: '300px', marginTop: '32px', textAlign: 'left' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}><Phone size={13}/> Interfone Digital</h4>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', marginBottom: '4px', display: 'block' }}>BLOCO / RUA</label>
-                    <input type="text" placeholder="Ex: A ou Rua 1" value={neighborBlock} onChange={e => setNeighborBlock(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: '#FFF', fontSize: '13px', outline: 'none' }} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', marginBottom: '4px', display: 'block' }}>Nº CASA/APTO</label>
-                    <input type="text" placeholder="Ex: 101" value={neighborNumber} onChange={e => setNeighborNumber(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: '#FFF', fontSize: '13px', outline: 'none' }} />
-                  </div>
-                </div>
-                <button onClick={searchNeighbor} disabled={neighborSearching} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#fff', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '10px', opacity: neighborSearching ? 0.7 : 1 }}>
-                  <Search size={16}/> {neighborSearching ? 'Buscando...' : 'Buscar Vizinho'}
-                </button>
-                {neighborError && <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600, marginBottom: '8px', textAlign: 'center' }}>{neighborError}</p>}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {neighborResults.map(neighbor => (
-                    <button key={neighbor.id} onClick={() => handleIntercomCall(neighbor)} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-subtle)', background: '#FFF', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', textAlign: 'left' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(59,130,246,0.1)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Building2 size={16}/></div>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontWeight: 600, fontSize: '14px', display: 'block' }}>{neighbor.name}</span>
-                        <span style={{ fontSize: '11px', color: '#64748B' }}>{neighbor.block && `Bloco ${neighbor.block} `}{neighbor.street && `${neighbor.street} `}{neighbor.number && `Nº ${neighbor.number}`}</span>
-                      </div>
-                      <Phone size={14} style={{ color: '#10B981' }}/>
-                    </button>
-                  ))}
+                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 4px', color: '#0F172A' }}>Aguardando Chamadas</h3>
+                <p style={{ color: '#64748B', fontSize: '13px', margin: 0 }}>Você será notificado quando tocarem.</p>
+                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', background: 'rgba(16,185,129,0.08)', padding: '5px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }}/> Conectado
                 </div>
               </div>
+
+              {/* Código de Acesso */}
+              <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '16px 18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                <p style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 8px' }}>SEU CÓDIGO DE ACESSO</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                  <span style={{ fontSize: '24px', fontWeight: 900, color: '#3B82F6', letterSpacing: '4px', fontFamily: 'monospace' }}>{accessCode || '...'}</span>
+                  <button onClick={() => { const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin}/morador-login`; window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank'); }}
+                    style={{ padding: '8px 14px', borderRadius: '10px', background: '#25D366', border: 'none', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <MessageCircle size={14}/> Compartilhar
+                  </button>
+                </div>
+              </div>
+
+              {/* Mensagens do condomínio - colapssável */}
+              <MessagesPanel messages={broadcastMessages} unreadCount={unreadCount} onClear={markMessagesRead}/>
+
+              {/* Interfone Digital */}
+              {propertyId && <IntercomPanel propertyId={propertyId} unitId={id} socketRef={socketRef} unitName={unitName}/>}
+
+              {/* Serviços & Parceiros */}
+              <ServicesPanel/>
+
             </div>
-          )}
 
           {/* RINGING */}
           {status === 'ringing' && call && (

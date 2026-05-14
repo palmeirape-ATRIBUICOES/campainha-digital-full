@@ -15,6 +15,8 @@ export default function PorteiroDashboard() {
   const [msgUnit, setMsgUnit] = useState(null);   // unitId sendo enviada msg
   const [msgText, setMsgText] = useState('');     // texto da mensagem
   const [msgSent, setMsgSent] = useState(false);  // feedback de enviado
+  const [residentMsg, setResidentMsg] = useState(null); // Mensagem recebida do morador
+  const [incomingCall, setIncomingCall] = useState(null); // Chamada recebida do morador
   const navigate = useNavigate();
   const socketRef = useRef(null);
 
@@ -64,6 +66,18 @@ export default function PorteiroDashboard() {
       setTimeout(() => setAuthorizedEntry(null), 15000);
     });
 
+    s.on('resident_message', ({ message, senderName, timestamp }) => {
+      setResidentMsg({ message, senderName, timestamp });
+      try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {}); } catch {}
+      setTimeout(() => setResidentMsg(null), 20000); // Mostra por 20 segundos
+    });
+
+    s.on('incoming_resident_call', ({ callerName, unitId }) => {
+      setIncomingCall({ callerName, unitId });
+      try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {}); } catch {}
+      setTimeout(() => setIncomingCall(null), 20000);
+    });
+
     return () => s.disconnect();
   }, [navigate]);
 
@@ -101,22 +115,60 @@ export default function PorteiroDashboard() {
     <div style={{ minHeight: '100vh', background: '#F8FAFC', color: '#1E293B' }}>
       <header style={{ padding: '20px 40px', background: '#FFF', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <Logo size={32} />
-          <div style={{ height: '24px', width: '1px', background: '#E2E8F0' }} />
-          <h1 style={{ fontSize: '18px', fontWeight: 800 }}>Painel de Monitoramento Central</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Logo size={28} showText={false} />
+          <h1 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>Painel da Portaria</h1>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button onClick={() => { localStorage.clear(); navigate('/auth'); }} style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid #F1F5F9', background: '#FFF', color: '#64748B', fontWeight: 600, cursor: 'pointer' }}>Sair</button>
-        </div>
+        <button onClick={() => navigate('/auth')} style={{ background: 'none', border: 'none', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}>
+          <LogOut size={16}/> Sair
+        </button>
       </header>
 
-      {authorizedEntry && (
-        <div style={{ position: 'fixed', top: '100px', left: '50%', transform: 'translateX(-50%)', background: '#10B981', color: '#FFF', padding: '20px 40px', borderRadius: '100px', boxShadow: '0 20px 40px rgba(16, 185, 129, 0.4)', zIndex: 1000, fontWeight: 900, fontSize: '18px' }}>
-          ✅ ACESSO LIBERADO: {authorizedEntry.unitName}
-        </div>
-      )}
+      <main style={{ padding: '32px 24px', maxWidth: '1000px', margin: '0 auto' }}>
+        
+        {/* Alerta de Acesso Liberado */}
+        {authorizedEntry && (
+          <div style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', padding: '24px', borderRadius: '24px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 8px 24px rgba(16,185,129,0.25)', animation: 'pulse 2s infinite' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShieldCheck size={28} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 4px' }}>Acesso Liberado!</h2>
+              <p style={{ margin: 0, opacity: 0.9, fontSize: '14px' }}>Morador de <strong>{authorizedEntry.unitName}</strong> autorizou a entrada.</p>
+            </div>
+          </div>
+        )}
 
-      <main style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
+        {/* Notificação de Mensagem Recebida do Morador */}
+        {residentMsg && (
+          <div style={{ background: '#FFF', border: '2px solid #3B82F6', padding: '20px', borderRadius: '20px', marginBottom: '32px', display: 'flex', alignItems: 'flex-start', gap: '16px', boxShadow: '0 8px 24px rgba(59,130,246,0.15)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#EFF6FF', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <MessageSquare size={24} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px', color: '#1E293B' }}>Mensagem de: {residentMsg.senderName}</h2>
+              <p style={{ margin: 0, color: '#475569', fontSize: '14px', lineHeight: 1.5 }}>"{residentMsg.message}"</p>
+              <div style={{ marginTop: '12px' }}>
+                <button onClick={() => setResidentMsg(null)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#3B82F6', color: '#FFF', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>Ciente</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notificação de Chamada Recebida do Morador */}
+        {incomingCall && (
+          <div style={{ background: '#FFF', border: '2px solid #F59E0B', padding: '20px', borderRadius: '20px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 8px 24px rgba(245,158,11,0.15)', animation: 'pulse 2s infinite' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FFFBEB', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Phone size={24} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px', color: '#1E293B' }}>Chamada de: {incomingCall.callerName}</h2>
+              <p style={{ margin: 0, color: '#64748B', fontSize: '13px' }}>O morador está interfonando para a portaria.</p>
+            </div>
+            <button onClick={() => setIncomingCall(null)} style={{ padding: '12px 24px', borderRadius: '10px', border: 'none', background: '#10B981', color: '#FFF', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}>Atender</button>
+          </div>
+        )}
+
         {/* Busca por Endereço */}
         <div style={{ marginBottom: '40px', background: '#FFF', borderRadius: '24px', padding: '32px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
           <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><Phone size={18} color="#3B82F6"/> Chamar Unidade por Endereço</h3>

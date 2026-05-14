@@ -291,71 +291,16 @@ export default function AdminPanel() {
     </div>
   );
 
-  if (onboardingStep === 'pay') return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-      <div className="fade-in" style={{ maxWidth: '400px', width: '100%', textAlign: 'center' }}>
-        <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-          <CreditCard size={32} color="#10B981" />
-        </div>
-        <h2 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '12px' }}>Pagamento</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '15px', lineHeight: 1.6, marginBottom: '32px' }}>
-          Ative sua campainha digital por apenas <strong style={{ color: 'var(--primary)' }}>R$ 15,00/mês</strong>.
-        </p>
-        
-        <div className="premium-card" style={{ padding: '24px', textAlign: 'left', marginBottom: '32px' }}>
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 600 }}>RESUMO DO PEDIDO</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span>Plano Mensal - {propertyName}</span>
-            <span style={{ fontWeight: 700 }}>R$ 15,00</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)', paddingTop: '8px', marginTop: '8px' }}>
-            <span style={{ fontWeight: 800 }}>Total</span>
-            <span style={{ fontWeight: 800, color: 'var(--primary)' }}>R$ 15,00</span>
-          </div>
-        </div>
-
-        <button onClick={() => setOnboardingStep('scan')} className="btn-primary" style={{ width: '100%', padding: '18px', fontSize: '16px', marginBottom: '16px', background: 'linear-gradient(135deg, #10B981, #059669)' }}>
-          💳 Pagar e Ativar Placa
-        </button>
-        <button onClick={() => setOnboardingStep('config')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px' }}>← Voltar para Configuração</button>
-      </div>
-    </div>
-  );
+  // ── Tela de pagamento removida: acesso direto ao scan ──
+  if (onboardingStep === 'pay') { setOnboardingStep('scan'); return null; }
 
   // ── Dashboard Principal ────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', paddingBottom: '60px' }}>
 
-      {/* ── Modal Paywall: Nova Placa R$15 ── */}
-      {showPaywall && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(8px)' }}>
-          <div style={{ background: 'var(--bg-surface-elevated)', borderRadius: '24px', padding: '32px', maxWidth: '380px', width: '100%', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px' }}>🏠</div>
-            <h2 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px' }}>Novo Endereço</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1.6, marginBottom: '24px' }}>
-              Cada endereço adicional tem o custo de <strong style={{ color: 'var(--primary)', fontSize: '18px' }}>R$ 15,00</strong> por mês.<br/>
-              Após o pagamento, seu novo endereço será ativado automaticamente.
-            </p>
 
-            {/* Benefícios */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '14px', padding: '16px', marginBottom: '24px', textAlign: 'left' }}>
-              {['✅ QR Code exclusivo para o novo endereço', '✅ Histórico de visitantes separado', '✅ Notificações independentes', '✅ Suporte a múltiplas unidades'].map((b, i) => (
-                <div key={i} style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: i < 3 ? '8px' : 0 }}>{b}</div>
-              ))}
-            </div>
+      {/* Paywall removido - condomínios gerenciam unidades diretamente */}
 
-            <button className="btn-primary" onClick={() => {
-              setShowPaywall(false);
-              alert('Em breve: integração com pagamento via Pix. Entre em contato para ativar manualmente.');
-            }} style={{ width: '100%', padding: '16px', fontSize: '16px', fontWeight: 800, marginBottom: '12px', background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 8px 24px rgba(16,185,129,0.3)' }}>
-              💳 Pagar R$ 15,00 e Adicionar
-            </button>
-            <button onClick={() => setShowPaywall(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', width: '100%', padding: '8px' }}>
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
 
       <header style={{ background: 'var(--bg-surface-elevated)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
