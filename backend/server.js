@@ -604,7 +604,19 @@ app.post('/api/resident/login-by-code', (req, res) => {
     });
   }
 
-  // 2. Check if it's a resident unit code
+  // 2. Check if it's an admin/client code (síndico/administrador do condomínio)
+  const adminProp = properties.find(p => p.clientCode === code);
+  if (adminProp) {
+    return res.json({
+      role: 'admin',
+      propertyId: adminProp.id,
+      propertyName: adminProp.name,
+      clientCode: adminProp.clientCode,
+      adminEmail: adminProp.adminEmail
+    });
+  }
+
+  // 3. Check if it's a resident unit code
   let foundUnit = null, foundProperty = null;
   for (const prop of properties) {
     const unit = prop.units.find(u => u.accessCode === code);

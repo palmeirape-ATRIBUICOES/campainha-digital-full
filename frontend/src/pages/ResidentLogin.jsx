@@ -63,6 +63,14 @@ export default function ResidentLogin() {
           localStorage.setItem('cd_doorman_propertyId', data.propertyId);
           localStorage.setItem('cd_doorman_propertyName', data.propertyName);
           navigate('/portaria');
+        } else if (data.role === 'admin') {
+          // Admin do condomínio logando pelo código de cliente
+          localStorage.setItem('cd_admin_email', data.adminEmail || '');
+          localStorage.setItem('cd_admin_role', 'client');
+          localStorage.setItem('cd_admin_propertyId', data.propertyId);
+          localStorage.setItem('cd_admin_clientCode', data.clientCode || '');
+          localStorage.setItem('cd_admin_propertyName', data.propertyName || '');
+          navigate('/admin');
         } else if (data.unitId) {
           saveAndNavigate(data);
         } else {

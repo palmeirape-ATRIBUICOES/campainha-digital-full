@@ -354,6 +354,52 @@ O login do morador pedia e-mail + código para TODOS os tipos, tornando o proces
 
 ---
 
+## 🔐 v3.1.1 — Correção do Login Admin do Condomínio (14/05/2026)
+
+### Problema Principal
+O administrador do condomínio (síndico) não conseguia acessar o painel de administração usando o código de cliente (`clientCode`). Ao digitar o código na tela de login do morador (`/morador-login`), recebia "Código de acesso inválido" porque o endpoint `login-by-code` só verificava códigos de **unidades** e **porteiro**, ignorando o **clientCode do admin**.
+
+### Correções no Backend (`server.js`)
+
+1. **Endpoint `login-by-code` reconhece admin**
+   - Adicionada verificação de `clientCode` (código do síndico/admin) no endpoint `/api/resident/login-by-code`.
+   - Ordem de prioridade: **Porteiro → Admin → Morador**.
+   - Retorna `role: 'admin'` com `propertyId`, `propertyName`, `clientCode` e `adminEmail`.
+
+2. **Endpoint `/api/properties/:id/units` retorna accessCode**
+   - O endpoint estava **removendo o `accessCode`** da resposta, fazendo com que o `UnitManager` não conseguisse exibir, copiar ou compartilhar os códigos das unidades.
+
+3. **Login do Admin (`/api/admin/login`) simplificado**
+   - Lógica de verificação de `clientCode` e `adminPassword` reescrita para ser mais clara.
+   - `clientCode`: comparação case-insensitive (uppercase).
+   - `adminPassword`: comparação exata.
+
+4. **Comparação de email case-insensitive**
+   - `GET /api/properties` e verificação do Master Admin agora comparam emails em `.toLowerCase()`.
+
+### Correções no Frontend
+
+1. **`ResidentLogin.jsx` — Redirect para Admin**
+   - Quando o `login-by-code` retorna `role: 'admin'`, salva dados no `localStorage` e redireciona para `/admin`.
+
+2. **`AuthPage.jsx` — Tratamento de erros**
+   - Removido fallback silencioso que redirecionava para `/admin` mesmo quando a API falhava (causava painel vazio).
+   - Validação de campos antes do envio.
+   - Salva `clientCode`, `propertyName` e `propertyId` no `localStorage`.
+
+3. **`AdminPanel.jsx` — Auth guard e logout**
+   - Auth guard: redireciona para `/auth` se não há email no `localStorage`.
+   - Logout limpa todos os dados do `localStorage` corretamente.
+   - `fetchProperties` verifica resposta `ok` e tipo array antes de atualizar state.
+
+### Arquivos Modificados
+- `backend/server.js`
+- `frontend/src/pages/AuthPage.jsx`
+- `frontend/src/pages/AdminPanel.jsx`
+- `frontend/src/pages/ResidentLogin.jsx`
+
+---
+
 ## 🛠️ Próximos Passos
 - [ ] Integração Pix automatizada via API de pagamentos.
 - [ ] Geração de contrato PDF com assinatura digital.
