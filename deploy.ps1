@@ -1,33 +1,24 @@
-# Script de Deploy Automático para Campainha Digital
+# Script de Deploy para Campainha Digital
 $ErrorActionPreference = "Continue"
 
-Write-Host "===========================================" -ForegroundColor Cyan
-Write-Host "🚀 INICIANDO DEPLOY PARA O GITHUB" -ForegroundColor Cyan
-Write-Host "===========================================" -ForegroundColor Cyan
+Write-Host "INICIANDO DEPLOY PARA O GITHUB..."
 
-Write-Host "🔍 Verificando alterações..." -ForegroundColor Gray
-& "C:\Program Files\Git\mingw64\libexec\git-core\git.exe" add .
+$gitPath = "C:\Program Files\Git\mingw64\libexec\git-core\git.exe"
+
+Write-Host "Adicionando arquivos..."
+& $gitPath add .
 
 $timestamp = Get-Date -Format "dd/MM/yyyy HH:mm:ss"
 $message = "Deploy automatico: $timestamp"
 
-Write-Host "📝 Criando registro (commit)..." -ForegroundColor Gray
-& "C:\Program Files\Git\mingw64\libexec\git-core\git.exe" commit -m "$message"
+Write-Host "Criando commit..."
+& $gitPath commit -m "$message"
 
-Write-Host "📤 Enviando arquivos para o servidor (GitHub)..." -ForegroundColor Yellow
-& "C:\Program Files\Git\mingw64\libexec\git-core\git.exe" push origin main
+Write-Host "Pushing to GitHub..."
+& $gitPath push origin main
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "===========================================" -ForegroundColor Green
-    Write-Host "✅ DEPLOY CONCLUIDO COM SUCESSO!" -ForegroundColor Green
-    Write-Host "===========================================" -ForegroundColor Green
+    Write-Host "DEPLOY CONCLUIDO COM SUCESSO!"
 } else {
-    Write-Host "===========================================" -ForegroundColor Red
-    Write-Host "❌ ERRO NO DEPLOY" -ForegroundColor Red
-    Write-Host "Verifique suas credenciais do GitHub." -ForegroundColor Red
-    Write-Host "===========================================" -ForegroundColor Red
+    Write-Host "ERRO NO DEPLOY: Verifique suas credenciais do GitHub."
 }
-
-Write-Host "Pressione qualquer tecla para sair..."
-# Comentado para evitar travamento em execucoes automaticas
-# $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
