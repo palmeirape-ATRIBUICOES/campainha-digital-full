@@ -271,7 +271,11 @@ io.on('connection', (socket) => {
   });
 });
 
+// Health Check (Keep-Alive)
+app.get('/api/ping', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
+
 // Catch-all para o Frontend (React Router)
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });

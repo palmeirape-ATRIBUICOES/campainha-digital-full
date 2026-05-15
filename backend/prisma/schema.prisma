@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -16,41 +16,34 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
-  // Módulos Ativos (Permissões)
   isSuperAdmin    Boolean   @default(false)
-  isAdmin         Boolean   @default(false) // Síndico / Admin de Propriedade
+  isAdmin         Boolean   @default(false) 
   isResident      Boolean   @default(false)
   isDoorman       Boolean   @default(false)
   
-  // Relações
   propertiesManaged Property[] @relation("PropertyAdmin")
   propertiesDoorman Property[] @relation("PropertyDoorman")
   units             Unit[]     @relation("UnitResidents")
   
-  // Configurações de Campainha
   doorbellEnabled   Boolean   @default(true)
-  quietModeStart    String?   // HH:mm
-  quietModeEnd      String?   // HH:mm
+  quietModeStart    String?   
+  quietModeEnd      String?   
   
-  // Promoções
   trialEndsAt       DateTime?
   promoActive       Boolean   @default(false)
 }
 
 model Property {
-  id              String    @id // QR Code ID (UUID ou escaneado)
-  type            String    @default("house") // house, condo, village
+  id              String    @id 
+  type            String    @default("house") 
   name            String
   
-  // Admin / Síndico
   adminId         String?
   admin           User?     @relation("PropertyAdmin", fields: [adminId], references: [id])
   
-  // Porteiro
   doormanId       String?
   doorman         User?     @relation("PropertyDoorman", fields: [doormanId], references: [id])
   
-  // Dados do Cliente (Legado/Dossiê)
   clientName      String?
   clientPhone     String?
   clientDocument  String?
@@ -74,10 +67,7 @@ model Unit {
   block           String?
   street          String?
   number          String?
-  
-  // Para casas compartilhadas
-  inviteCode      String?    @unique // Código para outros moradores da mesma casa
-  
+  inviteCode      String?    @unique 
   residents       User[]     @relation("UnitResidents")
   visitors        Visitor[]
 }
@@ -88,7 +78,7 @@ model Visitor {
   unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
   propertyId      String
   property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  photo           String?  @db.Text
+  photo           String?  
   callerName      String   @default("Visitante")
   timestamp       DateTime @default(now())
 }
@@ -98,9 +88,8 @@ model Message {
   propertyId      String
   property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   title           String
-  body            String   @db.Text
+  body            String   
   priority        String   @default("normal")
   senderId        String
   createdAt       DateTime @default(now())
-  readBy          String[] // IDs de usuários que leram
 }
