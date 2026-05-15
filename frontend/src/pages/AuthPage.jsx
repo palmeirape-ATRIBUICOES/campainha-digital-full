@@ -114,7 +114,7 @@ export default function AuthPage() {
               </div>
               <div style={{ position: 'relative', width: '100%' }}>
                 <Lock size={20} className="text-muted" style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '16px', pointerEvents: 'none' }} />
-                <input type="password" name="authInput" placeholder="Código Único de Acesso" className="input-glass" style={{ paddingLeft: '48px', width: '100%' }} required />
+                <input type="password" name="authInput" placeholder="Código Único ou Senha" className="input-glass" style={{ paddingLeft: '48px', width: '100%' }} required />
               </div>
               <button type="submit" className="btn-primary w-full" style={{ padding: '16px', marginTop: '12px', fontSize: '16px' }}>
                 Acessar Sistema <ArrowRight size={20} />
