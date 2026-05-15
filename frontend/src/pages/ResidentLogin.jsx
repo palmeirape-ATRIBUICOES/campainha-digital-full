@@ -92,8 +92,24 @@ export default function ResidentLogin() {
         body: JSON.stringify({ email, accessCode: password })
       });
       const data = await res.json();
-      if (res.ok && data.unitId) saveAndNavigate(data);
-      else setError(data.error || 'Credenciais incorretas.');
+      
+      if (res.ok) {
+        if (data.role === 'admin') {
+          // Admin do condomínio logando por email/senha
+          localStorage.setItem('cd_admin_email', data.adminEmail || email);
+          localStorage.setItem('cd_admin_role', 'client');
+          localStorage.setItem('cd_admin_propertyId', data.propertyId);
+          localStorage.setItem('cd_admin_clientCode', data.clientCode || '');
+          localStorage.setItem('cd_admin_propertyName', data.propertyName || '');
+          navigate('/admin');
+        } else if (data.unitId) {
+          saveAndNavigate(data);
+        } else {
+          setError('Ocorreu um erro inesperado.');
+        }
+      } else {
+        setError(data.error || 'Credenciais incorretas.');
+      }
     } catch { setError('Erro de conexão. Verifique sua internet.'); }
     finally { setLoading(false); }
   };

@@ -569,9 +569,32 @@ app.post('/api/resident/login', (req, res) => {
   if (!email || !accessCode)
     return res.status(400).json({ error: 'E-mail e código de acesso são obrigatórios.' });
 
+  const emailLower = email.trim().toLowerCase();
+  const codeTrimmed = accessCode.trim();
+  const codeUpper = codeTrimmed.toUpperCase();
+
+  // 1. Check if it's an admin/client code (síndico/administrador do condomínio)
+  const adminProp = properties.find(p => {
+    if ((p.adminEmail || '').toLowerCase() !== emailLower) return false;
+    if (p.clientCode && (p.clientCode === codeUpper || p.clientCode === codeTrimmed)) return true;
+    if (p.adminPassword && p.adminPassword === codeTrimmed) return true;
+    return false;
+  });
+
+  if (adminProp) {
+    return res.json({
+      role: 'admin',
+      propertyId: adminProp.id,
+      propertyName: adminProp.name,
+      clientCode: adminProp.clientCode,
+      adminEmail: adminProp.adminEmail
+    });
+  }
+
+  // 2. Check if it's a resident unit code
   let foundUnit = null, foundProperty = null;
   for (const prop of properties) {
-    const unit = prop.units.find(u => u.accessCode === accessCode.trim().toUpperCase());
+    const unit = prop.units.find(u => u.accessCode === codeUpper);
     if (unit) { foundUnit = unit; foundProperty = prop; break; }
   }
   if (!foundUnit) return res.status(401).json({ error: 'Código de acesso inválido.' });
