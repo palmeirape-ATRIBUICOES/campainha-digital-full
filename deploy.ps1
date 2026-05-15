@@ -3,18 +3,18 @@ $ErrorActionPreference = "Continue"
 
 Write-Host "INICIANDO DEPLOY PARA O GITHUB..."
 
-$gitPath = "C:\Program Files\Git\mingw64\libexec\git-core\git.exe"
+$gitPath = "C:\Users\thiag\AppData\Local\GitHubDesktop\app-3.5.8\resources\app\git\cmd\git.exe"
 
 Write-Host "Adicionando arquivos..."
 & $gitPath add .
 
 $timestamp = Get-Date -Format "dd/MM/yyyy HH:mm:ss"
-$message = "Deploy automatico: $timestamp"
+$message = "Deploy via Antigravity: $timestamp"
 
 Write-Host "Criando commit..."
 & $gitPath commit -m "$message"
 
-Write-Host "Pushing to GitHub..."
+Write-Host "Pushing to GitHub (origin main)..."
 & $gitPath push origin main
 
 if ($LASTEXITCODE -eq 0) {
