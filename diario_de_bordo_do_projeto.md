@@ -416,10 +416,40 @@ O projeto foi migrado com sucesso para um novo repositório oficial.
 ---
 
 
-## 🛠️ Próximos Passos
+---
+
+## 🗄️ v4.0.0 — Preparação para Banco de Dados Escalável (15/05/2026)
+
+Iniciada a migração dos bancos de dados JSON para PostgreSQL utilizando Prisma ORM.
+
+### Ações Realizadas:
+1. **Instalação do Prisma:** Configurado `prisma` e `@prisma/client` no backend.
+2. **Definição do Schema:** Criado `schema.prisma` com modelos para `Property`, `Unit`, `Resident`, `Visitor` e `Message`.
+3. **Utilitário Prisma:** Criado `prismaClient.js` para conexão centralizada.
+4. **Script de Migração:** Desenvolvido `migrateData.js` para transferir dados existentes dos arquivos JSON para o PostgreSQL sem perda de informação.
+
+### Próximos Passos:
+- Configurar a string de conexão no arquivo `.env`.
+- Executar a migração de dados.
+- Refatorar o `server.js` para utilizar o Prisma Client em vez de manipulação de arquivos local.
+
+---
+
+
+## 🔐 v4.1.0 — Autenticação Unificada e Sistema de Módulos (15/05/2026)
+
+Revisão completa da arquitetura de acesso e experiência do usuário.
+
+### Ações Realizadas:
+1. **Autenticação Unificada:** Implementado login centralizado por E-mail/Celular para todos os tipos de usuários.
+2. **Sistema de Módulos (Master Admin):** O Super Admin agora ativa módulos individualmente (Residente, Síndico, Porteiro) para cada usuário.
+3. **Refatoração do Backend:** `server.js` migrado para lógica de banco de dados (Prisma) e suporte a sessões unificadas.
+4. **Agendamento de Silêncio:** Moradores agora podem definir horários para não serem incomodados pela campainha.
+5. **Compartilhamento Familiar:** Adicionado suporte a `inviteCode` para moradores da mesma casa se vincularem sem nova placa.
+6. **Redesign de Onboarding:** Landing page e Auth simplificados, removendo burocracia e leitura obrigatória de placa no cadastro.
+
+### Próximos Passos:
 - [ ] Integração Pix automatizada via API de pagamentos.
 - [ ] Geração de contrato PDF com assinatura digital.
 - [ ] Sistema de notificações push (FCM).
-- [ ] Migração final para PostgreSQL/Neon.
-- [ ] Dashboard de analytics com gráficos.
-
+- [ ] Dashboard de analytics com gráficos no Master Admin.

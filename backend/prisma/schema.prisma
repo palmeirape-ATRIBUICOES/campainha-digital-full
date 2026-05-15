@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String?   @unique
+  phone           String?   @unique
+  password        String
+  name            String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Módulos Ativos (Permissões)
+  isSuperAdmin    Boolean   @default(false)
+  isAdmin         Boolean   @default(false) // Síndico / Admin de Propriedade
+  isResident      Boolean   @default(false)
+  isDoorman       Boolean   @default(false)
+  
+  // Relações
+  propertiesManaged Property[] @relation("PropertyAdmin")
+  propertiesDoorman Property[] @relation("PropertyDoorman")
+  units             Unit[]     @relation("UnitResidents")
+  
+  // Configurações de Campainha
+  doorbellEnabled   Boolean   @default(true)
+  quietModeStart    String?   // HH:mm
+  quietModeEnd      String?   // HH:mm
+  
+  // Promoções
+  trialEndsAt       DateTime?
+  promoActive       Boolean   @default(false)
+}
+
+model Property {
+  id              String    @id // QR Code ID (UUID ou escaneado)
+  type            String    @default("house") // house, condo, village
+  name            String
+  
+  // Admin / Síndico
+  adminId         String?
+  admin           User?     @relation("PropertyAdmin", fields: [adminId], references: [id])
+  
+  // Porteiro
+  doormanId       String?
+  doorman         User?     @relation("PropertyDoorman", fields: [doormanId], references: [id])
+  
+  // Dados do Cliente (Legado/Dossiê)
+  clientName      String?
+  clientPhone     String?
+  clientDocument  String?
+  clientAddress   String?
+  companyName     String?
+  plan            String    @default("BASIC")
+  
+  createdAt       DateTime  @default(now())
+  nextPaymentAt   DateTime
+  
+  units           Unit[]
+  messages        Message[]
+  visitors        Visitor[]
+}
+
+model Unit {
+  id              String     @id @default(uuid())
+  propertyId      String
+  property        Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  name            String
+  block           String?
+  street          String?
+  number          String?
+  
+  // Para casas compartilhadas
+  inviteCode      String?    @unique // Código para outros moradores da mesma casa
+  
+  residents       User[]     @relation("UnitResidents")
+  visitors        Visitor[]
+}
+
+model Visitor {
+  id              String   @id @default(uuid())
+  unitId          String
+  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  propertyId      String
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  photo           String?  @db.Text
+  callerName      String   @default("Visitante")
+  timestamp       DateTime @default(now())
+}
+
+model Message {
+  id              String   @id @default(uuid())
+  propertyId      String
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  title           String
+  body            String   @db.Text
+  priority        String   @default("normal")
+  senderId        String
+  createdAt       DateTime @default(now())
+  readBy          String[] // IDs de usuários que leram
+}
