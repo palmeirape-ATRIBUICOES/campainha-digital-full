@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, Send, Zap } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import UnitManager from '../components/UnitManager';
 import BroadcastPanel from '../components/BroadcastPanel';
@@ -68,16 +68,44 @@ export default function AdminPanel() {
   const [loadingVisitors, setLoadingVisitors] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const videoRef = useRef(null);
+  const navigate = useNavigate();
 
-  useEffect(() => { fetchProperties(); }, []);
+  useEffect(() => {
+    // Auth guard: redirect if not logged in
+    const adminEmail = localStorage.getItem('cd_admin_email');
+    if (!adminEmail) {
+      navigate('/auth');
+      return;
+    }
+    fetchProperties();
+  }, []);
 
   const fetchProperties = async () => {
     try {
       const adminEmail = localStorage.getItem('cd_admin_email');
-      const url = adminEmail ? `${API}/api/properties?email=${encodeURIComponent(adminEmail)}` : `${API}/api/properties`;
+      if (!adminEmail) return;
+      
+      const url = `${API}/api/properties?email=${encodeURIComponent(adminEmail)}`;
       const res  = await fetch(url);
+      
+      if (!res.ok) {
+        console.error('Failed to fetch properties:', res.status);
+        setProperties([]);
+        setOnboardingStep('type');
+        return;
+      }
+      
       const data = await res.json();
+      
+      // Ensure data is an array
+      if (!Array.isArray(data)) {
+        console.error('Invalid properties response:', data);
+        setProperties([]);
+        setOnboardingStep('type');
+        return;
+      }
       
       setProperties(data);
 
@@ -100,7 +128,7 @@ export default function AdminPanel() {
           : data[0].id;
         setSelectedProperty(toSelect);
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error('Fetch properties error:', err); }
     finally { setLoading(false); }
   };
 
@@ -378,9 +406,19 @@ export default function AdminPanel() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Logo size={32} />
         </div>
-        <Link to="/" style={{ color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600 }}>
+        <button onClick={() => {
+          localStorage.removeItem('cd_admin_email');
+          localStorage.removeItem('cd_admin_role');
+          localStorage.removeItem('cd_admin_propertyId');
+          localStorage.removeItem('cd_admin_clientCode');
+          localStorage.removeItem('cd_admin_propertyName');
+          localStorage.removeItem('cd_admin_name');
+          localStorage.removeItem('cd_admin_password');
+          localStorage.removeItem('cd_property_type');
+          navigate('/');
+        }} style={{ color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
           <LogOut size={18} /> Sair
-        </Link>
+        </button>
       </header>
 
       {/* Tabs */}

@@ -16,8 +16,13 @@ export default function AuthPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const emailInput = formData.get('email');
-    const authInput = formData.get('authInput'); // Can be password or client code
+    const emailInput = (formData.get('email') || '').trim();
+    const authInput = (formData.get('authInput') || '').trim();
+
+    if (!emailInput || !authInput) {
+      alert('Preencha todos os campos.');
+      return;
+    }
 
     try {
       const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -39,24 +44,19 @@ export default function AuthPage() {
           localStorage.setItem('cd_doorman_propertyName', data.propertyName);
           navigate('/portaria');
         } else {
-          // Admin de condomínio — salva propertyId para carregar painel correto
+          // Admin de condomínio — salva propertyId e clientCode para carregar painel correto
           localStorage.setItem('cd_admin_role', 'client');
           if (data.propertyId) localStorage.setItem('cd_admin_propertyId', data.propertyId);
+          if (data.clientCode) localStorage.setItem('cd_admin_clientCode', data.clientCode);
+          if (data.propertyName) localStorage.setItem('cd_admin_propertyName', data.propertyName);
           navigate('/admin');
         }
       } else {
-        alert(data.error || 'Erro ao fazer login.');
+        alert(data.error || 'Credenciais inválidas. Verifique seu e-mail e código de acesso.');
       }
     } catch (err) {
-      // Fallback behavior if API fails or for offline dev
-      if (emailInput === 'leandro2703palmeira@gmail.com' && authInput === '27031981') {
-        localStorage.setItem('cd_admin_email', emailInput);
-        localStorage.setItem('cd_admin_role', 'master');
-        navigate('/master-admin');
-      } else {
-        localStorage.setItem('cd_admin_email', emailInput);
-        navigate('/admin');
-      }
+      console.error('Login error:', err);
+      alert('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
     }
   };
 

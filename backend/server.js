@@ -72,13 +72,16 @@ app.post('/api/admin/login', (req, res) => {
   }
   
   // 2. Property Admin (Client) - aceita clientCode OU password como código OU adminPassword
-  const codeToUse = (clientCode || password || '').trim().toUpperCase();
-  const propAdmin = properties.find(p =>
-    (p.adminEmail || '').toLowerCase() === rawEmail &&
-    (p.clientCode === codeToUse || 
-     p.clientCode === rawPassword || 
-     (p.adminPassword && p.adminPassword === rawPassword))
-  );
+  const codeInput = (clientCode || '').trim().toUpperCase();
+  const passwordInput = (password || '').trim();
+  const propAdmin = properties.find(p => {
+    if ((p.adminEmail || '').toLowerCase() !== rawEmail) return false;
+    // Check clientCode match (case-insensitive)
+    if (p.clientCode && (p.clientCode === codeInput || p.clientCode === passwordInput.toUpperCase())) return true;
+    // Check adminPassword match (exact)
+    if (p.adminPassword && p.adminPassword === passwordInput) return true;
+    return false;
+  });
   if (propAdmin) {
     return res.json({
       success: true, role: 'admin', email: propAdmin.adminEmail,
@@ -192,14 +195,18 @@ app.get('/api/properties', (req, res) => {
   const { email } = req.query;
   
   // Master Admin always sees everything
-  if (email === MASTER_ADMIN_EMAIL) {
+  if (email && email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
     return res.json(properties);
   }
 
   if (!email) return res.status(400).json({ error: 'Email is required' });
   
-  // Filter by adminEmail OR doormanEmail
-  const filtered = properties.filter(p => p.adminEmail === email || p.doormanEmail === email);
+  // Filter by adminEmail OR doormanEmail (case-insensitive)
+  const emailLower = email.toLowerCase();
+  const filtered = properties.filter(p => 
+    (p.adminEmail || '').toLowerCase() === emailLower || 
+    (p.doormanEmail || '').toLowerCase() === emailLower
+  );
   res.json(filtered);
 });
 
@@ -212,8 +219,8 @@ app.get('/api/properties/:id', (req, res) => {
 app.get('/api/properties/:id/units', (req, res) => {
   const prop = properties.find(p => p.id === req.params.id);
   if (!prop) return res.status(404).json({ error: 'Property not found' });
-  // Return unit list with names, IDs, and address info
-  res.json(prop.units.map(u => ({ id: u.id, name: u.name, block: u.block || '', street: u.street || '', number: u.number || '' })));
+  // Return unit list with names, IDs, address info, and access codes
+  res.json(prop.units.map(u => ({ id: u.id, name: u.name, block: u.block || '', street: u.street || '', number: u.number || '', accessCode: u.accessCode || '' })));
 });
 
 app.delete('/api/properties/:id', (req, res) => {
