@@ -207,6 +207,8 @@ export default function AdminPanel() {
       if (res.ok) { 
         // Clear password from local storage after using it
         localStorage.removeItem('cd_admin_password');
+        
+        // Se for individual, vai para o pagamento. Se for coletivo, vai direto pro painel.
         if (propertyType === 'individual' || propertyType === 'house') {
           setOnboardingStep('pay');
         } else {
@@ -328,8 +330,8 @@ export default function AdminPanel() {
               </button>
             </div>
           )}
-          <button onClick={() => setOnboardingStep('pay')} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '16px', marginTop: '24px' }}>
-            Prosseguir para Pagamento <ChevronRight size={20} />
+          <button onClick={() => setOnboardingStep('scan')} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '16px', marginTop: '24px' }}>
+            Prosseguir para Ativação <ChevronRight size={20} />
           </button>
         </div>
         <button onClick={() => setOnboardingStep('type')} style={{ display: 'block', margin: '16px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px' }}>← Voltar</button>

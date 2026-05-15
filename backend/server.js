@@ -583,11 +583,13 @@ app.post('/api/resident/login', (req, res) => {
 
   if (adminProp) {
     return res.json({
+      success: true,
       role: 'admin',
       propertyId: adminProp.id,
       propertyName: adminProp.name,
       clientCode: adminProp.clientCode,
-      adminEmail: adminProp.adminEmail
+      adminEmail: adminProp.adminEmail,
+      clientName: adminProp.clientName || ''
     });
   }
 

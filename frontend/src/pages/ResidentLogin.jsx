@@ -101,6 +101,7 @@ export default function ResidentLogin() {
           localStorage.setItem('cd_admin_propertyId', data.propertyId);
           localStorage.setItem('cd_admin_clientCode', data.clientCode || '');
           localStorage.setItem('cd_admin_propertyName', data.propertyName || '');
+          localStorage.setItem('cd_admin_name', data.clientName || '');
           navigate('/admin');
         } else if (data.unitId) {
           saveAndNavigate(data);
@@ -217,23 +218,23 @@ export default function ResidentLogin() {
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '1px' }}>SEU E-MAIL</label>
                   <div style={{ position: 'relative' }}>
-                    <Mail size={20} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '20px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                    <input type="email" placeholder="nome@email.com" style={{ width: '100%', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px 16px 16px 56px', color: '#fff', fontSize: '16px', outline: 'none', transition: 'border 0.2s' }} value={email} onChange={e => setEmail(e.target.value)} required onFocus={e => e.target.style.borderColor = 'rgba(255,255,255,0.3)'} onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
+                    <Mail size={20} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '20px', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }} />
+                    <input type="email" placeholder="nome@email.com" className="input-glass" style={{ paddingLeft: '56px' }} value={email} onChange={e => setEmail(e.target.value)} required />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '1px' }}>CÓDIGO DE ACESSO</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '1px' }}>CÓDIGO DE ACESSO OU SENHA</label>
                   <div style={{ position: 'relative' }}>
-                    <Lock size={20} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '20px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                    <input type={showPass ? 'text' : 'password'} placeholder="••••••••" style={{ width: '100%', background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '16px', padding: '16px 56px', color: '#fff', fontSize: '16px', outline: 'none', transition: 'border 0.2s' }} value={password} onChange={e => setPassword(e.target.value)} required onFocus={e => e.target.style.borderColor = 'rgba(255,255,255,0.3)'} onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
-                    <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', right: '16px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '8px' }}>
+                    <Lock size={20} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '20px', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }} />
+                    <input type={showPass ? 'text' : 'password'} placeholder="••••••••" className="input-glass" style={{ paddingLeft: '56px', paddingRight: '56px' }} value={password} onChange={e => setPassword(e.target.value)} required />
+                    <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', right: '16px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '8px', zIndex: 2 }}>
                       {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
 
-                <button type="submit" disabled={loading} style={{ width: '100%', background: '#fff', color: '#000', border: 'none', padding: '20px', borderRadius: '16px', fontSize: '16px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 12px 32px rgba(255,255,255,0.1)', marginTop: '8px', transition: 'transform 0.2s', opacity: loading ? 0.7 : 1 }}>
+                <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '20px', fontSize: '16px', borderRadius: '16px', marginTop: '8px' }}>
                   {loading ? 'Conectando...' : <><ArrowRight size={20} /> Entrar com E-mail</>}
                 </button>
               </form>
