@@ -401,19 +401,20 @@ O administrador do condomínio (síndico) não conseguia acessar o painel de adm
 
 ---
 
-## 🚀 Deploy no Novo Diretorio (Desktop) - 15/05/2026
+## 🚀 Migração para Novo Repositório GitHub - 15/05/2026
 
-O projeto foi movido/clonado para um novo diretório na Área de Trabalho (`c:\Users\thiag\OneDrive\Área de Trabalho\campainha digital`).
+O projeto foi migrado com sucesso para um novo repositório oficial.
 
 ### Ações Realizadas:
-1. **Atualização do Script de Deploy:** O `deploy.ps1` foi atualizado para usar o executável do Git do GitHub Desktop, que é mais estável e geralmente já possui as credenciais do usuário.
-2. **Verificação de Build:** O frontend foi testado com `npm run build` e compilou com sucesso.
-3. **Tentativa de Push:** Detectado que o repositório local está 12 commits à frente do `origin/main`. O push requer interação manual para autenticação.
+1. **Criação do Repositório:** Criado novo repositório `campainha-digital-full` na conta `palmeirape-ATRIBUICOES`.
+2. **Atualização de Remotos:** O repositório local foi configurado para apontar para a nova URL: `https://github.com/palmeirape-ATRIBUICOES/campainha-digital-full.git`.
+3. **Primeiro Push:** Todos os arquivos foram enviados com sucesso para a branch `main`.
+4. **Atualização de Documentação:** `README.md` atualizado para apontar para o novo endereço.
 
-### Instrução para o Usuário:
-Como o push exige autorização via navegador, execute o arquivo **`ATUALIZAR_SITE_FINAL.bat`** que está na sua Área de Trabalho para concluir o deploy.
+**Novo Endereço:** [github.com/palmeirape-ATRIBUICOES/campainha-digital-full](https://github.com/palmeirape-ATRIBUICOES/campainha-digital-full)
 
 ---
+
 
 ## 🛠️ Próximos Passos
 - [ ] Integração Pix automatizada via API de pagamentos.

@@ -2,7 +2,7 @@
 
 > **SaaS de Campainha Inteligente via QR Code com Videochamada P2P Real**
 
-[![GitHub](https://img.shields.io/badge/GitHub-leopalmeira%2Fcampainha--digital-black?logo=github)](https://github.com/leopalmeira/campainha-digital)
+[![GitHub](https://img.shields.io/badge/GitHub-palmeirape--ATRIBUICOES%2Fcampainha--digital--full-black?logo=github)](https://github.com/palmeirape-ATRIBUICOES/campainha-digital-full)
 [![Deploy](https://img.shields.io/badge/Deploy-Render-46E3B7?logo=render)](https://render.com)
 [![Version](https://img.shields.io/badge/Versão-3.0.0-green)](#)
 [![License](https://img.shields.io/badge/Licença-MIT-gray)](#)
@@ -173,4 +173,4 @@ campainha-digital/
 
 ## 📄 Licença
 
-MIT © [Leo Palmeira](https://github.com/leopalmeira)
+MIT © [Leo Palmeira](https://github.com/palmeirape-ATRIBUICOES)
