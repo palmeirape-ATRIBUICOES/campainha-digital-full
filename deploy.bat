@@ -1,13 +1,34 @@
 @echo off
-SET GIT_PATH="C:\Program Files\Git\mingw64\libexec\git-core\git.exe"
-echo [DEPLOY] Iniciando deploy via CMD...
-%GIT_PATH% add .
-%GIT_PATH% commit -m "Deploy via CMD"
-echo [DEPLOY] Enviando para o GitHub...
-%GIT_PATH% push origin main
-if %ERRORLEVEL% EQU 0 (
-    echo [OK] Deploy concluido com sucesso!
-) else (
-    echo [ERRO] Falha no deploy. Verifique se o Git Credential Manager esta funcionando.
+setlocal enabledelayedexpansion
+
+echo [DEPLOY] Procurando executavel do Git...
+
+:: Tentar caminhos comuns
+set "GIT_PATH="
+if exist "C:\Program Files\Git\cmd\git.exe" set "GIT_PATH=C:\Program Files\Git\cmd\git.exe"
+if not defined GIT_PATH if exist "C:\Program Files\Git\mingw64\libexec\git-core\git.exe" set "GIT_PATH=C:\Program Files\Git\mingw64\libexec\git-core\git.exe"
+if not defined GIT_PATH if exist "%LOCALAPPDATA%\GitHubDesktop\app-3.5.8\resources\app\git\cmd\git.exe" set "GIT_PATH=%LOCALAPPDATA%\GitHubDesktop\app-3.5.8\resources\app\git\cmd\git.exe"
+
+if not defined GIT_PATH (
+    echo [ERRO] Git nao encontrado.
+    pause
+    exit /b 1
 )
+
+echo [DEPLOY] Usando: !GIT_PATH!
+echo [DEPLOY] Sincronizando arquivos...
+
+"!GIT_PATH!" add .
+"!GIT_PATH!" commit -m "Deploy automatico via CMD"
+
+echo [DEPLOY] Enviando para o GitHub (origin main)...
+"!GIT_PATH!" push origin main
+
+if !ERRORLEVEL! EQU 0 (
+    echo [OK] DEPLOY REALIZADO COM SUCESSO!
+) else (
+    echo [ERRO] Falha no envio. Verifique suas credenciais.
+    echo Dica: Se o erro for 'gcmcore', o Git Credential Manager esta quebrado.
+)
+
 pause
