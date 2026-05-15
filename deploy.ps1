@@ -3,7 +3,7 @@ $ErrorActionPreference = "Continue"
 
 Write-Host "INICIANDO DEPLOY PARA O GITHUB..."
 
-$gitPath = "C:\Users\thiag\AppData\Local\GitHubDesktop\app-3.5.8\resources\app\git\cmd\git.exe"
+$gitPath = "C:\ProgramData\thiag\GitHubDesktop\app-3.5.8\resources\app\git\cmd\git.exe"
 
 Write-Host "Adicionando arquivos..."
 & $gitPath add .

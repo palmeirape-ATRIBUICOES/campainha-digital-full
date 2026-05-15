@@ -398,6 +398,21 @@ O administrador do condomínio (síndico) não conseguia acessar o painel de adm
 - `frontend/src/pages/AdminPanel.jsx`
 - `frontend/src/pages/ResidentLogin.jsx`
 
+
+---
+
+## 🚀 Deploy no Novo Diretorio (Desktop) - 15/05/2026
+
+O projeto foi movido/clonado para um novo diretório na Área de Trabalho (`c:\Users\thiag\OneDrive\Área de Trabalho\campainha digital`).
+
+### Ações Realizadas:
+1. **Atualização do Script de Deploy:** O `deploy.ps1` foi atualizado para usar o executável do Git do GitHub Desktop, que é mais estável e geralmente já possui as credenciais do usuário.
+2. **Verificação de Build:** O frontend foi testado com `npm run build` e compilou com sucesso.
+3. **Tentativa de Push:** Detectado que o repositório local está 12 commits à frente do `origin/main`. O push requer interação manual para autenticação.
+
+### Instrução para o Usuário:
+Como o push exige autorização via navegador, execute o arquivo **`ATUALIZAR_SITE_FINAL.bat`** que está na sua Área de Trabalho para concluir o deploy.
+
 ---
 
 ## 🛠️ Próximos Passos

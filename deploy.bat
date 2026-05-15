@@ -5,7 +5,7 @@ echo [DEPLOY] Procurando executavel do Git...
 
 :: Tentar caminhos - Preferindo GitHub Desktop que geralmente ja esta autenticado
 set "GIT_PATH="
-if exist "%LOCALAPPDATA%\GitHubDesktop\app-3.5.8\resources\app\git\cmd\git.exe" set "GIT_PATH=%LOCALAPPDATA%\GitHubDesktop\app-3.5.8\resources\app\git\cmd\git.exe"
+if exist "C:\ProgramData\thiag\GitHubDesktop\app-3.5.8\resources\app\git\cmd\git.exe" set "GIT_PATH=C:\ProgramData\thiag\GitHubDesktop\app-3.5.8\resources\app\git\cmd\git.exe"
 if not defined GIT_PATH if exist "C:\Program Files\Git\cmd\git.exe" set "GIT_PATH=C:\Program Files\Git\cmd\git.exe"
 if not defined GIT_PATH if exist "C:\Program Files\Git\mingw64\libexec\git-core\git.exe" set "GIT_PATH=C:\Program Files\Git\mingw64\libexec\git-core\git.exe"
 
