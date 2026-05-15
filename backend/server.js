@@ -1,4 +1,6 @@
 const express = require('express');
+const path = require('path');
+
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
@@ -18,6 +20,8 @@ const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
 
 // ─── Middlewares ─────────────────────────────────────────────────────────────
 const authenticate = async (req, res, next) => {
@@ -267,5 +271,11 @@ io.on('connection', (socket) => {
   });
 });
 
+// Catch-all para o Frontend (React Router)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
+
 const PORT = process.env.PORT || 3001;
+
 server.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
