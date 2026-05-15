@@ -235,6 +235,8 @@ export default function ResidentDashboard() {
   const handleMonitor = () => {
     stopRing(); setStatus('monitoring'); localStreamRef.current = null;
     socketRef.current.emit('answer_call', { visitorSocketId: call.visitorSocketId, mode: 'monitor', unitId: id });
+    // Sinaliza ao visitante que pode criar a offer WebRTC
+    socketRef.current.emit('webrtc_ready', { target: call.visitorSocketId });
   };
 
   const handleAnswer = async (withCamera = false) => {
@@ -243,9 +245,11 @@ export default function ResidentDashboard() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withCamera });
       localStreamRef.current = stream;
       if (withCamera && localVideoRef.current) { localVideoRef.current.srcObject = stream; localVideoRef.current.play().catch(() => {}); }
-      if (pcRef.current) stream.getTracks().forEach(t => pcRef.current.addTrack(t, stream));
     } catch (e) { console.warn('[Media]', e); }
+    // Primeiro notifica o visitante que a chamada foi atendida
     socketRef.current.emit('answer_call', { visitorSocketId: call.visitorSocketId, mode: 'active', unitId: id });
+    // Depois sinaliza que a mídia local está pronta e pode criar a offer
+    socketRef.current.emit('webrtc_ready', { target: call.visitorSocketId });
   };
 
   const handleEnd = () => {

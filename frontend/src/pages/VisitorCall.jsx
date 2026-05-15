@@ -59,16 +59,21 @@ export default function VisitorCall() {
 
     fetchProperty();
 
-    // Morador atendeu – inicia WebRTC
+    // Morador atendeu – aguarda sinal de pronto antes de iniciar WebRTC
     // Em modo monitor: visitante vê "Chamando..." — NÃO revela que está sendo visto
-    socket.on('call_answered', async ({ residentSocketId, mode, unitId }) => {
+    socket.on('call_answered', ({ residentSocketId, mode, unitId }) => {
       setResidentSocket(residentSocketId);
       // modo monitor: visitante continua vendo a tela de "chamando" (não sabe que está sendo monitorado)
       if (mode !== 'monitor') {
         setStatus('answered');
         setCountdown(0);
       }
-      await startWebRTC(residentSocketId, mode);
+      // NÃO inicia WebRTC aqui — aguarda o sinal webrtc_ready do morador
+    });
+
+    // Morador sinalizou que está pronto (mídia local capturada) – agora cria a offer
+    socket.on('webrtc_ready', async ({ residentSocketId }) => {
+      await startWebRTC(residentSocketId, 'active');
     });
 
     // Mensagem rápida enviada pelo morador
@@ -317,7 +322,7 @@ export default function VisitorCall() {
       {/* ── Idle: escolher unidade ─────────────────────────────────────────── */}
       {status === 'idle' && property && (
         <div className="fade-in" style={{ width: '100%', maxWidth: '400px' }}>
-          {property.type === 'individual' ? (
+          {(property.type === 'individual' || property.type === 'house' || (property.units && property.units.length <= 1)) ? (
             <button
               id="btn-tocar-campainha"
               className="btn-primary"
