@@ -109,7 +109,7 @@ app.post('/api/auth/register', async (req, res) => {
         data: {
           id: crypto.randomUUID(), // Geração manual para garantir sucesso
           name: `Residência de ${user.name}`,
-          address: 'Individual',
+          clientAddress: 'Individual',
           type: 'individual',
           adminId: user.id,
           nextPaymentAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
