@@ -175,14 +175,19 @@ app.post('/api/resident/login-by-code', async (req, res) => {
   }
 });
 
-// Login por E-mail/Senha (Para Moradores)
+// Login por E-mail/Senha/Celular (Para Moradores)
 app.post('/api/resident/login', async (req, res) => {
-  const { email, accessCode } = req.body; // accessCode aqui é usado como senha
+  const { email, identifier, accessCode } = req.body; // accessCode aqui é usado como senha
+  const loginId = identifier || email || '';
+  const isEmail = loginId.includes('@');
+  
   try {
     const user = await prisma.user.findFirst({
       where: {
-        email: email.toLowerCase(),
-        password: accessCode
+        AND: [
+          isEmail ? { email: loginId.toLowerCase() } : { phone: loginId },
+          { password: accessCode }
+        ]
       },
       include: {
         propertiesManaged: true,

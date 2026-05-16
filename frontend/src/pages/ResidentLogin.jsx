@@ -8,7 +8,7 @@ import { API } from '../config';
 export default function ResidentLogin() {
   const [loginType, setLoginType] = useState('code'); // 'code' | 'email'
   const [accessCode, setAccessCode] = useState('');
-  const [email, setEmail]       = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError]       = useState('');
@@ -89,14 +89,14 @@ export default function ResidentLogin() {
     try {
       const res = await fetch(`${API}/api/resident/login`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, accessCode: password })
+        body: JSON.stringify({ identifier: identifier.trim(), accessCode: password })
       });
       const data = await res.json();
       
       if (res.ok) {
         if (data.role === 'admin') {
           // Admin do condomínio logando por email/senha
-          localStorage.setItem('cd_admin_email', data.adminEmail || email);
+          localStorage.setItem('cd_admin_email', data.adminEmail || identifier);
           localStorage.setItem('cd_admin_role', 'client');
           localStorage.setItem('cd_admin_propertyId', data.propertyId);
           localStorage.setItem('cd_admin_clientCode', data.clientCode || '');
@@ -211,7 +211,7 @@ export default function ResidentLogin() {
             </button>
             <button onClick={() => { setLoginType('email'); setError(''); }}
               style={{ flex: 1, padding: '14px', borderRadius: '18px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', background: loginType === 'email' ? '#FFF' : 'transparent', color: loginType === 'email' ? 'var(--primary)' : 'var(--text-muted)', boxShadow: loginType === 'email' ? '0 4px 12px rgba(0,0,0,0.05)' : 'none' }}>
-              <Mail size={18} /> E-mail
+              <Mail size={18} /> E-mail/Celular
             </button>
           </div>
 
@@ -255,19 +255,19 @@ export default function ResidentLogin() {
               </form>
             )}
 
-            {/* ── MODO E-MAIL ── */}
+            {/* ── MODO E-MAIL/CELULAR ── */}
             {loginType === 'email' && (
               <form onSubmit={handleEmailLogin} className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '1px' }}>SEU E-MAIL</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '1px' }}>E-MAIL OU CELULAR</label>
                   <div style={{ position: 'relative' }}>
                     <Mail size={20} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '20px', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }} />
-                    <input type="email" placeholder="nome@email.com" className="input-glass" style={{ paddingLeft: '56px' }} value={email} onChange={e => setEmail(e.target.value)} required />
+                    <input type="text" placeholder="nome@email.com ou (11) 99999-9999" className="input-glass" style={{ paddingLeft: '56px' }} value={identifier} onChange={e => setIdentifier(e.target.value)} required />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '1px' }}>CÓDIGO DE ACESSO OU SENHA</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '1px' }}>SENHA</label>
                   <div style={{ position: 'relative' }}>
                     <Lock size={20} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '20px', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }} />
                     <input type={showPass ? 'text' : 'password'} placeholder="••••••••" className="input-glass" style={{ paddingLeft: '56px', paddingRight: '56px' }} value={password} onChange={e => setPassword(e.target.value)} required />
@@ -278,7 +278,7 @@ export default function ResidentLogin() {
                 </div>
 
                 <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '20px', fontSize: '16px', borderRadius: '16px', marginTop: '8px' }}>
-                  {loading ? 'Conectando...' : <><ArrowRight size={20} /> Entrar com E-mail</>}
+                  {loading ? 'Conectando...' : <><ArrowRight size={20} /> Entrar</>}
                 </button>
 
                 <button type="button" onClick={handleForgotPassword} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px' }}>
