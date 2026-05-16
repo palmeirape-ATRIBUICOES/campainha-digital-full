@@ -455,6 +455,20 @@ app.get('/api/properties/:id', async (req, res) => {
   }
 });
 
+// Histórico de Visitantes
+app.get('/api/visitors/:unitId', async (req, res) => {
+  try {
+    const visitors = await prisma.visitor.findMany({
+      where: { unitId: req.params.unitId },
+      orderBy: { timestamp: 'desc' },
+      take: 50
+    });
+    res.json(visitors);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar visitantes.' });
+  }
+});
+
 // TODO: Implementar demais rotas (Units, Visitors, Messages) migrando para Prisma
 
 // ─── QR Code & Código de Cliente ─────────────────────────────────────────────
@@ -592,6 +606,10 @@ io.on('connection', (socket) => {
   // Outros eventos WebRTC...
   socket.on('answer_call', ({ visitorSocketId, mode, unitId }) => {
     io.to(visitorSocketId).emit('call_answered', { residentSocketId: socket.id, mode, unitId });
+  });
+  
+  socket.on('webrtc_ready', ({ target }) => {
+    io.to(target).emit('webrtc_ready', { residentSocketId: socket.id });
   });
   
   socket.on('webrtc_offer', ({ target, offer }) => {

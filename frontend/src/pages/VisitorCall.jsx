@@ -44,6 +44,7 @@ export default function VisitorCall() {
   const localVideoRef   = useRef(null); // câmera do visitante (oculta)
   const canvasRef       = useRef(null);
   const remoteAudioRef  = useRef(null);
+  const remoteVideoRef  = useRef(null); // câmera do morador (se ativada)
   const socketRef       = useRef(null);
   const pcRef           = useRef(null);   // RTCPeerConnection
   const localStreamRef  = useRef(null);
@@ -207,9 +208,15 @@ export default function VisitorCall() {
 
     // Quando receber áudio/vídeo do morador
     pc.ontrack = (event) => {
-      if (remoteAudioRef.current && event.streams[0]) {
-        remoteAudioRef.current.srcObject = event.streams[0];
-        remoteAudioRef.current.play().catch(e => console.warn('[Audio] autoplay bloqueado:', e));
+      if (event.streams[0]) {
+        if (event.track.kind === 'audio' && remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = event.streams[0];
+          remoteAudioRef.current.play().catch(e => console.warn('[Audio] autoplay bloqueado:', e));
+        }
+        if (event.track.kind === 'video' && remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = event.streams[0];
+          remoteVideoRef.current.play().catch(e => console.warn('[Video] autoplay bloqueado:', e));
+        }
       }
     };
 
@@ -393,8 +400,12 @@ export default function VisitorCall() {
       {/* ── Chamada ativa (áudio bidirecional) ───────────────────────────── */}
       {status === 'answered' && (
         <div className="glass-panel fade-in" style={{ padding: '48px 24px', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
-          <div style={{ width: '100px', height: '100px', background: '#10B981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 32px', boxShadow: '0 8px 32px rgba(16,185,129,0.4)' }}>
-            <CheckCircle size={48} color="#000" />
+          
+          <div style={{ position: 'relative', width: '120px', height: '120px', margin: '0 auto 32px', borderRadius: '50%', overflow: 'hidden', border: '4px solid #10B981', boxShadow: '0 8px 32px rgba(16,185,129,0.4)', background: '#000' }}>
+            <video ref={remoteVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: -1 }}>
+              <CheckCircle size={48} color="#10B981" />
+            </div>
           </div>
 
           <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '12px', color: '#10B981' }}>
