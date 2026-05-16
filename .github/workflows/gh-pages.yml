@@ -32,6 +32,8 @@ jobs:
           npm install --legacy-peer-deps
 
       - name: Build
+        env:
+          VITE_API_URL: https://campainha-backend.onrender.com
         run: |
           cd frontend
           npm run build
