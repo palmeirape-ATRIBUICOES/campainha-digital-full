@@ -42,6 +42,19 @@ model User {
   clientCode        String?   @unique
   // Código da placa pré-configurada (Opção 1: placa entregue pronta)
   plateCode         String?   @unique
+  
+  // Assinaturas de Push Notification (um por aparelho)
+  pushSubscriptions PushSubscription[]
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }
 
 model Property {

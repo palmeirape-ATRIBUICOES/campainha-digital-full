@@ -8,7 +8,13 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
+const webpush = require('web-push');
 const prisma = require('./prismaClient'); // Usando Prisma!
+
+// VAPID keys para Push Notifications
+const VAPID_PUBLIC_KEY = 'BOL7TRhhhHHze0bnWJY7w3ucZ9JhcxEzycbKQaCCPs2XCed4SVuLxSplr-dqfVeT6nfAmvj7JEvEUbXlnbZUT6U';
+const VAPID_PRIVATE_KEY = 'Cj-7L7Qzqfe3d_AxJ_KRL_wOq4jT2_ZWorgUXZDg8oE';
+webpush.setVapidDetails('mailto:admin@campainha.digital', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 // Debug database location
 const dbPath = path.join(__dirname, 'prisma', 'dev.db');
@@ -23,9 +29,23 @@ async function ensureColumnsExist() {
     await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "plateCode" TEXT;`).catch(() => {});
     await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "recoveryToken" TEXT;`).catch(() => {});
     await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "recoveryTokenExp" DATETIME;`).catch(() => {});
+    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "isReseller" INTEGER DEFAULT 0;`).catch(() => {});
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_clientCode_key" ON "User"("clientCode");`).catch(() => {});
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_plateCode_key" ON "User"("plateCode");`).catch(() => {});
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_recoveryToken_key" ON "User"("recoveryToken");`).catch(() => {});
+    // Garante tabela de Push Subscriptions
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PushSubscription" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "userId" TEXT NOT NULL,
+        "endpoint" TEXT NOT NULL,
+        "p256dh" TEXT NOT NULL,
+        "auth" TEXT NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "PushSubscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    `).catch(() => {});
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PushSubscription_endpoint_key" ON "PushSubscription"("endpoint");`).catch(() => {});
     console.log('Sincronização de colunas concluída.');
   } catch (err) {
     console.error('Erro ao verificar colunas:', err);
@@ -70,6 +90,70 @@ const authenticate = async (req, res, next) => {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const generateAccessCode = () => crypto.randomBytes(3).toString('hex').toUpperCase();
+
+// Helper: Enviar push para todos os dispositivos de um usuário
+const sendPushToUser = async (userId, payload) => {
+  try {
+    const subs = await prisma.pushSubscription.findMany({ where: { userId } });
+    const dead = [];
+    await Promise.all(subs.map(async (sub) => {
+      const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
+      try {
+        await webpush.sendNotification(pushSub, JSON.stringify(payload));
+      } catch (err) {
+        if (err.statusCode === 410 || err.statusCode === 404) dead.push(sub.id); // Subscription expirada
+      }
+    }));
+    if (dead.length > 0) await prisma.pushSubscription.deleteMany({ where: { id: { in: dead } } });
+  } catch (err) {
+    console.error('[Push] Erro ao enviar:', err.message);
+  }
+};
+
+// ─── Push Notification Routes ──────────────────────────────────────────────────
+
+// Retorna a chave pública VAPID para o frontend se inscrever
+app.get('/api/push/vapid-public-key', (req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+// Salva a subscription do dispositivo do morador
+app.post('/api/push/subscribe', authenticate, async (req, res) => {
+  const { endpoint, keys } = req.body;
+  if (!endpoint || !keys?.p256dh || !keys?.auth) {
+    return res.status(400).json({ error: 'Dados de subscription inválidos.' });
+  }
+  try {
+    await prisma.pushSubscription.upsert({
+      where: { endpoint },
+      update: { p256dh: keys.p256dh, auth: keys.auth, userId: req.user.id },
+      create: { id: crypto.randomUUID(), userId: req.user.id, endpoint, p256dh: keys.p256dh, auth: keys.auth }
+    });
+    res.json({ success: true, message: 'Dispositivo registrado para notificações!' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar subscription.', details: err.message });
+  }
+});
+
+// Remove a subscription do dispositivo (quando o morador desativa notificações)
+app.delete('/api/push/unsubscribe', authenticate, async (req, res) => {
+  const { endpoint } = req.body;
+  await prisma.pushSubscription.deleteMany({ where: { endpoint, userId: req.user.id } }).catch(() => {});
+  res.json({ success: true });
+});
+
+// Rota de TESTE para validar se o push está chegando
+app.post('/api/push/test', authenticate, async (req, res) => {
+  await sendPushToUser(req.user.id, {
+    title: '🔔 Teste de Campainha!',
+    body: 'Se você está vendo isso, as notificações push estão funcionando!',
+    icon: '/logo.png',
+    badge: '/badge.png',
+    tag: 'test-notification',
+    data: { url: '/morador/' + req.user.id }
+  });
+  res.json({ success: true, message: 'Notificação de teste enviada!' });
+});
 
 // ─── Auth Routes (Unificadas) ─────────────────────────────────────────────────
 
@@ -645,6 +729,20 @@ io.on('connection', (socket) => {
             timestamp: visit.timestamp,
             visitId: visit.id,
             propertyId
+          });
+
+          // 🔔 Push Notification: Acorda o app mesmo fechado
+          const baseUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+          sendPushToUser(resident.id, {
+            title: '🔔 Alguém na sua porta!',
+            body: `${callerName || 'Visitante'} está chamando. Toque para atender.`,
+            icon: `${baseUrl}/logo.png`,
+            badge: `${baseUrl}/badge.png`,
+            tag: 'incoming-call',
+            renotify: true,
+            requireInteraction: true,
+            vibrate: [400, 200, 400, 200, 800],
+            data: { url: `${baseUrl}/#/morador/${resident.id}`, unitId, propertyId }
           });
         }
       });

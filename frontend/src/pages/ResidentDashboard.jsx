@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag } from 'lucide-react';
+import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag, BellOff, BellRing } from 'lucide-react';
 import { HistoryPanel, SettingsPanel, DEFAULT_CATEGORIES } from './ResidentPanels';
 import Logo from '../components/Logo';
 import MessagesPanel from '../components/resident/MessagesPanel';
@@ -92,6 +92,8 @@ export default function ResidentDashboard() {
   const [propertyId, setPropertyId] = useState(() => localStorage.getItem('residentPropertyId'));
   const [broadcastMessages, setBroadcastMessages] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
 
   const audioRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -143,6 +145,61 @@ export default function ResidentDashboard() {
     fetchMessages();
     fetchUserProfile();
 
+    // ─── Registrar Service Worker e Push Subscription ──────────────────────
+    const registerPush = async () => {
+      try {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        
+        // Registra o SW
+        const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        await navigator.serviceWorker.ready;
+        console.log('[SW] Registrado com sucesso:', reg.scope);
+
+        // Pede permissão
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return;
+
+        // Busca chave pública VAPID
+        const vapidRes = await fetch(`${API}/api/push/vapid-public-key`);
+        const { publicKey } = await vapidRes.json();
+
+        // Converte a chave VAPID para o formato correto
+        const urlBase64ToUint8 = (base64) => {
+          const pad = '='.repeat((4 - base64.length % 4) % 4);
+          const b64 = (base64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+          const raw = atob(b64);
+          return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+        };
+
+        // Verifica se já existe uma subscription
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8(publicKey)
+          });
+        }
+
+        // Envia a subscription para o servidor
+        const token = localStorage.getItem('cd_token');
+        if (token) {
+          const saveRes = await fetch(`${API}/api/push/subscribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': token },
+            body: JSON.stringify(sub.toJSON())
+          });
+          if (saveRes.ok) {
+            setPushEnabled(true);
+            console.log('[Push] Dispositivo registrado!');
+          }
+        }
+      } catch (err) {
+        console.warn('[Push] Erro ao registrar:', err);
+      }
+    };
+
+    registerPush();
+
 
     s.on('incoming_call', (data) => {
       setCall(data); setStatus('ringing'); setVisitorSocketId(data.visitorSocketId);
@@ -190,7 +247,6 @@ export default function ResidentDashboard() {
 
     const bip = (e) => { e.preventDefault(); setInstallPrompt(e); };
     window.addEventListener('beforeinstallprompt', bip);
-    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
 
     return () => { s.disconnect(); window.removeEventListener('beforeinstallprompt', bip); stopAll(); };
   }, [id]);
@@ -455,6 +511,29 @@ export default function ResidentDashboard() {
                 <p style={{ color: '#64748B', fontSize: '13px', margin: 0 }}>Você será notificado quando tocarem.</p>
                 <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', background: 'rgba(16,185,129,0.08)', padding: '5px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>
                   <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }}/> Conectado
+                </div>
+
+                {/* Status de notificações push */}
+                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: pushEnabled ? '#10B981' : '#94A3B8', background: pushEnabled ? 'rgba(16,185,129,0.08)' : 'rgba(148,163,184,0.1)', padding: '5px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>
+                    {pushEnabled ? <BellRing size={12} /> : <BellOff size={12} />}
+                    {pushEnabled ? 'Push Ativo' : 'Push Inativo'}
+                  </div>
+                  {pushEnabled && (
+                    <button
+                      onClick={async () => {
+                        setPushLoading(true);
+                        try {
+                          const token = localStorage.getItem('cd_token');
+                          await fetch(`${API}/api/push/test`, { method: 'POST', headers: { 'Authorization': token } });
+                        } catch {} finally { setPushLoading(false); }
+                      }}
+                      disabled={pushLoading}
+                      style={{ padding: '5px 12px', borderRadius: '99px', background: 'rgba(59,130,246,0.1)', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      {pushLoading ? '...' : '🔔 Testar'}
+                    </button>
+                  )}
                 </div>
               </div>
 
