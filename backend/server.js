@@ -344,21 +344,28 @@ app.post('/api/master/users/:id/promo', authenticate, async (req, res) => {
 // ─── Configurações de Usuário (Horários, etc) ────────────────────────────────
 
 app.get('/api/user/settings', authenticate, async (req, res) => {
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    select: {
-      doorbellEnabled: true,
-      quietModeStart: true,
-      quietModeEnd: true,
-      clientCode: true,
-      plateCode: true,
-      properties: {
-        select: { id: true }
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        doorbellEnabled: true,
+        quietModeStart: true,
+        quietModeEnd: true,
+        clientCode: true,
+        plateCode: true,
+        propertiesManaged: { select: { id: true } },
+        units: { select: { propertyId: true } }
       }
-    }
-  });
-  const propertyId = user.properties?.[0]?.id;
-  res.json({ ...user, propertyId });
+    });
+    
+    // Obtém o propertyId sendo o usuário admin da propriedade ou morador de uma unidade
+    const propertyId = user.propertiesManaged?.[0]?.id || user.units?.[0]?.propertyId;
+    
+    res.json({ ...user, propertyId });
+  } catch (err) {
+    console.error('Settings error:', err);
+    res.status(500).json({ error: 'Erro ao carregar configs' });
+  }
 });
 
 
