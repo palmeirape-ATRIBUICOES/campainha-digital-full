@@ -16,51 +16,21 @@ const VAPID_PUBLIC_KEY = 'BOL7TRhhhHHze0bnWJY7w3ucZ9JhcxEzycbKQaCCPs2XCed4SVuLxS
 const VAPID_PRIVATE_KEY = 'Cj-7L7Qzqfe3d_AxJ_KRL_wOq4jT2_ZWorgUXZDg8oE';
 webpush.setVapidDetails('mailto:admin@campainha.digital', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
-// Debug database location
-const dbPath = path.join(__dirname, 'prisma', 'dev.db');
-console.log('Database Path:', dbPath);
-
-// Auto-fix: Garantir que as colunas existam (SQLite hack)
-async function ensureColumnsExist() {
-  console.log('Verificando integridade das colunas...');
+// Debug: Verificação de conexão com o banco de dados
+async function checkDatabaseConnection() {
   try {
-    // Tenta adicionar as colunas. Se já existirem, o SQLite apenas dará erro e nós ignoramos.
-    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "clientCode" TEXT;`).catch(() => {});
-    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "plateCode" TEXT;`).catch(() => {});
-    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "recoveryToken" TEXT;`).catch(() => {});
-    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "recoveryTokenExp" DATETIME;`).catch(() => {});
-    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "isReseller" INTEGER DEFAULT 0;`).catch(() => {});
-    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_clientCode_key" ON "User"("clientCode");`).catch(() => {});
-    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_plateCode_key" ON "User"("plateCode");`).catch(() => {});
-    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_recoveryToken_key" ON "User"("recoveryToken");`).catch(() => {});
-    // Garante tabela de Push Subscriptions
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "PushSubscription" (
-        "id" TEXT NOT NULL PRIMARY KEY,
-        "userId" TEXT NOT NULL,
-        "endpoint" TEXT NOT NULL,
-        "p256dh" TEXT NOT NULL,
-        "auth" TEXT NOT NULL,
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "PushSubscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-      );
-    `).catch(() => {});
-    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PushSubscription_endpoint_key" ON "PushSubscription"("endpoint");`).catch(() => {});
-    console.log('Sincronização de colunas concluída.');
+    await prisma.$connect();
+    console.log('[DB] Conectado ao banco de dados com sucesso!');
+    // Conta usuários para verificar integridade
+    const count = await prisma.user.count();
+    console.log(`[DB] ${count} usuário(s) registrado(s) no banco.`);
   } catch (err) {
-    console.error('Erro ao verificar colunas:', err);
+    console.error('[DB] ERRO ao conectar ao banco de dados:', err.message);
+    console.error('[DB] Verifique a variável DATABASE_URL no ambiente.');
   }
 }
 
-if (fs.existsSync(dbPath)) {
-  try {
-    fs.accessSync(dbPath, fs.constants.W_OK);
-    console.log('Database is WRITABLE');
-    ensureColumnsExist();
-  } catch (err) {
-    console.error('Database is NOT WRITABLE:', err);
-  }
-}
+checkDatabaseConnection();
 
 
 const app = express();
