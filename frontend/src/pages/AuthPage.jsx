@@ -57,7 +57,8 @@ export default function AuthPage() {
         else if (data.user.isDoorman) navigate('/portaria');
         else navigate(`/morador/${data.user.id}`);
       } else {
-        alert(data.error || 'Erro ao processar solicitação.');
+        const errorMsg = data.details ? `Erro: ${data.error}\nDetalhes: ${data.details}` : (data.error || 'Erro ao processar solicitação.');
+        alert(errorMsg);
       }
     } catch (err) {
       console.error('Auth error:', err);

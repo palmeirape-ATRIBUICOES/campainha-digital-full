@@ -4,10 +4,26 @@ const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 const prisma = require('./prismaClient'); // Usando Prisma!
+
+// Debug database location
+const dbPath = path.join(__dirname, 'prisma', 'dev.db');
+console.log('Database Path:', dbPath);
+if (fs.existsSync(dbPath)) {
+  try {
+    fs.accessSync(dbPath, fs.constants.W_OK);
+    console.log('Database is WRITABLE');
+  } catch (err) {
+    console.error('Database is NOT WRITABLE:', err);
+  }
+} else {
+  console.log('Database file does not exist yet (will be created by db push)');
+}
+
 
 const app = express();
 const server = http.createServer(app);
