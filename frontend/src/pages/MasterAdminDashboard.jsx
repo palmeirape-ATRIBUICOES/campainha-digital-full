@@ -132,56 +132,66 @@ export default function MasterAdminDashboard() {
         </div>
 
         {/* USERS TABLE */}
-        <div style={{ background: '#FFF', borderRadius: '24px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead style={{ background: '#F8FAFC' }}>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #E2E8F0' }}>
-                <th style={{ padding: '20px 24px', fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Usuário</th>
-                <th style={{ padding: '20px 24px', fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Módulos Ativos</th>
-                <th style={{ padding: '20px 24px', fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Status / Trial</th>
-                <th style={{ padding: '20px 24px', fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center' }}>Carregando...</td></tr>
-              ) : filteredUsers.map(user => (
-                <tr key={user.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                  <td style={{ padding: '20px 24px' }}>
-                    <div style={{ fontWeight: 700, color: '#0F172A' }}>{user.name}</div>
-                    <div style={{ fontSize: '13px', color: '#64748B' }}>{user.email || user.phone}</div>
-                    <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>Cadastrado em {new Date(user.createdAt).toLocaleDateString()}</div>
-                  </td>
-                  <td style={{ padding: '20px 24px' }}>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <ModuleBadge label="Residente" active={user.isResident} onClick={() => toggleModule(user.id, 'isResident', user.isResident)} />
-                      <ModuleBadge label="Síndico" active={user.isAdmin} onClick={() => toggleModule(user.id, 'isAdmin', user.isAdmin)} />
-                      <ModuleBadge label="Porteiro" active={user.isDoorman} onClick={() => toggleModule(user.id, 'isDoorman', user.isDoorman)} />
-                      {user.isSuperAdmin && <span style={{ background: '#0F172A', color: '#FFF', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800 }}>SUPER ADMIN</span>}
-                    </div>
-                  </td>
-                  <td style={{ padding: '20px 24px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600 }}>
-                      {user.trialEndsAt ? `Expira em ${new Date(user.trialEndsAt).toLocaleDateString()}` : 'Acesso Vitalício'}
-                    </div>
-                    {user.promoActive && <div style={{ fontSize: '11px', color: '#3B82F6', fontWeight: 700 }}>PROMOÇÃO ATIVA</div>}
-                  </td>
-                  <td style={{ padding: '20px 24px' }}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        onClick={() => giveFreeMonth(user.id)} 
-                        style={{ padding: '8px 16px', borderRadius: '10px', background: '#3B82F6', color: '#FFF', border: 'none', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                      >
-                        <Gift size={14} /> +1 Mês Grátis
-                      </button>
-                      <button style={{ padding: '8px', borderRadius: '10px', background: '#F1F5F9', border: 'none', cursor: 'pointer' }}><ExternalLink size={16} /></button>
-                    </div>
-                  </td>
+        {activeTab === 'users' && (
+          <div style={{ background: '#FFF', borderRadius: '24px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ background: '#F8FAFC' }}>
+                <tr style={{ textAlign: 'left', borderBottom: '1px solid #E2E8F0' }}>
+                  <th style={{ padding: '20px 24px', fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Usuário</th>
+                  <th style={{ padding: '20px 24px', fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Módulos Ativos</th>
+                  <th style={{ padding: '20px 24px', fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Status / Trial</th>
+                  <th style={{ padding: '20px 24px', fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan="4" style={{ padding: '40px', textAlign: 'center' }}>Carregando...</td></tr>
+                ) : filteredUsers.map(user => (
+                  <tr key={user.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                    <td style={{ padding: '20px 24px' }}>
+                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{user.name}</div>
+                      <div style={{ fontSize: '13px', color: '#64748B' }}>{user.email || user.phone}</div>
+                      <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>Cadastrado em {new Date(user.createdAt).toLocaleDateString()}</div>
+                    </td>
+                    <td style={{ padding: '20px 24px' }}>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <ModuleBadge label="Residente" active={user.isResident} onClick={() => toggleModule(user.id, 'isResident', user.isResident)} />
+                        <ModuleBadge label="Síndico" active={user.isAdmin} onClick={() => toggleModule(user.id, 'isAdmin', user.isAdmin)} />
+                        <ModuleBadge label="Porteiro" active={user.isDoorman} onClick={() => toggleModule(user.id, 'isDoorman', user.isDoorman)} />
+                      </div>
+                    </td>
+                    <td style={{ padding: '20px 24px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600 }}>
+                        {user.trialEndsAt ? `Expira em ${new Date(user.trialEndsAt).toLocaleDateString()}` : 'Acesso Vitalício'}
+                      </div>
+                    </td>
+                    <td style={{ padding: '20px 24px' }}>
+                      <button onClick={() => giveFreeMonth(user.id)} style={{ padding: '8px 16px', borderRadius: '10px', background: '#3B82F6', color: '#FFF', border: 'none', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}>+1 Mês Grátis</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* PROPERTIES TABLE */}
+        {activeTab === 'properties' && (
+          <div style={{ background: '#FFF', borderRadius: '24px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+             <div style={{ padding: '40px', textAlign: 'center' }}>
+               <Building2 size={48} color="#94A3B8" style={{ marginBottom: '16px' }} />
+               <h3 style={{ fontSize: '20px', fontWeight: 800 }}>Gestão de Propriedades</h3>
+               <p style={{ color: '#64748B', maxWidth: '400px', margin: '8px auto 24px' }}>
+                 Aqui você verá os links de chamada e QR Codes de todos os seus clientes.
+               </p>
+               <div style={{ background: '#F8FAFC', padding: '20px', borderRadius: '16px', border: '1px dashed #E2E8F0', display: 'inline-block' }}>
+                 <p style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>Dica de Acesso:</p>
+                 <code style={{ fontSize: '13px', color: '#3B82F6' }}>https://campainha-digital.onrender.com/chamada/[ID-DA-PROPRIEDADE]</code>
+               </div>
+             </div>
+          </div>
+        )}
+
       </main>
     </div>
   );
