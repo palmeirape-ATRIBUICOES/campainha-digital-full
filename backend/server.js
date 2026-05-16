@@ -308,7 +308,8 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/master/users', authenticate, async (req, res) => {
   if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
   const users = await prisma.user.findMany({
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'desc' },
+    include: { propertiesManaged: true }
   });
   res.json(users);
 });
@@ -316,11 +317,11 @@ app.get('/api/master/users', authenticate, async (req, res) => {
 // Ativar/Desativar módulos de um usuário
 app.post('/api/master/users/:id/modules', authenticate, async (req, res) => {
   if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
-  const { isAdmin, isDoorman, isResident, isSuperAdmin } = req.body;
+  const { isAdmin, isDoorman, isResident, isSuperAdmin, isReseller } = req.body;
   
   const updated = await prisma.user.update({
     where: { id: req.params.id },
-    data: { isAdmin, isDoorman, isResident, isSuperAdmin }
+    data: { isAdmin, isDoorman, isResident, isSuperAdmin, isReseller }
   });
   
   res.json(updated);

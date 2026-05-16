@@ -137,11 +137,14 @@ export default function MasterAdminDashboard() {
     }
   };
 
-  const filteredUsers = users.filter(u =>
-    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.phone?.includes(searchQuery)
-  );
+  const filteredUsers = users.filter(u => {
+    const q = searchQuery.toLowerCase();
+    const addressMatch = u.propertiesManaged?.some(p => p.clientAddress?.toLowerCase().includes(q));
+    return u.name?.toLowerCase().includes(q) ||
+           u.email?.toLowerCase().includes(q) ||
+           u.phone?.includes(searchQuery) ||
+           addressMatch;
+  });
 
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', fontFamily: 'Inter, sans-serif' }}>
@@ -213,9 +216,10 @@ export default function MasterAdminDashboard() {
                     </td>
                     <td style={{ padding: '18px 24px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <ModuleBadge label="Residente" active={user.isResident} onClick={() => toggleModule(user.id, 'isResident', user.isResident)} />
-                        <ModuleBadge label="Síndico" active={user.isAdmin} onClick={() => toggleModule(user.id, 'isAdmin', user.isAdmin)} />
-                        <ModuleBadge label="Porteiro" active={user.isDoorman} onClick={() => toggleModule(user.id, 'isDoorman', user.isDoorman)} />
+                        <ModuleBadge label="Cliente Final" active={user.isResident} onClick={() => toggleModule(user.id, 'isResident', user.isResident)} />
+                        <ModuleBadge label="Admin de Vilas" active={user.isAdmin} onClick={() => toggleModule(user.id, 'isAdmin', user.isAdmin)} />
+                        <ModuleBadge label="Zelador" active={user.isDoorman} onClick={() => toggleModule(user.id, 'isDoorman', user.isDoorman)} />
+                        <ModuleBadge label="Revendedor" active={user.isReseller} onClick={() => toggleModule(user.id, 'isReseller', user.isReseller)} />
                       </div>
                     </td>
                     <td style={{ padding: '18px 24px' }}>

@@ -15,10 +15,10 @@ export default function LandingPage() {
         <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Logo size={36} />
           <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-            <Link to="/morador-login" style={{ color: '#64748B', textDecoration: 'none', fontWeight: 600, fontSize: '14px', transition: 'color 0.2s' }}>Acesso Morador</Link>
+            <Link to="/morador-login" style={{ color: '#64748B', textDecoration: 'none', fontWeight: 600, fontSize: '14px', transition: 'color 0.2s' }}>Acessar Conta</Link>
             <Link to="/auth" style={{ textDecoration: 'none' }}>
               <button className="btn-primary" style={{ padding: '10px 24px', borderRadius: '12px', fontSize: '14px' }}>
-                Entrar Admin
+                Criar Conta
               </button>
             </Link>
           </div>
