@@ -130,6 +130,80 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// Login por Código (Para Moradores e Síndicos via Código Único)
+app.post('/api/resident/login-by-code', async (req, res) => {
+  const { accessCode } = req.body;
+  try {
+    // Busca usuário pelo clientCode (Código Único) ou plateCode (Placa)
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { clientCode: accessCode },
+          { plateCode: accessCode }
+        ]
+      },
+      include: {
+        properties: true,
+        units: { include: { property: true } }
+      }
+    });
+
+    if (!user) return res.status(401).json({ error: 'Código inválido.' });
+
+    const property = user.properties[0] || (user.units[0] ? user.units[0].property : null);
+    const unit = user.units[0];
+
+    res.json({
+      role: user.isAdmin ? 'admin' : (user.isDoorman ? 'doorman' : 'resident'),
+      propertyId: property?.id,
+      propertyName: property?.name,
+      unitId: unit?.id,
+      unitName: user.name,
+      accessCode: user.clientCode || user.plateCode,
+      clientCode: user.clientCode,
+      adminEmail: user.email
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro no servidor.', details: err.message });
+  }
+});
+
+// Login por E-mail/Senha (Para Moradores)
+app.post('/api/resident/login', async (req, res) => {
+  const { email, accessCode } = req.body; // accessCode aqui é usado como senha
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        email: email.toLowerCase(),
+        password: accessCode
+      },
+      include: {
+        properties: true,
+        units: { include: { property: true } }
+      }
+    });
+
+    if (!user) return res.status(401).json({ error: 'Credenciais incorretas.' });
+
+    const property = user.properties[0] || (user.units[0] ? user.units[0].property : null);
+    const unit = user.units[0];
+
+    res.json({
+      role: user.isAdmin ? 'admin' : 'resident',
+      propertyId: property?.id,
+      propertyName: property?.name,
+      unitId: unit?.id,
+      unitName: user.name,
+      accessCode: user.clientCode || user.plateCode,
+      clientCode: user.clientCode,
+      adminEmail: user.email
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro no servidor.', details: err.message });
+  }
+});
+
+
 // Login Unificado
 app.post('/api/auth/login', async (req, res) => {
   const { identifier, password } = req.body;
