@@ -589,7 +589,7 @@ app.get('/api/properties/:id', async (req, res) => {
   }
 });
 
-// Histórico de Visitantes
+// Histórico de Visitantes por UnitId (ID da unidade no banco)
 app.get('/api/visitors/:unitId', async (req, res) => {
   try {
     const visitors = await prisma.visitor.findMany({
@@ -600,6 +600,27 @@ app.get('/api/visitors/:unitId', async (req, res) => {
     res.json(visitors);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar visitantes.' });
+  }
+});
+
+// Histórico de Visitantes por UserId (ID do usuário logado)
+app.get('/api/visitors/by-user/:userId', async (req, res) => {
+  try {
+    // Busca a unidade vinculada ao usuário
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.userId },
+      include: { units: { include: { visitors: { orderBy: { timestamp: 'desc' }, take: 100 } } } }
+    });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    
+    // Junta visitantes de todas as unidades do usuário
+    const visitors = user.units
+      .flatMap(u => u.visitors.map(v => ({ ...v, unitName: u.name })))
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    res.json(visitors);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar histórico.', details: err.message });
   }
 });
 

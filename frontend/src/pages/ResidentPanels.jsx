@@ -43,28 +43,38 @@ function groupByDate(visitors) {
 function VisitorCard({ v }) {
   const [expanded, setExpanded] = useState(false);
   const { date, time, weekday, ago } = fmt(v.timestamp);
+  const name = v.callerName || 'Visitante';
   return (
     <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-subtle)', background: '#FFF', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
       <div onClick={() => setExpanded(!expanded)} style={{ display: 'flex', gap: '14px', alignItems: 'center', padding: '14px 16px', cursor: 'pointer' }}>
         <div style={{ width: '56px', height: '56px', borderRadius: '12px', overflow: 'hidden', background: '#F1F5F9', flexShrink: 0, border: '2px solid var(--border-subtle)', position: 'relative' }}>
           {v.photo
-            ? <img src={v.photo} alt="Visitante" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img src={v.photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={24} style={{ opacity: 0.3 }} /></div>}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span style={{ fontWeight: 700, fontSize: '14px' }}>Visitante</span>
+            <span style={{ fontWeight: 700, fontSize: '14px' }}>{name}</span>
             <span style={{ fontSize: '11px', color: 'var(--primary)', background: 'rgba(0,229,255,0.08)', padding: '2px 8px', borderRadius: '100px', fontWeight: 600 }}>{ago}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '12px' }}>
-            <Clock size={11} /> {time} • {weekday}
+            <Clock size={11} /> {time} • {date}
           </div>
         </div>
         {expanded ? <ChevronUp size={16} style={{ opacity: 0.4 }} /> : <ChevronDown size={16} style={{ opacity: 0.4 }} />}
       </div>
-      {expanded && v.photo && (
+      {expanded && (
         <div style={{ padding: '0 16px 16px' }}>
-          <img src={v.photo} alt="Visitante" style={{ width: '100%', borderRadius: '12px', maxHeight: '240px', objectFit: 'contain', background: '#000' }} />
+          {v.photo ? (
+            <img src={v.photo} alt={name} style={{ width: '100%', borderRadius: '12px', maxHeight: '240px', objectFit: 'contain', background: '#000' }} />
+          ) : (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#94A3B8', fontSize: '13px', background: '#F8FAFC', borderRadius: '12px' }}>
+              📷 Foto não disponível para esta visita
+            </div>
+          )}
+          <div style={{ marginTop: '10px', fontSize: '12px', color: '#64748B' }}>
+            <strong>{weekday}</strong>, {date} às {time}
+          </div>
         </div>
       )}
     </div>
@@ -75,11 +85,17 @@ export function HistoryPanel({ unitId, propertyId }) {
   const [visitors, setVisitors] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // unitId aqui é o ID do usuário logado (da URL /morador/:id)
+  // Usamos a nova rota by-user para buscar todos os visitantes das suas unidades
   const load = async () => {
+    if (!unitId) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/visitors/${unitId}?propertyId=${propertyId}`);
-      if (res.ok) setVisitors(await res.json());
+      const res = await fetch(`${API}/api/visitors/by-user/${unitId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVisitors(data);
+      }
     } catch { setVisitors([]); }
     finally { setLoading(false); }
   };
@@ -90,10 +106,29 @@ export function HistoryPanel({ unitId, propertyId }) {
 
   return (
     <div style={{ padding: '20px 24px' }}>
-      <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '20px' }}>Histórico</h2>
-      {loading ? <p>Carregando...</p> : groups.map(([dateKey, items]) => (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>Histórico de Visitas</h2>
+          <p style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px', marginBottom: 0 }}>{visitors.length} visita{visitors.length !== 1 ? 's' : ''} registrada{visitors.length !== 1 ? 's' : ''}</p>
+        </div>
+        <button onClick={load} disabled={loading} style={{ padding: '8px', borderRadius: '10px', border: '1px solid #E2E8F0', background: '#FFF', cursor: 'pointer' }}>
+          <RefreshCw size={16} color="#64748B" style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+        </button>
+      </div>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
+          <div style={{ width: '32px', height: '32px', border: '3px solid #E2E8F0', borderTopColor: '#3B82F6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+          <p style={{ fontSize: '13px' }}>Carregando histórico...</p>
+        </div>
+      ) : groups.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94A3B8' }}>
+          <User size={48} style={{ opacity: 0.15, marginBottom: '16px' }} />
+          <p style={{ fontWeight: 700, fontSize: '16px', marginBottom: '4px' }}>Nenhuma visita registrada</p>
+          <p style={{ fontSize: '13px' }}>Quando alguém tocar sua campainha, aparecerá aqui com foto e horário.</p>
+        </div>
+      ) : groups.map(([dateKey, items]) => (
         <div key={dateKey} style={{ marginBottom: '24px' }}>
-          <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', marginBottom: '12px' }}>{dateKey}</p>
+          <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{dateKey}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {items.map(v => <VisitorCard key={v.id} v={v} />)}
           </div>
