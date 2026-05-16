@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { LogOut, Building2, Phone, Search, KeyRound, CheckCircle2, MessageSquare, Send, X, ShieldCheck } from 'lucide-react';
 import Logo from '../components/Logo';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API } from '../config';
 
 export default function PorteiroDashboard() {
   const [properties, setProperties] = useState([]);
@@ -254,3 +254,4 @@ export default function PorteiroDashboard() {
     </div>
   );
 }
+

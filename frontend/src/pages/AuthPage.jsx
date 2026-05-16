@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, ShieldCheck, Home, Phone, Smartphone, KeyRound, Sparkles, ChevronLeft } from 'lucide-react';
 import Logo from '../components/Logo';
+import { API } from '../config';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,7 +17,6 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
     
     try {

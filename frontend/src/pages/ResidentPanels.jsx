@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Clock, User, RefreshCw, Calendar, MapPin, Phone, X, ChevronDown, ChevronUp, Bell, BellOff, Share2, Copy, Check } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API } from '../config';
 
 // Funções utilitárias mantidas (fmt, groupByDate, VisitorCard...)
 // [Conteúdo omitido para brevidade, mas deve ser mantido no arquivo final]
@@ -222,3 +222,4 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
 export const DEFAULT_CATEGORIES = [
   { id: 'general', label: 'Geral', messages: ['Já abro!', 'Um momento', 'Não estou em casa'] }
 ];
+

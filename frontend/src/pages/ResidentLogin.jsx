@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, ShieldCheck, Home, BellRing, Hash, Building2, Download, CheckCircle, Eye, EyeOff, Sparkles } from 'lucide-react';
 import Logo from '../components/Logo';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API } from '../config';
 
 export default function ResidentLogin() {
   const [loginType, setLoginType] = useState('code'); // 'code' | 'email'
@@ -253,3 +253,4 @@ export default function ResidentLogin() {
     </div>
   );
 }
+

@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Home, Building2, X, ShieldCheck, LogOut, ChevronRight, Settings, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, Activity, History, Settings2, Search, Bell, Briefcase, ExternalLink, PieChart, Database, QrCode, Gift, Smartphone, ToggleRight, ToggleLeft
 } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useNavigate } from 'react-router-dom';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API } from '../config';
 
 export default function MasterAdminDashboard() {
   const [activeTab, setActiveTab] = useState('users');
@@ -232,3 +232,4 @@ function ModuleBadge({ label, active, onClick }) {
     </button>
   );
 }
+

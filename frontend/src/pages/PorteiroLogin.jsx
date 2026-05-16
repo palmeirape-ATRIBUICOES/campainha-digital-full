@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, ShieldCheck, Home } from 'lucide-react';
 import Logo from '../components/Logo';
+import { API } from '../config';
 
 export default function PorteiroLogin() {
   const [email, setEmail] = useState('');
@@ -12,7 +13,6 @@ export default function PorteiroLogin() {
     e.preventDefault();
 
     try {
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       const res = await fetch(`${API}/api/doorman/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

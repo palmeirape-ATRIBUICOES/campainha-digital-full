@@ -5,7 +5,8 @@ import { Bell, CheckCircle, ShieldCheck, MapPin, ChevronRight, Mic, Video, Phone
 import Logo from '../components/Logo';
 
 // ─── Configuração do Socket.io ────────────────────────────────────────────────
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API } from '../config';
+
 
 // Configuração ICE com STUN públicos do Google (funcionam em qualquer rede)
 const ICE_CONFIG = {
@@ -49,7 +50,7 @@ export default function VisitorCall() {
 
   // ─── Inicialização do Socket.io ─────────────────────────────────────────
   useEffect(() => {
-    const socket = io(API_URL, {
+    const socket = io(API, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 2000,
@@ -153,7 +154,7 @@ export default function VisitorCall() {
 
   const fetchProperty = async () => {
     try {
-      const res  = await fetch(`${API_URL}/api/properties/${id}`);
+      const res  = await fetch(`${API}/api/properties/${id}`);
       const data = await res.json();
       setProperty(data);
     } catch (err) {

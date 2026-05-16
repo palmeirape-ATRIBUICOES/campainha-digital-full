@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Send, MessageSquare, AlertTriangle, Clock, CheckCheck, Users } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API } from '../config';
 
 function fmt(ts) {
   const d = new Date(ts);
@@ -104,3 +104,4 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
     </div>
   );
 }
+

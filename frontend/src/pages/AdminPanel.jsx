@@ -6,7 +6,8 @@ import UnitManager from '../components/UnitManager';
 import BroadcastPanel from '../components/BroadcastPanel';
 import ResidentManager from '../components/ResidentManager';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API } from '../config';
+
 
 function fmtDate(ts) {
   const d = new Date(ts);

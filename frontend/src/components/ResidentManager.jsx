@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Users, UserX, Shield, ShieldOff, Plus, Trash2, Mail, Key, Copy, Check, RefreshCw } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API } from '../config';
 
 function CopyBtn({ text }) {
   const [c, setC] = useState(false);
@@ -130,3 +130,4 @@ export default function ResidentManager({ propertyId, property, adminEmail, onRe
     </div>
   );
 }
+

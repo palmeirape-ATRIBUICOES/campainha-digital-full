@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag } from 'lucide-react';
@@ -8,7 +8,7 @@ import MessagesPanel from '../components/resident/MessagesPanel';
 import IntercomPanel from '../components/resident/IntercomPanel';
 import ServicesPanel from '../components/resident/ServicesPanel';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API } from '../config';
 const ICE = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -647,3 +647,4 @@ export default function ResidentDashboard() {
     </div>
   );
 }
+
