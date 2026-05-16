@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag } from 'lucide-react';
@@ -123,7 +123,25 @@ export default function ResidentDashboard() {
         }
       } catch {}
     };
+
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem('cd_token');
+        if (!token) return;
+        const res = await fetch(`${API}/api/user/settings`, {
+          headers: { 'Authorization': token }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.clientCode) setAccessCode(data.clientCode);
+          else if (data.plateCode) setAccessCode(data.plateCode);
+          if (data.name) setUnitName(data.name);
+        }
+      } catch {}
+    };
+
     fetchMessages();
+    fetchUserProfile();
 
 
     s.on('incoming_call', (data) => {

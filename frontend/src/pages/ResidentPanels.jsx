@@ -162,6 +162,8 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
         setClientCode(data.clientCode);
         loadQrCode(`CAMPAINHA:${data.clientCode}`);
         alert('Código único gerado com sucesso!');
+        // Força uma atualização global para garantir que apareça em todo o app
+        window.location.reload(); 
       }
     } catch {
       alert('Erro ao gerar código.');
