@@ -43,8 +43,8 @@ const generateAccessCode = () => crypto.randomBytes(3).toString('hex').toUpperCa
 app.post('/api/auth/register', async (req, res) => {
   const { name, identifier, password } = req.body;
   
-  if (!identifier || !password || !name) {
-    return res.status(400).json({ error: 'Preencha todos os campos obrigatórios.' });
+  if (!name || !identifier || !password) {
+    return res.status(400).json({ error: 'Nome, e-mail/celular e senha são obrigatórios para o cadastro.' });
   }
 
   const isEmail = identifier.includes('@');
