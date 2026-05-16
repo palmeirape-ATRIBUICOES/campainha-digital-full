@@ -33,7 +33,7 @@ jobs:
 
       - name: Build
         env:
-          VITE_API_URL: https://campainha-backend.onrender.com
+          VITE_API_URL: https://campainha-digital.onrender.com
         run: |
           cd frontend
           npm run build

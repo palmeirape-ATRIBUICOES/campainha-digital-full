@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Ping Backend
         run: |
-          curl -f https://campainha-backend.onrender.com/api/ping || echo "Backend ping failed"
+          curl -f https://campainha-digital.onrender.com/api/ping || echo "Backend ping failed"
       - name: Ping Frontend
         run: |
           curl -f https://campainha-frontend.onrender.com || echo "Frontend ping failed"
