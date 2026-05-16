@@ -98,8 +98,9 @@ app.post('/api/auth/register', async (req, res) => {
         email: isEmail ? identifier.toLowerCase() : null,
         phone: !isEmail ? identifier : null,
         password: password, // TODO: Hash password
-        isResident: true, // Por padrão, todo novo usuário é um residente/cliente
-        trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 dias grátis por padrão
+        clientCode: generateAccessCode() + generateAccessCode(), // Gera código automaticamente na criação
+        isResident: true,
+        trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       }
     });
 
@@ -422,14 +423,29 @@ app.post('/api/properties', authenticate, async (req, res) => {
 // Buscar dados de uma Propriedade para o Visitante (Acesso Público)
 app.get('/api/properties/:id', async (req, res) => {
   try {
-    const property = await prisma.property.findUnique({
-      where: { id: req.params.id },
+    const idParam = req.params.id;
+    let code = idParam;
+    if (idParam.startsWith('CAMPAINHA:')) code = idParam.split(':')[1];
+
+    let property = await prisma.property.findUnique({
+      where: { id: idParam },
       include: {
-        units: {
-          select: { id: true, name: true }
-        }
+        units: { select: { id: true, name: true } }
       }
     });
+
+    if (!property) {
+      const user = await prisma.user.findFirst({
+        where: { OR: [{ clientCode: code }, { plateCode: code }] },
+        include: {
+          propertiesManaged: { include: { units: { select: { id: true, name: true } } } },
+          units: { include: { property: { include: { units: { select: { id: true, name: true } } } } } }
+        }
+      });
+      if (user) {
+        property = user.propertiesManaged?.[0] || user.units?.[0]?.property;
+      }
+    }
 
     if (!property) return res.status(404).json({ error: 'Propriedade não encontrada' });
 
@@ -489,35 +505,25 @@ app.get('/api/qrcode', async (req, res) => {
   }
 });
 
-// Escanear placa: ao cadastrar, se o usuário escanear um QR com plateCode, vincula ao seu perfil
+// Escanear placa: ao cadastrar ou logar, o usuário escaneia a placa para vinculá-la à sua conta
 app.post('/api/auth/scan-plate', async (req, res) => {
   const { plateCode, userId } = req.body;
   if (!plateCode || !userId) return res.status(400).json({ error: 'Dados incompletos.' });
 
-  // Verifica se o plateCode pertence a algum usuário (placa pré-configurada)
+  // Verifica se a placa já pertence a outro usuário
   const plateOwner = await prisma.user.findFirst({ where: { plateCode } });
   
   if (plateOwner && plateOwner.id !== userId) {
-    // A placa pertence a outro usuário — gera um clientCode único para o novo usuário
-    const newCode = generateAccessCode() + generateAccessCode();
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { clientCode: newCode }
-    });
-    return res.json({ success: true, clientCode: updated.clientCode, message: 'Código gerado com sucesso!' });
+    return res.status(400).json({ error: 'Esta placa física já está vinculada a outra conta.' });
   }
 
-  if (!plateOwner) {
-    return res.status(404).json({ error: 'Placa não encontrada ou não pré-configurada.' });
-  }
-
-  // A placa pertence ao próprio usuário (placa do próprio cliente)
-  const newCode = generateAccessCode() + generateAccessCode();
+  // Vincula a placa ao usuário atual (mantendo seu clientCode intacto)
   const updated = await prisma.user.update({
     where: { id: userId },
-    data: { clientCode: newCode }
+    data: { plateCode }
   });
-  res.json({ success: true, clientCode: updated.clientCode, message: 'Código gerado!' });
+  
+  res.json({ success: true, plateCode: updated.plateCode, message: 'Placa vinculada com sucesso!' });
 });
 
 

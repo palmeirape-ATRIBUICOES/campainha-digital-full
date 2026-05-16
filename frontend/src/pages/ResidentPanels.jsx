@@ -111,6 +111,7 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
   const [plateCode, setPlateCode] = useState('');
   const [qrImage, setQrImage] = useState('');
   const [qrLoading, setQrLoading] = useState(false);
+  const [newPlateInput, setNewPlateInput] = useState('');
 
   useEffect(() => {
     // Buscar configurações do usuário do backend
@@ -164,11 +165,35 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
         setClientCode(data.clientCode);
         loadQrCode(`CAMPAINHA:${data.clientCode}`);
         alert('Código único gerado com sucesso!');
-        // Força uma atualização global para garantir que apareça em todo o app
         window.location.reload(); 
       }
     } catch {
       alert('Erro ao gerar código.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLinkPlate = async () => {
+    if (!newPlateInput.trim()) return;
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/auth/scan-plate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ plateCode: newPlateInput.trim(), userId: localStorage.getItem('cd_user_id') })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('Placa física vinculada com sucesso ao seu código!');
+        setPlateCode(data.plateCode);
+        setNewPlateInput('');
+      } else {
+        alert(data.error || 'Erro ao vincular placa.');
+      }
+    } catch {
+      alert('Erro de conexão ao vincular placa.');
     } finally {
       setLoading(false);
     }
@@ -275,11 +300,31 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
                 <Download size={18} /> Baixar QR Code
               </button>
 
-              {plateCode && !clientCode && (
-                <div style={{ marginTop: '8px', padding: '12px', background: 'rgba(16,185,129,0.05)', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', gap: '8px', alignItems: 'flex-start', textAlign: 'left' }}>
+              <div style={{ marginTop: '16px', width: '100%', borderTop: '1px solid #E2E8F0', paddingTop: '16px', textAlign: 'left' }}>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: '#64748B', marginBottom: '8px' }}>Comprou uma placa nova?</p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: PLACA-123" 
+                    value={newPlateInput}
+                    onChange={e => setNewPlateInput(e.target.value.toUpperCase())}
+                    style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '13px' }}
+                  />
+                  <button 
+                    onClick={handleLinkPlate}
+                    disabled={loading || !newPlateInput.trim()}
+                    style={{ background: '#3B82F6', color: '#FFF', border: 'none', borderRadius: '10px', padding: '0 16px', fontWeight: 700, cursor: 'pointer', opacity: (loading || !newPlateInput.trim()) ? 0.5 : 1 }}
+                  >
+                    Vincular
+                  </button>
+                </div>
+              </div>
+
+              {plateCode && (
+                <div style={{ marginTop: '8px', padding: '12px', background: 'rgba(16,185,129,0.05)', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', gap: '8px', alignItems: 'flex-start', textAlign: 'left', width: '100%' }}>
                   <ShieldCheck size={16} color="#10B981" style={{ flexShrink: 0, marginTop: '2px' }} />
                   <p style={{ fontSize: '12px', color: '#047857', margin: 0, lineHeight: 1.5 }}>
-                    Você está usando uma <strong>Placa Física</strong> pré-configurada. O sistema já gerou seu vínculo automaticamente.
+                    Você possui a Placa Física <strong>{plateCode}</strong> vinculada ao seu QR Code.
                   </p>
                 </div>
               )}
