@@ -107,15 +107,17 @@ app.post('/api/auth/register', async (req, res) => {
     if (user.isResident) {
       const property = await prisma.property.create({
         data: {
+          id: crypto.randomUUID(), // Geração manual para garantir sucesso
           name: `Residência de ${user.name}`,
           address: 'Individual',
           type: 'individual',
           adminId: user.id,
-          nextPaymentAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 dias para o primeiro pagamento
+          nextPaymentAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         }
       });
       await prisma.unit.create({
         data: {
+          id: crypto.randomUUID(), // Geração manual para garantir sucesso
           name: 'Principal',
           propertyId: property.id,
           residents: { connect: { id: user.id } }
