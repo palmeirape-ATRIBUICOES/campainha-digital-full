@@ -108,7 +108,7 @@ export default function ResidentDashboard() {
 
     const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 20 });
     socketRef.current = s;
-    s.emit('register_resident', { unitId: id, propertyId: savedPropId });
+    s.emit('register_user', { userId: id });
 
     // Fetch broadcast messages
     const fetchMessages = async () => {

@@ -532,43 +532,46 @@ io.on('connection', (socket) => {
 
     if (!unit) return;
 
-    const visit = await prisma.visitor.create({
-      data: {
-        unitId,
-        propertyId,
-        visitorSocketId: socket.id,
-        photo: photoBase64,
-        callerName: callerName || 'Visitante'
-      }
-    });
-
-    // Notifica todos os moradores da unidade
-    unit.residents.forEach(resident => {
-      // Verifica se está no horário de silêncio
-      const now = new Date();
-      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      
-      let shouldRing = resident.doorbellEnabled;
-      if (resident.quietModeStart && resident.quietModeEnd) {
-        if (resident.quietModeStart < resident.quietModeEnd) {
-          if (currentTime >= resident.quietModeStart && currentTime <= resident.quietModeEnd) shouldRing = false;
-        } else {
-          // Caso passe da meia-noite (ex: 22:00 as 07:00)
-          if (currentTime >= resident.quietModeStart || currentTime <= resident.quietModeEnd) shouldRing = false;
-        }
-      }
-
-      if (shouldRing) {
-        io.to(`user_${resident.id}`).emit('incoming_call', {
-          visitorSocketId: socket.id,
+    try {
+      const visit = await prisma.visitor.create({
+        data: {
+          unitId,
+          propertyId,
           photo: photoBase64,
-          callerName: callerName || 'Visitante',
-          timestamp: visit.timestamp,
-          visitId: visit.id,
-          propertyId
-        });
-      }
-    });
+          callerName: callerName || 'Visitante'
+        }
+      });
+
+      // Notifica todos os moradores da unidade
+      unit.residents.forEach(resident => {
+        // Verifica se está no horário de silêncio
+        const now = new Date();
+        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        
+        let shouldRing = resident.doorbellEnabled;
+        if (resident.quietModeStart && resident.quietModeEnd) {
+          if (resident.quietModeStart < resident.quietModeEnd) {
+            if (currentTime >= resident.quietModeStart && currentTime <= resident.quietModeEnd) shouldRing = false;
+          } else {
+            // Caso passe da meia-noite (ex: 22:00 as 07:00)
+            if (currentTime >= resident.quietModeStart || currentTime <= resident.quietModeEnd) shouldRing = false;
+          }
+        }
+
+        if (shouldRing) {
+          io.to(`user_${resident.id}`).emit('incoming_call', {
+            visitorSocketId: socket.id,
+            photo: photoBase64,
+            callerName: callerName || 'Visitante',
+            timestamp: visit.timestamp,
+            visitId: visit.id,
+            propertyId
+          });
+        }
+      });
+    } catch (e) {
+      console.error('Error initiating call:', e);
+    }
   });
 
   // Outros eventos WebRTC...
