@@ -315,9 +315,13 @@ export default function ResidentDashboard() {
     socketRef.current.emit('authorize_entry', { 
       unitId: id, 
       propertyId: call.propertyId,
-      visitorId: call.visitId 
+      visitorId: visitorSocketId || call.visitorSocketId 
     });
-    alert('Entrada autorizada! Notificação enviada à portaria.');
+    sendQuickMsg("Portão Aberto! Pode entrar.");
+    alert('Entrada autorizada!');
+    setTimeout(() => {
+      handleEnd();
+    }, 3000);
   };
 
   const sendQuickMsg = (msg) => {

@@ -641,8 +641,8 @@ io.on('connection', (socket) => {
   });
 
   // Relays para Mensagens Rápidas, Encerrar Chamada e Abrir Portão
-  socket.on('quick_message', ({ visitorSocketId, message }) => {
-    io.to(visitorSocketId).emit('quick_message', { message });
+  socket.on('send_quick_message', ({ target, message }) => {
+    io.to(target).emit('quick_message', { message });
   });
 
   socket.on('call_ended', ({ target }) => {
