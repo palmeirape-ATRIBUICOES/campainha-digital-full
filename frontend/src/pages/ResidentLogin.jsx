@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, ShieldCheck, Home, BellRing, Hash, Building2, Download, CheckCircle, Eye, EyeOff, Sparkles } from 'lucide-react';
 import Logo from '../components/Logo';
@@ -114,6 +114,49 @@ export default function ResidentLogin() {
     } catch { setError('Erro de conexão. Verifique sua internet.'); }
     finally { setLoading(false); }
   };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    const identifier = loginType === 'email' ? email : accessCode;
+    if (!identifier) return setError('Digite seu e-mail ou código para recuperar.');
+    
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/auth/forgot-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Um código de recuperação foi gerado: ${data.debug_token}\n(Em produção, este código seria enviado para você)`);
+        setLoginType('reset');
+      } else {
+        setError(data.error);
+      }
+    } catch { setError('Erro ao processar recuperação.'); }
+    finally { setLoading(false); }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    const identifier = email || accessCode;
+    setError(''); setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/auth/reset-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, token: accessCode, newPassword: password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('Senha redefinida com sucesso!');
+        setLoginType('email');
+      } else {
+        setError(data.error);
+      }
+    } catch { setError('Erro ao redefinir senha.'); }
+    finally { setLoading(false); }
+  };
+
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#F8FAFC', position: 'relative', overflow: 'hidden' }}>
@@ -236,6 +279,31 @@ export default function ResidentLogin() {
 
                 <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '20px', fontSize: '16px', borderRadius: '16px', marginTop: '8px' }}>
                   {loading ? 'Conectando...' : <><ArrowRight size={20} /> Entrar com E-mail</>}
+                </button>
+
+                <button type="button" onClick={handleForgotPassword} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '8px' }}>
+                  Esqueci minha senha
+                </button>
+              </form>
+            )}
+
+            {/* ── MODO RESET ── */}
+            {loginType === 'reset' && (
+              <form onSubmit={handleResetPassword} className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>Digite o código recebido e sua nova senha.</p>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>CÓDIGO (6 DÍGITOS)</label>
+                  <input type="text" className="input-glass" value={accessCode} onChange={e => setAccessCode(e.target.value)} required />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>NOVA SENHA</label>
+                  <input type="password" className="input-glass" value={password} onChange={e => setPassword(e.target.value)} required />
+                </div>
+                <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%', padding: '20px', borderRadius: '16px' }}>
+                  {loading ? 'Alterando...' : 'Redefinir Senha'}
+                </button>
+                <button type="button" onClick={() => setLoginType('email')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '13px', cursor: 'pointer' }}>
+                  Voltar ao login
                 </button>
               </form>
             )}

@@ -9,6 +9,11 @@ datasource db {
 
 model User {
   id              String    @id @default(uuid())
+  
+  // Recuperação de senha
+  recoveryToken     String?   @unique
+  recoveryTokenExp  DateTime?
+
   email           String?   @unique
   phone           String?   @unique
   password        String
@@ -39,7 +44,7 @@ model User {
 }
 
 model Property {
-  id              String    @id 
+  id              String    @id @default(uuid())
   type            String    @default("house") 
   name            String
   

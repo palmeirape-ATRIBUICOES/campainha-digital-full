@@ -204,6 +204,66 @@ app.post('/api/resident/login', async (req, res) => {
 });
 
 
+// Recuperação de Senha - Solicitar
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { identifier } = req.body;
+  const isEmail = identifier.includes('@');
+  
+  try {
+    const user = await prisma.user.findFirst({
+      where: isEmail ? { email: identifier.toLowerCase() } : { phone: identifier }
+    });
+
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+    // Gera um código de 6 dígitos para recuperação
+    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 3600000); // 1 hora de validade
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { recoveryToken: token, recoveryTokenExp: expiry }
+    });
+
+    res.json({ success: true, message: 'Código de recuperação gerado.', debug_token: token });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao processar solicitação.' });
+  }
+});
+
+// Recuperação de Senha - Redefinir
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { identifier, token, newPassword } = req.body;
+  const isEmail = identifier.includes('@');
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        AND: [
+          isEmail ? { email: identifier.toLowerCase() } : { phone: identifier },
+          { recoveryToken: token },
+          { recoveryTokenExp: { gt: new Date() } }
+        ]
+      }
+    });
+
+    if (!user) return res.status(400).json({ error: 'Código inválido ou expirado.' });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { 
+        password: newPassword, // TODO: Hash
+        recoveryToken: null,
+        recoveryTokenExp: null
+      }
+    });
+
+    res.json({ success: true, message: 'Senha alterada com sucesso!' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao redefinir senha.' });
+  }
+});
+
 // Login Unificado
 app.post('/api/auth/login', async (req, res) => {
   const { identifier, password } = req.body;
@@ -226,20 +286,14 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({ 
       success: true, 
       token: user.id, 
-      user: { 
-        id: user.id, 
-        name: user.name, 
-        isSuperAdmin: user.isSuperAdmin,
-        isAdmin: user.isAdmin,
-        isDoorman: user.isDoorman,
-        isResident: user.isResident
-      } 
+      user: { id: user.id, name: user.name, role: user.isAdmin ? 'admin' : (user.isDoorman ? 'doorman' : 'resident') } 
     });
   } catch (err) {
     console.error('LOGIN ERROR:', err);
     res.status(500).json({ error: 'Erro ao processar login.', details: err.message });
   }
 });
+
 
 // ─── Super Admin (Master) Routes ──────────────────────────────────────────────
 
