@@ -31,6 +31,11 @@ model User {
   
   trialEndsAt       DateTime?
   promoActive       Boolean   @default(false)
+
+  // Código único do cliente (gerado pelo master admin ou pelo próprio usuário)
+  clientCode        String?   @unique
+  // Código da placa pré-configurada (Opção 1: placa entregue pronta)
+  plateCode         String?   @unique
 }
 
 model Property {

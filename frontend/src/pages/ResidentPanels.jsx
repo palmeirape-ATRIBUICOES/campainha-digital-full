@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
-import { Clock, User, RefreshCw, Calendar, MapPin, Phone, X, ChevronDown, ChevronUp, Bell, BellOff, Share2, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Clock, User, RefreshCw, Calendar, MapPin, Phone, X, ChevronDown, ChevronUp, Bell, BellOff, Share2, Copy, Check, QrCode, Download, Hash, ShieldCheck } from 'lucide-react';
 
 import { API } from '../config';
 
@@ -107,6 +107,10 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
   const [inviteCode, setInviteCode] = useState('ABCD-123'); // Exemplo
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [clientCode, setClientCode] = useState('');
+  const [plateCode, setPlateCode] = useState('');
+  const [qrImage, setQrImage] = useState('');
+  const [qrLoading, setQrLoading] = useState(false);
 
   useEffect(() => {
     // Buscar configurações do usuário do backend
@@ -123,7 +127,47 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
       setEnabled(data.doorbellEnabled);
       setQuietStart(data.quietModeStart || '22:00');
       setQuietEnd(data.quietModeEnd || '07:00');
+      setClientCode(data.clientCode || '');
+      setPlateCode(data.plateCode || '');
+      
+      if (data.clientCode) loadQrCode(`CAMPAINHA:${data.clientCode}`);
+      else if (data.plateCode) loadQrCode(`CAMPAINHA-PLATE:${data.plateCode}`);
     } catch {}
+  };
+
+  const loadQrCode = async (text) => {
+    setQrLoading(true);
+    try {
+      const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(text)}`);
+      const data = await res.json();
+      setQrImage(data.qrcode || '');
+    } catch {
+      setQrImage('');
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const generateMyCode = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/user/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ generateClientCode: true })
+      });
+      const data = await res.json();
+      if (data.clientCode) {
+        setClientCode(data.clientCode);
+        loadQrCode(`CAMPAINHA:${data.clientCode}`);
+        alert('Código único gerado com sucesso!');
+      }
+    } catch {
+      alert('Erro ao gerar código.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -187,21 +231,72 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
         </div>
       </section>
 
-      {/* Compartilhamento (Moradores da mesma casa) */}
+      {/* QR Code do Cliente */}
       <section>
         <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Share2 size={20} color="#10B981" /> Compartilhar Acesso
+          <QrCode size={20} color="var(--primary)" /> Seu QR Code de Acesso
         </h3>
-        <div style={{ background: '#FFF', borderRadius: '20px', padding: '20px', border: '1px solid #E2E8F0' }}>
-          <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '16px' }}>Outras pessoas da sua casa podem se cadastrar usando este código:</p>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <div style={{ flex: 1, background: '#F8FAFC', padding: '12px', borderRadius: '12px', border: '1px solid #E2E8F0', textAlign: 'center', fontWeight: 900, fontSize: '20px', letterSpacing: '2px', color: '#3B82F6' }}>
-              {inviteCode}
+        <div style={{ background: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
+          
+          {clientCode || plateCode ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <div style={{ padding: '16px', background: '#FFF', borderRadius: '16px', border: '2px solid #F1F5F9', position: 'relative' }}>
+                {qrLoading ? (
+                  <div style={{ width: '180px', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <RefreshCw size={24} className="animate-spin" color="#94A3B8" />
+                  </div>
+                ) : (
+                  <img src={qrImage} alt="Seu QR Code" style={{ width: '180px', height: '180px' }} />
+                )}
+              </div>
+              
+              <div style={{ background: '#F8FAFC', padding: '12px 20px', borderRadius: '12px', border: '1px solid #E2E8F0', width: '100%' }}>
+                <div style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  {plateCode && !clientCode ? 'Placa Física Vinculada' : 'Seu Código Único'}
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', letterSpacing: '2px' }}>
+                  {clientCode || plateCode}
+                </div>
+              </div>
+
+              <button 
+                onClick={() => {
+                  const a = document.createElement('a');
+                  a.href = qrImage;
+                  a.download = `QR_Campainha_${unitName}.png`;
+                  a.click();
+                }}
+                style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#0F172A', color: '#FFF', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
+              >
+                <Download size={18} /> Baixar QR Code
+              </button>
+
+              {plateCode && !clientCode && (
+                <div style={{ marginTop: '8px', padding: '12px', background: 'rgba(16,185,129,0.05)', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', gap: '8px', alignItems: 'flex-start', textAlign: 'left' }}>
+                  <ShieldCheck size={16} color="#10B981" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <p style={{ fontSize: '12px', color: '#047857', margin: 0, lineHeight: 1.5 }}>
+                    Você está usando uma <strong>Placa Física</strong> pré-configurada. O sistema já gerou seu vínculo automaticamente.
+                  </p>
+                </div>
+              )}
             </div>
-            <button onClick={copyInvite} style={{ padding: '0 16px', borderRadius: '12px', border: 'none', background: copied ? '#10B981' : '#3B82F6', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}>
-              {copied ? <Check size={20} /> : <Copy size={20} />}
-            </button>
-          </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
+                <QrCode size={40} />
+              </div>
+              <p style={{ fontSize: '14px', color: '#64748B', margin: 0 }}>
+                Você ainda não tem um QR Code gerado para sua unidade.
+              </p>
+              <button 
+                onClick={generateMyCode}
+                disabled={loading}
+                style={{ width: '100%', padding: '16px', borderRadius: '16px', background: 'linear-gradient(135deg, #3B82F6, #6366F1)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '15px', cursor: 'pointer', boxShadow: '0 8px 20px rgba(59,130,246,0.2)' }}
+              >
+                {loading ? 'Gerando...' : 'Gerar Meu QR Code Agora'}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

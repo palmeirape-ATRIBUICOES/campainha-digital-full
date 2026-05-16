@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, ShieldCheck, Home, Phone, Smartphone, KeyRound, Sparkles, ChevronLeft } from 'lucide-react';
 import Logo from '../components/Logo';
 import { API } from '../config';
@@ -12,6 +12,9 @@ export default function AuthPage() {
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const plateFromUrl = queryParams.get('plate') || '';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,6 +40,18 @@ export default function AuthPage() {
         localStorage.setItem('cd_token', data.token);
         localStorage.setItem('cd_user_id', data.user.id);
         
+        if (!isLogin && plateFromUrl) {
+          try {
+            await fetch(`${API}/api/auth/scan-plate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ plateCode: plateFromUrl, userId: data.user.id })
+            });
+          } catch (e) {
+            console.error('Error linking plate:', e);
+          }
+        }
+
         if (data.user.isSuperAdmin) navigate('/master-admin');
         else if (data.user.isAdmin) navigate('/admin');
         else if (data.user.isDoorman) navigate('/portaria');
@@ -77,6 +92,11 @@ export default function AuthPage() {
           <p style={{ fontSize: '15px', color: '#64748B' }}>
             {isLogin ? 'Acesse o painel administrativo' : 'Comece a proteger sua residência hoje.'}
           </p>
+          {plateFromUrl && !isLogin && (
+            <div style={{ marginTop: '16px', padding: '10px', background: 'rgba(16,185,129,0.08)', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.2)', color: '#047857', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+              <ShieldCheck size={18} /> Placa Detectada: {plateFromUrl}
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

@@ -159,16 +159,38 @@ app.post('/api/master/users/:id/promo', authenticate, async (req, res) => {
 
 // ─── Configurações de Usuário (Horários, etc) ────────────────────────────────
 
+app.get('/api/user/settings', authenticate, async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: {
+      doorbellEnabled: true,
+      quietModeStart: true,
+      quietModeEnd: true,
+      clientCode: true,
+      plateCode: true
+    }
+  });
+  res.json(user);
+});
+
+
 app.put('/api/user/settings', authenticate, async (req, res) => {
-  const { doorbellEnabled, quietModeStart, quietModeEnd } = req.body;
+  const { doorbellEnabled, quietModeStart, quietModeEnd, generateClientCode } = req.body;
   
+  let data = { doorbellEnabled, quietModeStart, quietModeEnd };
+  
+  if (generateClientCode) {
+    data.clientCode = generateAccessCode() + generateAccessCode();
+  }
+
   const updated = await prisma.user.update({
     where: { id: req.user.id },
-    data: { doorbellEnabled, quietModeStart, quietModeEnd }
+    data
   });
   
   res.json(updated);
 });
+
 
 // ─── Propriedades e Unidades (Adaptado) ──────────────────────────────────────
 
@@ -194,6 +216,82 @@ app.post('/api/properties', authenticate, async (req, res) => {
 });
 
 // TODO: Implementar demais rotas (Units, Visitors, Messages) migrando para Prisma
+
+// ─── QR Code & Código de Cliente ─────────────────────────────────────────────
+
+// Gerar/resetar o código único de cliente (Opção 2 - cliente gera o próprio QR)
+app.post('/api/master/users/:id/generate-client-code', authenticate, async (req, res) => {
+  if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+
+  const code = generateAccessCode() + generateAccessCode(); // Ex: A3F9C2B1
+  const updated = await prisma.user.update({
+    where: { id: req.params.id },
+    data: { clientCode: code }
+  });
+  res.json({ clientCode: updated.clientCode });
+});
+
+// Definir código de placa pré-configurada (Opção 1 - placa entregue pronta)
+app.post('/api/master/users/:id/set-plate-code', authenticate, async (req, res) => {
+  if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+  const { plateCode } = req.body;
+  if (!plateCode) return res.status(400).json({ error: 'Código da placa é obrigatório.' });
+
+  // Verifica se o código de placa já está em uso por outro usuário
+  const existing = await prisma.user.findFirst({ where: { plateCode, NOT: { id: req.params.id } } });
+  if (existing) return res.status(400).json({ error: 'Este código de placa já está em uso.' });
+
+  const updated = await prisma.user.update({
+    where: { id: req.params.id },
+    data: { plateCode }
+  });
+  res.json({ plateCode: updated.plateCode });
+});
+
+// Gerar imagem de QR Code (retorna URL de dados base64) para qualquer texto
+app.get('/api/qrcode', async (req, res) => {
+  const { text } = req.query;
+  if (!text) return res.status(400).json({ error: 'Texto para QR code é obrigatório.' });
+  try {
+    const qr = await QRCode.toDataURL(text, { width: 400, margin: 2, color: { dark: '#0F172A', light: '#FFFFFF' } });
+    res.json({ qrcode: qr });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao gerar QR Code.' });
+  }
+});
+
+// Escanear placa: ao cadastrar, se o usuário escanear um QR com plateCode, vincula ao seu perfil
+app.post('/api/auth/scan-plate', async (req, res) => {
+  const { plateCode, userId } = req.body;
+  if (!plateCode || !userId) return res.status(400).json({ error: 'Dados incompletos.' });
+
+  // Verifica se o plateCode pertence a algum usuário (placa pré-configurada)
+  const plateOwner = await prisma.user.findFirst({ where: { plateCode } });
+  
+  if (plateOwner && plateOwner.id !== userId) {
+    // A placa pertence a outro usuário — gera um clientCode único para o novo usuário
+    const newCode = generateAccessCode() + generateAccessCode();
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { clientCode: newCode }
+    });
+    return res.json({ success: true, clientCode: updated.clientCode, message: 'Código gerado com sucesso!' });
+  }
+
+  if (!plateOwner) {
+    return res.status(404).json({ error: 'Placa não encontrada ou não pré-configurada.' });
+  }
+
+  // A placa pertence ao próprio usuário (placa do próprio cliente)
+  const newCode = generateAccessCode() + generateAccessCode();
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { clientCode: newCode }
+  });
+  res.json({ success: true, clientCode: updated.clientCode, message: 'Código gerado!' });
+});
+
+
 
 // ─── Socket.io Logic ─────────────────────────────────────────────────────────
 
