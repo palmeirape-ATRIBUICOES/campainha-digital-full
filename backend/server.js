@@ -1,4 +1,4 @@
-const express = require('express');
+ const express = require('express');
 const path = require('path');
 
 const http = require('http');
@@ -276,7 +276,7 @@ app.get('/api/ping', (req, res) => res.json({ status: 'ok', timestamp: new Date(
 
 // Catch-all para o Frontend (React Router)
 
-app.get('*', (req, res) => {
+app.get('(.*)', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
