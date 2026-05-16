@@ -150,14 +150,14 @@ app.post('/api/resident/login-by-code', async (req, res) => {
         ]
       },
       include: {
-        properties: true,
+        propertiesManaged: true,
         units: { include: { property: true } }
       }
     });
 
     if (!user) return res.status(401).json({ error: 'Código inválido.' });
 
-    const property = user.properties[0] || (user.units[0] ? user.units[0].property : null);
+    const property = user.propertiesManaged[0] || (user.units[0] ? user.units[0].property : null);
     const unit = user.units[0];
 
     res.json({
@@ -185,14 +185,14 @@ app.post('/api/resident/login', async (req, res) => {
         password: accessCode
       },
       include: {
-        properties: true,
+        propertiesManaged: true,
         units: { include: { property: true } }
       }
     });
 
     if (!user) return res.status(401).json({ error: 'Credenciais incorretas.' });
 
-    const property = user.properties[0] || (user.units[0] ? user.units[0].property : null);
+    const property = user.propertiesManaged[0] || (user.units[0] ? user.units[0].property : null);
     const unit = user.units[0];
 
     res.json({
