@@ -13,15 +13,30 @@ const prisma = require('./prismaClient'); // Usando Prisma!
 // Debug database location
 const dbPath = path.join(__dirname, 'prisma', 'dev.db');
 console.log('Database Path:', dbPath);
+
+// Auto-fix: Garantir que as colunas existam (SQLite hack)
+async function ensureColumnsExist() {
+  console.log('Verificando integridade das colunas...');
+  try {
+    // Tenta adicionar as colunas. Se já existirem, o SQLite apenas dará erro e nós ignoramos.
+    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "clientCode" TEXT;`).catch(() => {});
+    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "plateCode" TEXT;`).catch(() => {});
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_clientCode_key" ON "User"("clientCode");`).catch(() => {});
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_plateCode_key" ON "User"("plateCode");`).catch(() => {});
+    console.log('Sincronização de colunas concluída.');
+  } catch (err) {
+    console.error('Erro ao verificar colunas:', err);
+  }
+}
+
 if (fs.existsSync(dbPath)) {
   try {
     fs.accessSync(dbPath, fs.constants.W_OK);
     console.log('Database is WRITABLE');
+    ensureColumnsExist();
   } catch (err) {
     console.error('Database is NOT WRITABLE:', err);
   }
-} else {
-  console.log('Database file does not exist yet (will be created by db push)');
 }
 
 
