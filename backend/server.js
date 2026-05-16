@@ -110,7 +110,8 @@ app.post('/api/auth/register', async (req, res) => {
           name: `Residência de ${user.name}`,
           address: 'Individual',
           type: 'individual',
-          adminId: user.id
+          adminId: user.id,
+          nextPaymentAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 dias para o primeiro pagamento
         }
       });
       await prisma.unit.create({
