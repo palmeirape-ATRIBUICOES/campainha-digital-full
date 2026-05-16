@@ -354,8 +354,8 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
         quietModeEnd: true,
         clientCode: true,
         plateCode: true,
-        propertiesManaged: { select: { id: true } },
-        units: { select: { propertyId: true } }
+        propertiesManaged: { select: { id: true, name: true } },
+        units: { select: { propertyId: true, property: { select: { name: true } } } }
       }
     });
     
@@ -365,8 +365,9 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
 
     // Obtém o propertyId sendo o usuário admin da propriedade ou morador de uma unidade
     const propertyId = user.propertiesManaged?.[0]?.id || user.units?.[0]?.propertyId;
+    const propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.property?.name || '';
     
-    res.json({ ...user, propertyId });
+    res.json({ ...user, propertyId, propertyName });
   } catch (err) {
     console.error('Settings error:', err);
     res.status(500).json({ error: 'Erro ao carregar configs' });
@@ -376,7 +377,7 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
 
 app.put('/api/user/settings', authenticate, async (req, res) => {
   try {
-    const { doorbellEnabled, quietModeStart, quietModeEnd, generateClientCode } = req.body;
+    const { doorbellEnabled, quietModeStart, quietModeEnd, generateClientCode, propertyName } = req.body;
     
     let data = { doorbellEnabled, quietModeStart, quietModeEnd };
     
@@ -386,8 +387,17 @@ app.put('/api/user/settings', authenticate, async (req, res) => {
 
     const updated = await prisma.user.update({
       where: { id: req.user.id },
-      data
+      data,
+      include: { propertiesManaged: true }
     });
+    
+    // Atualiza o nome da residência se o usuário for o dono (admin da propriedade)
+    if (propertyName && updated.propertiesManaged.length > 0) {
+      await prisma.property.update({
+        where: { id: updated.propertiesManaged[0].id },
+        data: { name: propertyName }
+      });
+    }
     
     res.json(updated);
   } catch (err) {

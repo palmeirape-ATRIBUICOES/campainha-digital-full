@@ -129,15 +129,22 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
       const res = await fetch(`${API}/api/user/settings`, {
         headers: { 'Authorization': token }
       });
-      const data = await res.json();
-      setEnabled(data.doorbellEnabled);
-      setQuietStart(data.quietModeStart || '22:00');
-      setQuietEnd(data.quietModeEnd || '07:00');
-      setClientCode(data.clientCode || '');
-      setPlateCode(data.plateCode || '');
-      
-      const propId = data.propertyId || unitId;
-      if (data.clientCode || data.plateCode) loadQrCode(propId);
+      if (res.ok) {
+        const data = await res.json();
+        setEnabled(data.doorbellEnabled);
+        setQuietStart(data.quietModeStart || '22:00');
+        setQuietEnd(data.quietModeEnd || '07:00');
+        setClientCode(data.clientCode || '');
+        setPlateCode(data.plateCode || '');
+        
+        if (data.propertyName) {
+          setUnitName(data.propertyName);
+          localStorage.setItem('cd_unit_name', data.propertyName);
+        }
+        
+        const propId = data.propertyId || unitId;
+        if (data.clientCode || data.plateCode) loadQrCode(propId);
+      }
     } catch {}
   };
 
@@ -233,17 +240,22 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
     setLoading(true);
     try {
       const token = localStorage.getItem('cd_token');
-      await fetch(`${API}/api/user/settings`, {
+      const res = await fetch(`${API}/api/user/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': token },
         body: JSON.stringify({ 
           doorbellEnabled: enabled, 
           quietModeStart: quietStart, 
-          quietModeEnd: quietEnd 
+          quietModeEnd: quietEnd,
+          propertyName: unitName
         })
       });
-      onSave(); // Salva nome localmente
-      alert('Configurações salvas!');
+      if (res.ok) {
+        onSave();
+        alert('Configurações salvas!');
+      } else {
+        alert('Erro ao salvar as configurações.');
+      }
     } catch {
       alert('Erro ao salvar.');
     } finally {
