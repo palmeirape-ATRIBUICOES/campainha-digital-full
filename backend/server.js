@@ -358,6 +358,10 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
       }
     });
     
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado no banco de dados.' });
+    }
+
     // Obtém o propertyId sendo o usuário admin da propriedade ou morador de uma unidade
     const propertyId = user.propertiesManaged?.[0]?.id || user.units?.[0]?.propertyId;
     
@@ -370,20 +374,25 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
 
 
 app.put('/api/user/settings', authenticate, async (req, res) => {
-  const { doorbellEnabled, quietModeStart, quietModeEnd, generateClientCode } = req.body;
-  
-  let data = { doorbellEnabled, quietModeStart, quietModeEnd };
-  
-  if (generateClientCode) {
-    data.clientCode = generateAccessCode() + generateAccessCode();
-  }
+  try {
+    const { doorbellEnabled, quietModeStart, quietModeEnd, generateClientCode } = req.body;
+    
+    let data = { doorbellEnabled, quietModeStart, quietModeEnd };
+    
+    if (generateClientCode) {
+      data.clientCode = generateAccessCode() + generateAccessCode();
+    }
 
-  const updated = await prisma.user.update({
-    where: { id: req.user.id },
-    data
-  });
-  
-  res.json(updated);
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data
+    });
+    
+    res.json(updated);
+  } catch (err) {
+    console.error('Update settings error:', err);
+    res.status(500).json({ error: 'Erro ao atualizar configurações. Talvez o usuário não exista mais.' });
+  }
 });
 
 
