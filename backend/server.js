@@ -46,6 +46,15 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
+// Health check endpoint
+app.get('/api/ping', async (req, res) => {
+  try {
+    const count = await prisma.user.count();
+    res.json({ status: 'ok', database: 'connected', users: count, timestamp: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ status: 'error', database: 'disconnected', error: err.message });
+  }
+});
 
 // ─── Middlewares ─────────────────────────────────────────────────────────────
 const authenticate = async (req, res, next) => {
