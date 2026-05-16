@@ -633,6 +633,20 @@ io.on('connection', (socket) => {
   socket.on('webrtc_ice_candidate', ({ target, candidate }) => {
     io.to(target).emit('webrtc_ice_candidate', { sender: socket.id, candidate });
   });
+
+  // Relays para Mensagens Rápidas, Encerrar Chamada e Abrir Portão
+  socket.on('quick_message', ({ visitorSocketId, message }) => {
+    io.to(visitorSocketId).emit('quick_message', { message });
+  });
+
+  socket.on('call_ended', ({ target }) => {
+    io.to(target).emit('call_ended');
+  });
+
+  socket.on('authorize_entry', ({ visitorId }) => {
+    // visitorId neste contexto contém o visitorSocketId para notificar a tela
+    io.to(visitorId).emit('entry_authorized');
+  });
 });
 
 // Health Check (Keep-Alive)
