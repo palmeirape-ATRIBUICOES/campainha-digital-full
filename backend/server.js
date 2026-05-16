@@ -73,6 +73,38 @@ const generateAccessCode = () => crypto.randomBytes(3).toString('hex').toUpperCa
 
 // ─── Auth Routes (Unificadas) ─────────────────────────────────────────────────
 
+// Login Unificado (Para AuthPage)
+app.post('/api/auth/login', async (req, res) => {
+  const { identifier, password } = req.body;
+  if (!identifier || !password) return res.status(400).json({ error: 'Credenciais inválidas.' });
+  
+  const isEmail = identifier.includes('@');
+  const loginId = isEmail ? identifier.toLowerCase() : identifier.replace(/\D/g, '');
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        AND: [
+          isEmail ? { email: loginId } : { phone: loginId },
+          { password: password }
+        ]
+      }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Credenciais incorretas.' });
+    }
+
+    res.json({ 
+      success: true, 
+      token: user.id, 
+      user: { id: user.id, name: user.name, isSuperAdmin: user.isSuperAdmin, isAdmin: user.isAdmin, isDoorman: user.isDoorman, isResident: user.isResident, isReseller: user.isReseller } 
+    });
+  } catch (err) {
+    console.error('LOGIN ERROR:', err);
+    res.status(500).json({ error: 'Erro ao processar login.', details: err.message });
+  }
+});
+
 // Registro Simples (E-mail ou Celular)
 app.post('/api/auth/register', async (req, res) => {
   const { name, identifier, password } = req.body;
@@ -82,10 +114,11 @@ app.post('/api/auth/register', async (req, res) => {
   }
 
   const isEmail = identifier.includes('@');
+  const cleanIdentifier = isEmail ? identifier.toLowerCase() : identifier.replace(/\D/g, '');
   
   try {
     const existing = await prisma.user.findFirst({
-      where: isEmail ? { email: identifier.toLowerCase() } : { phone: identifier }
+      where: isEmail ? { email: cleanIdentifier } : { phone: cleanIdentifier }
     });
 
     if (existing) {
@@ -95,8 +128,8 @@ app.post('/api/auth/register', async (req, res) => {
     const user = await prisma.user.create({
       data: {
         name,
-        email: isEmail ? identifier.toLowerCase() : null,
-        phone: !isEmail ? identifier : null,
+        email: isEmail ? cleanIdentifier : null,
+        phone: !isEmail ? cleanIdentifier : null,
         password: password, // TODO: Hash password
         clientCode: generateAccessCode() + generateAccessCode(), // Gera código automaticamente na criação
         isResident: true,
@@ -178,14 +211,15 @@ app.post('/api/resident/login-by-code', async (req, res) => {
 // Login por E-mail/Senha/Celular (Para Moradores)
 app.post('/api/resident/login', async (req, res) => {
   const { email, identifier, accessCode } = req.body; // accessCode aqui é usado como senha
-  const loginId = identifier || email || '';
-  const isEmail = loginId.includes('@');
+  const rawId = identifier || email || '';
+  const isEmail = rawId.includes('@');
+  const loginId = isEmail ? rawId.toLowerCase() : rawId.replace(/\D/g, '');
   
   try {
     const user = await prisma.user.findFirst({
       where: {
         AND: [
-          isEmail ? { email: loginId.toLowerCase() } : { phone: loginId },
+          isEmail ? { email: loginId } : { phone: loginId },
           { password: accessCode }
         ]
       },
