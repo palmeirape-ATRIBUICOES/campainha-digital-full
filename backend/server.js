@@ -410,6 +410,26 @@ app.post('/api/properties', authenticate, async (req, res) => {
   res.status(201).json(property);
 });
 
+// Buscar dados de uma Propriedade para o Visitante (Acesso Público)
+app.get('/api/properties/:id', async (req, res) => {
+  try {
+    const property = await prisma.property.findUnique({
+      where: { id: req.params.id },
+      include: {
+        units: {
+          select: { id: true, name: true }
+        }
+      }
+    });
+
+    if (!property) return res.status(404).json({ error: 'Propriedade não encontrada' });
+
+    res.json(property);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar propriedade' });
+  }
+});
+
 // TODO: Implementar demais rotas (Units, Visitors, Messages) migrando para Prisma
 
 // ─── QR Code & Código de Cliente ─────────────────────────────────────────────
