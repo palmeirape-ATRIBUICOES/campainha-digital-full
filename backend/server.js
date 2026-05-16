@@ -21,8 +21,11 @@ async function ensureColumnsExist() {
     // Tenta adicionar as colunas. Se já existirem, o SQLite apenas dará erro e nós ignoramos.
     await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "clientCode" TEXT;`).catch(() => {});
     await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "plateCode" TEXT;`).catch(() => {});
+    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "recoveryToken" TEXT;`).catch(() => {});
+    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "recoveryTokenExp" DATETIME;`).catch(() => {});
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_clientCode_key" ON "User"("clientCode");`).catch(() => {});
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_plateCode_key" ON "User"("plateCode");`).catch(() => {});
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_recoveryToken_key" ON "User"("recoveryToken");`).catch(() => {});
     console.log('Sincronização de colunas concluída.');
   } catch (err) {
     console.error('Erro ao verificar colunas:', err);
