@@ -75,8 +75,8 @@ app.post('/api/auth/register', async (req, res) => {
       user: { id: user.id, name: user.name, role: 'resident' } 
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao criar conta.' });
+    console.error('REGISTRATION ERROR:', err);
+    res.status(500).json({ error: 'Erro ao criar conta.', details: err.message });
   }
 });
 
@@ -112,8 +112,8 @@ app.post('/api/auth/login', async (req, res) => {
       } 
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao processar login.' });
+    console.error('LOGIN ERROR:', err);
+    res.status(500).json({ error: 'Erro ao processar login.', details: err.message });
   }
 });
 
