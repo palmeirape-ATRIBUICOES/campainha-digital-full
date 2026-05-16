@@ -100,6 +100,25 @@ app.post('/api/auth/register', async (req, res) => {
       }
     });
 
+    // Se for um morador comum, cria uma "Propriedade" e "Unidade" para ele receber chamadas
+    if (user.isResident) {
+      const property = await prisma.property.create({
+        data: {
+          name: `Residência de ${user.name}`,
+          address: 'Individual',
+          type: 'individual',
+          adminId: user.id
+        }
+      });
+      await prisma.unit.create({
+        data: {
+          name: 'Principal',
+          propertyId: property.id,
+          residents: { connect: { id: user.id } }
+        }
+      });
+    }
+
     res.status(201).json({ 
       success: true, 
       token: user.id, 
@@ -198,10 +217,14 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
       quietModeStart: true,
       quietModeEnd: true,
       clientCode: true,
-      plateCode: true
+      plateCode: true,
+      properties: {
+        select: { id: true }
+      }
     }
   });
-  res.json(user);
+  const propertyId = user.properties?.[0]?.id;
+  res.json({ ...user, propertyId });
 });
 
 
@@ -254,12 +277,17 @@ app.post('/api/properties', authenticate, async (req, res) => {
 app.post('/api/master/users/:id/generate-client-code', authenticate, async (req, res) => {
   if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
 
-  const code = generateAccessCode() + generateAccessCode(); // Ex: A3F9C2B1
-  const updated = await prisma.user.update({
-    where: { id: req.params.id },
-    data: { clientCode: code }
-  });
-  res.json({ clientCode: updated.clientCode });
+  try {
+    const code = generateAccessCode() + generateAccessCode(); // Ex: A3F9C2B1
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { clientCode: code }
+    });
+    const prop = await prisma.property.findFirst({ where: { adminId: req.params.id } });
+    res.json({ clientCode: updated.clientCode, propertyId: prop?.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao gerar código.' });
+  }
 });
 
 // Definir código de placa pré-configurada (Opção 1 - placa entregue pronta)

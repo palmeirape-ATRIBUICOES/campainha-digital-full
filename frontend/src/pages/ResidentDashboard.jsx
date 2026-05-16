@@ -481,17 +481,19 @@ export default function ResidentDashboard() {
               </div>
 
               {/* Foto visitante */}
-              <div style={{ borderRadius: '20px', overflow: 'hidden', background: '#F1F5F9', aspectRatio: '4/3', position: 'relative', marginBottom: '16px', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ borderRadius: '24px', overflow: 'hidden', background: '#000', aspectRatio: '4/3', position: 'relative', marginBottom: '24px', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
                 {call.photo ? <img src={call.photo} alt="Visitante" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}><Bell size={48} style={{ opacity: 0.1 }} /></div>}
-                <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(255,255,255,0.9)', color: '#0F172A', padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, backdropFilter: 'blur(8px)', border: '1px solid var(--border-subtle)' }}>
-                  📷 {call.callerName || 'Visitante'} na porta
+                  : <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}><Bell size={48} color="#FFF" style={{ opacity: 0.2 }} /></div>}
+                <div style={{ position: 'absolute', top: '16px', left: '16px', background: 'rgba(15,23,42,0.8)', color: '#FFF', padding: '6px 14px', borderRadius: '100px', fontSize: '12px', fontWeight: 700, backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1s infinite' }} />
+                  Visitante no local
                 </div>
               </div>
 
-              {/* Caller Name highlight */}
-              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '20px', fontWeight: 800 }}>{call.callerName === 'Visitante' ? 'Chamada do Portão' : `Interfone: ${call.callerName}`}</h3>
+              {/* Título e Status */}
+              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px' }}>{call.callerName === 'Visitante' ? 'Chamada do Portão' : call.callerName}</h3>
+                <p style={{ fontSize: '14px', color: '#64748B', fontWeight: 600 }}>Câmera e áudio capturados para sua segurança.</p>
               </div>
 
               {/* Mensagens rápidas */}

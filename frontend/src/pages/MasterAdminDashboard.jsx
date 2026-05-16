@@ -49,10 +49,15 @@ export default function MasterAdminDashboard() {
   };
 
   // Gerar QR Code a partir de texto
-  const loadQrCode = async (text) => {
+  const loadQrCode = async (text, isPlate = false) => {
     if (!text) return;
+    const baseUrl = window.location.origin + window.location.pathname;
+    const finalUrl = isPlate 
+      ? `${baseUrl}#/auth?plate=${text}`
+      : `${baseUrl}#/chamada/${text}`; // Aqui text será o ID da propriedade/unidade
+    
     try {
-      const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(text)}`);
+      const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(finalUrl)}`);
       const data = await res.json();
       setQrImage(data.qrcode || '');
     } catch { setQrImage(''); }
@@ -72,7 +77,9 @@ export default function MasterAdminDashboard() {
         const updated = users.map(u => u.id === userId ? { ...u, clientCode: data.clientCode } : u);
         const user = updated.find(u => u.id === userId) || { ...qrModal.user, clientCode: data.clientCode };
         setQrModal(m => ({ ...m, user: { ...m.user, clientCode: data.clientCode } }));
-        await loadQrCode(`CAMPAINHA:${data.clientCode}`);
+        // Se o usuário tem uma propriedade, usamos o ID dela para o QR de chamada
+        const propId = data.propertyId || userId; 
+        await loadQrCode(propId, false);
       }
     } catch { alert('Erro ao gerar código.'); }
     finally { setActionLoading(false); }
@@ -92,7 +99,7 @@ export default function MasterAdminDashboard() {
       const data = await res.json();
       if (res.ok) {
         setQrModal(m => ({ ...m, user: { ...m.user, plateCode: data.plateCode } }));
-        await loadQrCode(`CAMPAINHA-PLATE:${data.plateCode}`);
+        await loadQrCode(data.plateCode, true);
         fetchUsers();
       } else {
         alert(data.error || 'Erro ao definir placa.');
@@ -120,11 +127,13 @@ export default function MasterAdminDashboard() {
     setPlateInput('');
     setQrImage('');
     // Se já tem código, carrega o QR automaticamente
-    if (mode === 'option2' && user.clientCode) {
-      await loadQrCode(`CAMPAINHA:${user.clientCode}`);
+    if (mode === 'option2') {
+      // Para o cliente, tentamos pegar o ID da propriedade dele
+      const propId = user.properties?.[0]?.id || user.id;
+      await loadQrCode(propId, false);
     }
     if (mode === 'option1' && user.plateCode) {
-      await loadQrCode(`CAMPAINHA-PLATE:${user.plateCode}`);
+      await loadQrCode(user.plateCode, true);
     }
   };
 

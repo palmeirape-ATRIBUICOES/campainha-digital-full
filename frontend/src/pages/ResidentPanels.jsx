@@ -130,15 +130,17 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
       setClientCode(data.clientCode || '');
       setPlateCode(data.plateCode || '');
       
-      if (data.clientCode) loadQrCode(`CAMPAINHA:${data.clientCode}`);
-      else if (data.plateCode) loadQrCode(`CAMPAINHA-PLATE:${data.plateCode}`);
+      const propId = data.propertyId || unitId;
+      if (data.clientCode || data.plateCode) loadQrCode(propId);
     } catch {}
   };
 
-  const loadQrCode = async (text) => {
+  const loadQrCode = async (propId) => {
     setQrLoading(true);
     try {
-      const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(text)}`);
+      const baseUrl = window.location.origin + window.location.pathname;
+      const finalUrl = `${baseUrl}#/chamada/${propId}`;
+      const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(finalUrl)}`);
       const data = await res.json();
       setQrImage(data.qrcode || '');
     } catch {
