@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, User, RefreshCw, Calendar, MapPin, Phone, X, ChevronDown, ChevronUp, Bell, BellOff, Share2, Copy, Check, QrCode, Download, Hash, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Clock, User, RefreshCw, Calendar, MapPin, Phone, X, ChevronDown, ChevronUp, Bell, BellOff, Share2, Copy, Check, QrCode, Download, Hash, ShieldCheck, Camera } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 import { API } from '../config';
+import QRScanner from '../components/QRScanner';
+import PrintablePlate from '../components/PrintablePlate';
 
 // Funções utilitárias mantidas (fmt, groupByDate, VisitorCard...)
 // [Conteúdo omitido para brevidade, mas deve ser mantido no arquivo final]
@@ -112,6 +115,8 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
   const [qrImage, setQrImage] = useState('');
   const [qrLoading, setQrLoading] = useState(false);
   const [newPlateInput, setNewPlateInput] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+  const printRef = useRef(null);
 
   useEffect(() => {
     // Buscar configurações do usuário do backend
@@ -194,6 +199,31 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
       }
     } catch {
       alert('Erro de conexão ao vincular placa.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleScanPlate = (code) => {
+    if (code.startsWith('CAMPAINHA:')) {
+      code = code.split(':')[1];
+    }
+    setNewPlateInput(code);
+    setShowScanner(false);
+  };
+
+  const handleDownloadPlate = async () => {
+    if (!printRef.current) return;
+    setLoading(true);
+    try {
+      const canvas = await html2canvas(printRef.current, { scale: 3, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = imgData;
+      a.download = `Placa_Campainha_${unitName}.png`;
+      a.click();
+    } catch (e) {
+      alert('Erro ao gerar a imagem da placa.');
     } finally {
       setLoading(false);
     }
@@ -288,16 +318,15 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
                 </div>
               </div>
 
+              {/* COMPONENTE INVISÍVEL PARA DOWNLOAD */}
+              <PrintablePlate ref={printRef} qrImage={qrImage} />
+
               <button 
-                onClick={() => {
-                  const a = document.createElement('a');
-                  a.href = qrImage;
-                  a.download = `QR_Campainha_${unitName}.png`;
-                  a.click();
-                }}
-                style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#0F172A', color: '#FFF', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
+                onClick={handleDownloadPlate}
+                disabled={loading}
+                style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#0F172A', color: '#FFF', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
               >
-                <Download size={18} /> Baixar QR Code
+                <Download size={18} /> {loading ? 'Gerando Placa...' : 'Baixar Placa Completa'}
               </button>
 
               <div style={{ marginTop: '16px', width: '100%', borderTop: '1px solid #E2E8F0', paddingTop: '16px', textAlign: 'left' }}>
@@ -310,6 +339,12 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
                     onChange={e => setNewPlateInput(e.target.value.toUpperCase())}
                     style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '13px' }}
                   />
+                  <button 
+                    onClick={() => setShowScanner(true)}
+                    style={{ background: '#F1F5F9', color: '#0F172A', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '0 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Camera size={18} />
+                  </button>
                   <button 
                     onClick={handleLinkPlate}
                     disabled={loading || !newPlateInput.trim()}
@@ -359,6 +394,9 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
         </button>
       </section>
 
+      {showScanner && (
+        <QRScanner onScan={handleScanPlate} onClose={() => setShowScanner(false)} />
+      )}
     </div>
   );
 }

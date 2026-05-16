@@ -1,0 +1,67 @@
+import React, { forwardRef } from 'react';
+
+const PrintablePlate = forwardRef(({ qrImage }, ref) => {
+  return (
+    <div 
+      ref={ref}
+      style={{ 
+        width: '400px', 
+        height: '500px', 
+        background: '#FFFFFF', 
+        position: 'absolute', 
+        top: '-9999px', // Escondido da tela principal
+        left: '-9999px',
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        padding: '40px',
+        boxSizing: 'border-box',
+        fontFamily: "'Inter', sans-serif"
+      }}
+    >
+      {/* Detalhes dos "parafusos" do acrílico */}
+      <div style={{ position: 'absolute', top: '20px', left: '20px', width: '12px', height: '12px', borderRadius: '50%', background: '#CBD5E1', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }} />
+      <div style={{ position: 'absolute', top: '20px', right: '20px', width: '12px', height: '12px', borderRadius: '50%', background: '#CBD5E1', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }} />
+      <div style={{ position: 'absolute', bottom: '20px', left: '20px', width: '12px', height: '12px', borderRadius: '50%', background: '#CBD5E1', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }} />
+      <div style={{ position: 'absolute', bottom: '20px', right: '20px', width: '12px', height: '12px', borderRadius: '50%', background: '#CBD5E1', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }} />
+
+      {/* Header com Logo e Texto */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+          {/* Logo Simplificado da Campainha Digital */}
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: '4px solid #3B82F6' }}></div>
+            <div style={{ position: 'absolute', right: '-8px', width: '16px', height: '16px', borderRadius: '50%', background: '#F59E0B' }}></div>
+          </div>
+        </div>
+        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+          Campainha-<span style={{ color: '#0891B2' }}>Digital</span>
+        </h1>
+      </div>
+
+      {/* Área Central: Ícone do Celular e QR Code */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', margin: '20px 0' }}>
+        <div style={{ width: '80px', height: '160px', borderRadius: '16px', background: '#0F172A', border: '4px solid #334155', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+           <div style={{ position: 'absolute', bottom: '8px', width: '12px', height: '12px', borderRadius: '50%', background: '#94A3B8' }}></div>
+           <div style={{ width: '64px', height: '120px', background: '#FFF', borderRadius: '4px' }}></div>
+        </div>
+        
+        {qrImage ? (
+          <img src={qrImage} alt="QR Code" style={{ width: '160px', height: '160px', objectFit: 'contain' }} />
+        ) : (
+          <div style={{ width: '160px', height: '160px', background: '#F1F5F9', border: '2px dashed #CBD5E1' }}></div>
+        )}
+      </div>
+
+      {/* Texto de Instrução */}
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0, lineHeight: 1.4 }}>
+          ESCANEIE AQUI COM<br/>O SEU TELEFONE E<br/>FALE COM O MORADOR
+        </p>
+      </div>
+    </div>
+  );
+});
+
+export default PrintablePlate;
