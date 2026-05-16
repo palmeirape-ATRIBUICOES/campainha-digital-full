@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, ShieldCheck, Home, Phone, Smartphone, KeyRound } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, ShieldCheck, Home, Phone, Smartphone, KeyRound, Sparkles, ChevronLeft } from 'lucide-react';
 import Logo from '../components/Logo';
 
 export default function AuthPage() {
@@ -37,11 +37,10 @@ export default function AuthPage() {
         localStorage.setItem('cd_token', data.token);
         localStorage.setItem('cd_user_id', data.user.id);
         
-        // Redirecionamento unificado baseado nos módulos
         if (data.user.isSuperAdmin) navigate('/master-admin');
         else if (data.user.isAdmin) navigate('/admin');
         else if (data.user.isDoorman) navigate('/portaria');
-        else navigate(`/morador/${data.user.id}`); // Dashboard de residente
+        else navigate(`/morador/${data.user.id}`);
       } else {
         alert(data.error || 'Erro ao processar solicitação.');
       }
@@ -54,34 +53,41 @@ export default function AuthPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#F8FAFC' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#F8FAFC', position: 'relative', overflow: 'hidden' }}>
       
+      {/* Aurora Background Decor */}
+      <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }}></div>
+      <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: '60vw', height: '60vw', background: 'radial-gradient(circle, rgba(16,185,129,0.04) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }}></div>
+
       <div style={{ position: 'absolute', top: '32px', left: '32px', zIndex: 10 }}>
-         <Link to="/" style={{ color: '#64748B', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600 }}>
-            <Home size={16} /> Voltar ao Início
+         <Link to="/" style={{ color: '#64748B', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, padding: '10px 18px', background: '#FFF', borderRadius: '100px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+            <ChevronLeft size={16} /> Voltar
          </Link>
       </div>
 
-      <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '40px', background: '#FFF', borderRadius: '24px', boxShadow: '0 20px 50px rgba(0,0,0,0.05)', border: '1px solid #E2E8F0' }}>
+      <div className="glass-panel animate-fade-up" style={{ width: '100%', maxWidth: '440px', padding: '48px', background: 'rgba(255, 255, 255, 0.9)', borderRadius: '32px', boxShadow: '0 40px 100px rgba(0,0,0,0.08)', border: '1px solid rgba(255,255,255,0.8)', position: 'relative', zIndex: 1 }}>
         
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <Logo size={42} />
-          <h2 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-1px', marginTop: '20px', color: '#0F172A' }}>
-            {isLogin ? 'Acessar Conta' : 'Criar Nova Conta'}
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{ marginBottom: '24px' }}>
+            <Logo size={48} />
+          </div>
+          <h2 style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-1.5px', color: '#0F172A', marginBottom: '8px' }}>
+            {isLogin ? 'Bem-vindo de volta' : 'Crie sua conta'}
           </h2>
-          <p style={{ fontSize: '14px', color: '#64748B' }}>
-            {isLogin ? 'Use seu celular ou e-mail cadastrado' : 'Simples, rápido e intuitivo.'}
+          <p style={{ fontSize: '15px', color: '#64748B' }}>
+            {isLogin ? 'Acesse o painel administrativo' : 'Comece a proteger sua residência hoje.'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {!isLogin && (
             <div style={{ position: 'relative' }}>
-              <User size={18} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '16px', color: '#94A3B8' }} />
+              <User size={18} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '20px', color: '#94A3B8' }} />
               <input 
                 type="text" 
-                placeholder="Seu Nome Completo" 
-                style={{ padding: '14px 16px 14px 48px', width: '100%', borderRadius: '12px', border: '1px solid #E2E8F0', outline: 'none' }} 
+                placeholder="Nome Completo" 
+                className="input-glass"
+                style={{ paddingLeft: '52px' }}
                 value={name}
                 onChange={e => setName(e.target.value)}
                 required 
@@ -90,11 +96,12 @@ export default function AuthPage() {
           )}
           
           <div style={{ position: 'relative' }}>
-            <Smartphone size={18} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '16px', color: '#94A3B8' }} />
+            <Smartphone size={18} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '20px', color: '#94A3B8' }} />
             <input 
               type="text" 
-              placeholder="Celular ou E-mail" 
-              style={{ padding: '14px 16px 14px 48px', width: '100%', borderRadius: '12px', border: '1px solid #E2E8F0', outline: 'none' }} 
+              placeholder="E-mail ou Celular" 
+              className="input-glass"
+              style={{ paddingLeft: '52px' }}
               value={identifier}
               onChange={e => setIdentifier(e.target.value)}
               required 
@@ -102,11 +109,12 @@ export default function AuthPage() {
           </div>
 
           <div style={{ position: 'relative' }}>
-            <Lock size={18} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '16px', color: '#94A3B8' }} />
+            <Lock size={18} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '20px', color: '#94A3B8' }} />
             <input 
               type="password" 
-              placeholder="Sua Senha" 
-              style={{ padding: '14px 16px 14px 48px', width: '100%', borderRadius: '12px', border: '1px solid #E2E8F0', outline: 'none' }} 
+              placeholder="Senha" 
+              className="input-glass"
+              style={{ paddingLeft: '52px' }}
               value={password}
               onChange={e => setPassword(e.target.value)}
               required 
@@ -115,11 +123,12 @@ export default function AuthPage() {
 
           {!isLogin && (
             <div style={{ position: 'relative' }}>
-              <KeyRound size={18} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '16px', color: '#94A3B8' }} />
+              <KeyRound size={18} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', left: '20px', color: '#94A3B8' }} />
               <input 
                 type="text" 
                 placeholder="Código de Convite (Opcional)" 
-                style={{ padding: '14px 16px 14px 48px', width: '100%', borderRadius: '12px', border: '1px solid #E2E8F0', outline: 'none', background: '#F8FAFC' }} 
+                className="input-glass"
+                style={{ paddingLeft: '52px', background: '#F1F5F9', border: '1px dashed #CBD5E1' }}
                 value={inviteCode}
                 onChange={e => setInviteCode(e.target.value)}
               />
@@ -129,25 +138,30 @@ export default function AuthPage() {
           <button 
             type="submit" 
             className="btn-primary" 
-            style={{ padding: '16px', marginTop: '8px', borderRadius: '12px', background: '#3B82F6', color: '#FFF', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+            style={{ padding: '18px', marginTop: '12px', borderRadius: '16px', fontSize: '16px', fontWeight: 800, gap: '12px', boxShadow: '0 20px 40px rgba(59,130,246,0.2)' }}
             disabled={loading}
           >
-            {loading ? 'Processando...' : (isLogin ? 'Entrar Agora' : 'Criar Conta')} 
-            {!loading && <ArrowRight size={18} />}
+            {loading ? 'Processando...' : (isLogin ? 'Entrar no Painel' : 'Criar minha conta')} 
+            {!loading && (isLogin ? <ArrowRight size={20} /> : <Sparkles size={20} />)}
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #F1F5F9' }}>
-          <p style={{ fontSize: '14px', color: '#64748B' }}>
-            {isLogin ? 'Ainda não tem acesso?' : 'Já possui uma conta?'}
+        <div style={{ textAlign: 'center', marginTop: '40px', paddingTop: '24px', borderTop: '1px solid #F1F5F9' }}>
+          <p style={{ fontSize: '15px', color: '#64748B' }}>
+            {isLogin ? 'Não possui uma conta?' : 'Já tem uma conta?'}
             <button 
               onClick={() => setIsLogin(!isLogin)} 
-              style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: 800, marginLeft: '6px', cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: 800, marginLeft: '8px', cursor: 'pointer', fontSize: '15px' }}
             >
-              {isLogin ? 'Cadastre-se' : 'Faça Login'}
+              {isLogin ? 'Cadastre-se grátis' : 'Fazer login'}
             </button>
           </p>
         </div>
+      </div>
+
+      {/* Footer Info */}
+      <div style={{ position: 'absolute', bottom: '32px', textAlign: 'center', width: '100%', color: '#94A3B8', fontSize: '12px', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>
+        Conexão Segura End-to-End
       </div>
     </div>
   );
