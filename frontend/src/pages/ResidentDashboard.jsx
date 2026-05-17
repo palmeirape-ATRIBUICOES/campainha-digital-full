@@ -258,9 +258,48 @@ export default function ResidentDashboard() {
       }
     };
 
+    const checkActiveCallParam = async () => {
+      const hashPart = window.location.hash;
+      const queryPart = hashPart.includes('?') ? hashPart.split('?')[1] : '';
+      const params = new URLSearchParams(queryPart);
+      const hasCallParam = params.get('call') === 'true';
+      const paramVisitorSocket = params.get('visitorSocketId');
+
+      if (hasCallParam && paramVisitorSocket) {
+        setVisitorSocketId(paramVisitorSocket);
+        setStatus('ringing');
+        setTab('home');
+        setSentMsg('');
+        
+        try {
+          const res = await fetch(`${API}/api/units/${id}/visitors`);
+          if (res.ok) {
+            const visitors = await res.json();
+            if (visitors && visitors.length > 0) {
+              const latest = visitors[0];
+              setCall({
+                visitorSocketId: paramVisitorSocket,
+                callerName: latest.callerName || 'Visitante',
+                photo: latest.photo,
+                timestamp: latest.timestamp,
+                visitId: latest.id
+              });
+            } else {
+              setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
+            }
+          } else {
+            setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
+          }
+        } catch {
+          setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
+        }
+      }
+    };
+
     fetchMessages();
     fetchUserProfile();
     healSession();
+    checkActiveCallParam();
 
     // Verifica se é iOS e se está instalado na tela inicial (necessário para Push no iOS)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;

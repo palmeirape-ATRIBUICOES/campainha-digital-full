@@ -298,9 +298,41 @@ export default function VisitorCall() {
 
       {/* Banner de mensagem rápida do morador */}
       {quickMessage && (
-        <div style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.92)', border: '1px solid var(--primary)', borderRadius: '16px', padding: '14px 24px', zIndex: 999, maxWidth: '320px', width: '90%', textAlign: 'center', backdropFilter: 'blur(12px)', boxShadow: '0 8px 32px rgba(0,229,255,0.2)' }}>
-          <p style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 700, marginBottom: '4px', letterSpacing: '1px' }}>💬 MENSAGEM</p>
-          <p style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>"{quickMessage}"</p>
+        <div style={{ 
+          position: 'fixed', 
+          top: '30px', 
+          left: '50%', 
+          transform: 'translateX(-50%)', 
+          background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', 
+          border: '3px solid #000000', 
+          borderRadius: '24px', 
+          padding: '24px 32px', 
+          zIndex: 9999, 
+          maxWidth: '450px', 
+          width: '92%', 
+          textAlign: 'center', 
+          boxShadow: '0 20px 50px rgba(255, 165, 0, 0.4), 0 0 0 10px rgba(255, 255, 255, 0.1)'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            <div style={{ 
+              width: '64px', 
+              height: '64px', 
+              background: '#000000', 
+              borderRadius: '50%', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+            }}>
+              <Bell size={32} color="#FFA500" />
+            </div>
+            <div>
+              <p style={{ fontSize: '13px', color: '#000000', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', margin: '0 0 6px 0' }}>💬 MENSAGEM DO MORADOR</p>
+              <h2 style={{ fontSize: '26px', fontWeight: 900, color: '#000000', margin: 0, lineHeight: '1.2', letterSpacing: '-0.5px' }}>
+                "{quickMessage}"
+              </h2>
+            </div>
+          </div>
         </div>
       )}
 
