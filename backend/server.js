@@ -50,14 +50,7 @@ app.use(express.static(path.join(__dirname, '../frontend/dist')));
 app.get('/api/ping', async (req, res) => {
   try {
     const count = await prisma.user.count();
-    const token = process.env.MERCADOPAGO_ACCESS_TOKEN || '';
-    res.json({
-      status: 'ok',
-      database: 'connected',
-      users: count,
-      timestamp: new Date().toISOString(),
-      mp_token: token ? `${token.substring(0, 10)}... [len: ${token.length}]` : 'using-hardcoded-fallback'
-    });
+    res.json({ status: 'ok', database: 'connected', users: count, timestamp: new Date().toISOString() });
   } catch (err) {
     res.status(500).json({ status: 'error', database: 'disconnected', error: err.message });
   }
