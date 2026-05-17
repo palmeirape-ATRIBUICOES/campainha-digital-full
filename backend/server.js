@@ -1,5 +1,9 @@
- const express = require('express');
+require('dotenv').config();
+const express = require('express');
 const path = require('path');
+
+// Mercado Pago Access Token centralizado
+const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || 'APP_USR-2782203393851760-051715-d99612a87266aa73cb5cc571aa401c2c-126980400';
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -267,7 +271,7 @@ app.post('/api/auth/register', async (req, res) => {
     if (planType === 'annual') {
       try {
         const activePrice = await getPlanPrice();
-        const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
+        const mpAccessToken = MERCADOPAGO_ACCESS_TOKEN;
         const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
           method: 'POST',
           headers: {
@@ -384,7 +388,7 @@ app.post('/api/payment/webhook', async (req, res) => {
 
   if (topic === 'payment' || action === 'payment.updated') {
     try {
-      const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
+      const mpAccessToken = MERCADOPAGO_ACCESS_TOKEN;
       
       // Busca detalhes do pagamento na API do Mercado Pago
       const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
@@ -437,7 +441,7 @@ app.post('/api/payment/webhook', async (req, res) => {
 // ─── Rota dedicada para gerar pagamento PIX (sem SDK externo) ────────────────
 app.post('/api/payment/pix', async (req, res) => {
   try {
-    const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
+    const mpAccessToken = MERCADOPAGO_ACCESS_TOKEN;
     const { email, userId, cpf } = req.body;
     const activePrice = await getPlanPrice();
 
@@ -505,23 +509,8 @@ app.post('/api/payment/pix', async (req, res) => {
         is_mock: false
       });
     } catch (mpError) {
-      console.warn('[MP PIX] API falhou, caindo para modo Simulação/Mock PIX:', mpError.message);
-      
-      // Gera chave copia e cola simulada com valor dinâmico formatado
-      const formattedPrice = activePrice.toFixed(2);
-      const mockPixKey = `00020101021226870014br.gov.bcb.pix2565pix.campainhadigital.com/payment-${userId || 'anon'}-${formattedPrice}5204000053039865405${formattedPrice}5802BR5925CampainhaDigitalLtda6009SAOPAULO62070503***6304ABCD`;
-      
-      // Converte para QR Code base64 usando o módulo qrcode existente
-      const qrCodeDataUrl = await QRCode.toDataURL(mockPixKey, { width: 400, margin: 2 });
-      const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
-
-      return res.json({
-        id: `mock-pix-${Date.now()}`,
-        status: 'pending',
-        qr_code: mockPixKey,
-        qr_code_base64: base64Data,
-        is_mock: true
-      });
+      console.error('[MP PIX] API do Mercado Pago falhou ao gerar PIX:', mpError.message);
+      return res.status(500).json({ error: 'Erro de conexão com o Mercado Pago ao gerar Pix. Por favor, tente novamente.' });
     }
   } catch (err) {
     console.error('[MP PIX] Erro interno:', err);
@@ -532,7 +521,7 @@ app.post('/api/payment/pix', async (req, res) => {
 // Processamento Transparente de Pagamento (Usado pelo MP Bricks e fallback PIX)
 app.post('/api/payment/process', async (req, res) => {
   try {
-    const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
+    const mpAccessToken = MERCADOPAGO_ACCESS_TOKEN;
     const paymentData = req.body;
     const activePrice = await getPlanPrice();
     
@@ -608,7 +597,7 @@ app.post('/api/payment/process', async (req, res) => {
 // Criar preferência de pagamento de upgrade do Mercado Pago para usuário logado
 app.post('/api/payment/upgrade-preference', authenticate, async (req, res) => {
   try {
-    const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
+    const mpAccessToken = MERCADOPAGO_ACCESS_TOKEN;
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {

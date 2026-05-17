@@ -132,30 +132,6 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
     generatePix();
   };
 
-  // ── Simulação de Pagamento (Ambiente de Testes) ────────────────────────
-  const [simulating, setSimulating] = useState(false);
-  const handleSimulatePayment = async () => {
-    setSimulating(true);
-    setPixError('');
-    try {
-      const uid = userId || localStorage.getItem('cd_user_id') || '';
-      const res = await fetch(`${API}/api/payment/confirm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: uid })
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Erro ao simular ativação.');
-      
-      // Define o resultado como aprovado para exibir a tela de sucesso do modal
-      setResult({ status: 'approved' });
-    } catch (err) {
-      setPixError(err.message || 'Erro ao conectar com o servidor para simular pagamento.');
-    } finally {
-      setSimulating(false);
-    }
-  };
-
   // ── Cartão ────────────────────────────────────────────────────────────
   const handleCardSubmit = async (e) => {
     e.preventDefault();
@@ -293,28 +269,6 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
                   <p style={{ margin: '0 0 12px', color: '#EF4444', fontSize: '12px', lineHeight: 1.5 }}>
                     {pixError}
                   </p>
-                  <div style={{ borderTop: '1px solid #FEE2E2', paddingTop: '10px', marginTop: '10px', textAlign: 'left', fontSize: '11px', color: '#991B1B', lineHeight: 1.4 }}>
-                    <strong>💡 Nota do Sistema:</strong> A credencial do Mercado Pago não está configurada nas variáveis de ambiente do Render. Defina <code>MERCADOPAGO_ACCESS_TOKEN</code> no painel do Render para habilitar o PIX real.
-                  </div>
-                </div>
-
-                {/* Opção de Simulação de Pagamento - Premium Sandbox Fallback */}
-                <div style={{ background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', border: '1px solid #A7F3D0', borderRadius: '16px', padding: '20px', marginBottom: '20px', textAlign: 'center', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.08)' }}>
-                  <span style={{ fontSize: '24px', display: 'block', marginBottom: '8px' }}>⚡</span>
-                  <p style={{ margin: '0 0 6px', color: '#065F46', fontSize: '14px', fontWeight: 800 }}>Ambiente de Testes Ativo</p>
-                  <p style={{ margin: '0 0 16px', color: '#047857', fontSize: '12px', lineHeight: 1.5 }}>
-                    Como você está testando o app, você pode pular a cobrança real e ativar a conta de morador instantaneamente.
-                  </p>
-                  
-                  <button onClick={handleSimulatePayment} disabled={simulating}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      padding: '14px', borderRadius: '12px', background: '#10B981', color: '#fff', border: 'none',
-                      fontWeight: 800, cursor: 'pointer', fontSize: '14px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-                      transition: 'all 0.2s', opacity: simulating ? 0.7 : 1
-                    }}>
-                    {simulating ? 'Ativando...' : 'Simular Ativação de Conta'}
-                  </button>
                 </div>
 
                 {/* Opções: tentar de novo ou voltar */}
@@ -343,30 +297,18 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
             {/* QR Code PIX */}
             {!pixLoading && pixData?.qr_code_base64 && (
               <>
-                {/* Banner de status do PIX (Real vs Simulado) */}
-                {pixData.is_mock ? (
-                  <div style={{ background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', border: '1px solid #A7F3D0', borderRadius: '12px', padding: '14px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 4px 12px rgba(16,185,129,0.05)' }}>
-                    <span style={{ fontSize: '24px' }}>⚡</span>
-                    <div>
-                      <p style={{ margin: 0, fontWeight: 800, color: '#065F46', fontSize: '13px' }}>PIX de Teste (Simulado)</p>
-                      <p style={{ margin: '2px 0 0', color: '#047857', fontSize: '11px', lineHeight: 1.4 }}>
-                        Mercado Pago indisponível. Geramos este PIX simulado para você testar a experiência real!
-                      </p>
-                    </div>
+                {/* Banner de status do PIX */}
+                <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '22px' }}>✅</span>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, color: '#166534', fontSize: '13px' }}>PIX gerado com sucesso!</p>
+                    <p style={{ margin: '2px 0 0', color: '#15803D', fontSize: '12px' }}>Escaneie ou copie o código — R$ {planPrice.replace('.', ',')}</p>
                   </div>
-                ) : (
-                  <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '22px' }}>✅</span>
-                    <div>
-                      <p style={{ margin: 0, fontWeight: 700, color: '#166534', fontSize: '13px' }}>PIX gerado com sucesso!</p>
-                      <p style={{ margin: '2px 0 0', color: '#15803D', fontSize: '12px' }}>Escaneie ou copie o código — R$ {planPrice.replace('.', ',')}</p>
-                    </div>
-                  </div>
-                )}
+                </div>
 
                 {/* QR Code */}
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                  <div style={{ background: '#fff', padding: '12px', borderRadius: '16px', border: pixData.is_mock ? '2px solid #A7F3D0' : '2px solid #BBF7D0', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+                  <div style={{ background: '#fff', padding: '12px', borderRadius: '16px', border: '2px solid #BBF7D0', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
                     <img
                       src={`data:image/jpeg;base64,${pixData.qr_code_base64}`}
                       alt="QR Code PIX"
