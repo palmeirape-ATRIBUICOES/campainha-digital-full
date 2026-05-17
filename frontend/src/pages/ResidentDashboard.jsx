@@ -68,6 +68,10 @@ function stopDoorbell() {
 export default function ResidentDashboard() {
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  const savedUnitId = localStorage.getItem('residentUnitId');
+  const token = localStorage.getItem('cd_token');
+
   const [tab, setTab] = useState('home'); // home | history | messages
   const [showMenu, setShowMenu] = useState(false);
   const [call, setCall] = useState(null);
@@ -183,9 +187,6 @@ export default function ResidentDashboard() {
   };
 
   useEffect(() => {
-    const savedUnitId = localStorage.getItem('residentUnitId');
-    const token = localStorage.getItem('cd_token');
-
     // Auth guard: redirect if not logged in
     if (!savedUnitId && !token) {
       navigate('/morador-login');
@@ -500,6 +501,10 @@ export default function ResidentDashboard() {
       </div>
     </>
   );
+
+  if (!savedUnitId && !token) {
+    return null;
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', paddingBottom: '72px' }} onClick={() => { if (audioRef.current) audioRef.current.play().then(() => audioRef.current.pause()).catch(() => {}); }}>
