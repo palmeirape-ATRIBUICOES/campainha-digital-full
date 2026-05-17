@@ -301,13 +301,8 @@ export default function AdminPanel() {
         // Clear password from local storage after using it
         localStorage.removeItem('cd_admin_password');
         
-        // Se for individual, vai para o pagamento. Se for coletivo, vai direto pro painel.
-        if (propertyType === 'individual' || propertyType === 'house') {
-          setOnboardingStep('pay');
-        } else {
-          setOnboardingStep(null);
-          fetchProperties();
-        }
+        setOnboardingStep(null);
+        fetchProperties();
       } else {
         const data = await res.json();
         alert(data.error || 'Erro ao ativar placa.');
@@ -351,7 +346,7 @@ export default function AdminPanel() {
             <Camera size={24} /> Escanear Agora
           </button>
         )}
-        <button onClick={() => setOnboardingStep('pay')} style={{ display: 'block', margin: '24px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px' }}>← Voltar ao Pagamento</button>
+        <button onClick={() => setOnboardingStep(propertyType === 'individual' ? 'type' : 'config')} style={{ display: 'block', margin: '24px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px' }}>← Voltar</button>
       </div>
     </div>
   );
@@ -432,45 +427,7 @@ export default function AdminPanel() {
     </div>
   );
 
-  if (onboardingStep === 'pay') return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-      <div className="fade-in" style={{ maxWidth: '480px', width: '100%', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', padding: '20px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: '24px', border: '1px solid var(--border-subtle)', marginBottom: '32px' }}>
-          <CreditCard size={56} color="var(--primary)" />
-        </div>
-        <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '12px' }}>Quase lá!</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '16px', lineHeight: 1.6, marginBottom: '40px' }}>
-          Sua placa foi ativada com sucesso. Como você está no plano <strong style={{ color: 'var(--text-main)' }}>Casa Simples</strong>, escolha como deseja prosseguir:
-        </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <button onClick={() => { setOnboardingStep(null); fetchProperties(); }} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '24px', borderRadius: '16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Zap size={24} color="#10B981" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <strong style={{ color: 'var(--text-main)', fontSize: '16px', display: 'block' }}>Teste Grátis por 15 dias</strong>
-              <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Experimente todos os recursos sem custo.</span>
-            </div>
-          </button>
-
-          <button onClick={() => { alert('Redirecionando para o checkout Pix (R$ 39,90)...'); setOnboardingStep(null); fetchProperties(); }} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '24px', borderRadius: '16px', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05))', border: '1px solid var(--primary)', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ShieldCheck size={24} color="#000" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <strong style={{ color: 'var(--text-main)', fontSize: '16px', display: 'block' }}>Ativar Plano Anual</strong>
-              <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Taxa única de <strong style={{ color: 'var(--primary)' }}>R$ 39,90/ano</strong></span>
-            </div>
-          </button>
-        </div>
-
-        <p style={{ marginTop: '32px', fontSize: '12px', color: 'var(--text-muted)' }}>
-          Você poderá mudar de ideia ou cancelar a qualquer momento nas configurações.
-        </p>
-      </div>
-    </div>
-  );
 
   // ── Dashboard Principal ────────────────────────────────────────────────────
   return (
