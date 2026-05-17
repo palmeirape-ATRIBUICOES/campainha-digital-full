@@ -270,13 +270,6 @@ export default function ResidentDashboard() {
     fetchUserProfile();
     healSession();
 
-    // Verifica se é iOS e se está instalado na tela inicial (necessário para Push no iOS)
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-    if (isIOS && !isStandalone) {
-      setShowIOSPrompt(true);
-    }
-
     checkPushSubscription();
 
 
@@ -713,22 +706,7 @@ export default function ResidentDashboard() {
 
       {audioError && <div style={{ margin: '12px 24px 0', background: '#EF4444', color: '#fff', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, display: 'flex', gap: '8px', alignItems: 'center' }}><AlertCircle size={16} />Toque na tela para ativar o som!</div>}
 
-      {showIOSPrompt && (
-        <div style={{ margin: '12px 24px 0', background: 'linear-gradient(135deg, #FF9900 0%, #FF5E00 100%)', color: '#fff', padding: '16px', borderRadius: '16px', fontSize: '14px', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 4px 15px rgba(255, 94, 0, 0.3)' }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <AlertCircle size={20} />
-            <span style={{ fontSize: '15px', fontWeight: 800 }}>Atenção Morador com iPhone (iOS)</span>
-          </div>
-          <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5', opacity: 0.95 }}>
-            Para receber chamadas com o <strong>aplicativo fechado</strong>, você precisa instalá-lo na tela inicial:
-          </p>
-          <ol style={{ margin: '0 0 0 20px', padding: 0, fontSize: '13px', lineHeight: '1.5', opacity: 0.95 }}>
-            <li>Toque no ícone de <strong>Compartilhar</strong> (ícone de seta para cima) na barra do Safari.</li>
-            <li>Role a lista para baixo e escolha <strong>"Adicionar à Tela de Início"</strong>.</li>
-            <li>Abra o aplicativo a partir do ícone criado e faça o login.</li>
-          </ol>
-        </div>
-      )}
+
 
       {/* ── HOME TAB ── */}
       {tab === 'home' && (
