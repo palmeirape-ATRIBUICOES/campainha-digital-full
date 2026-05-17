@@ -494,7 +494,8 @@ app.post('/api/payment/pix', async (req, res) => {
           number: cpf || '12345678909' // CPF de teste válido (se não informado)
         }
       },
-      external_reference: userId || 'unknown'
+      external_reference: userId || 'unknown',
+      notification_url: 'https://campainha-digital.onrender.com/api/payment/webhook'
     };
 
     console.log('[MP PIX] Gerando pagamento PIX para:', email, '| Nome:', firstName, lastName, '| Valor:', activePrice);
@@ -568,7 +569,8 @@ app.post('/api/payment/process', async (req, res) => {
         last_name: paymentData.payer?.last_name || lastName,
         identification: paymentData.payer?.identification || { type: 'CPF', number: '12345678909' }
       },
-      external_reference: paymentData.external_reference // ID do usuário
+      external_reference: paymentData.external_reference, // ID do usuário
+      notification_url: 'https://campainha-digital.onrender.com/api/payment/webhook'
     };
 
     // Adiciona campos específicos para cartão de crédito
