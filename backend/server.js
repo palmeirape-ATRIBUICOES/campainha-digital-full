@@ -380,6 +380,23 @@ app.post('/api/payment/confirm', async (req, res) => {
   }
 });
 
+// Endpoint para verificar o status premium (para polling do frontend)
+app.get('/api/payment/status/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { trialEndsAt: true }
+    });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    
+    const isPremium = user.trialEndsAt && new Date(user.trialEndsAt) > new Date();
+    res.json({ isPremium, trialEndsAt: user.trialEndsAt });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao verificar status do pagamento.' });
+  }
+});
+
 // Webhook do Mercado Pago (Notificações automáticas de pagamento)
 app.post('/api/payment/webhook', async (req, res) => {
   const { action, type, data } = req.body;

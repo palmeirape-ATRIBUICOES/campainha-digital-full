@@ -127,6 +127,31 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
     generatePix();
   }, [generatePix]);
 
+  // Polling automático para verificar aprovação do PIX
+  useEffect(() => {
+    if (!pixData) return;
+
+    const uid = userId || localStorage.getItem('cd_user_id') || '';
+    if (!uid) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API}/api/payment/status/${uid}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.isPremium) {
+            clearInterval(interval);
+            setResult({ status: 'approved' });
+          }
+        }
+      } catch (err) {
+        console.error('[PaymentModal] Erro ao consultar status de pagamento:', err);
+      }
+    }, 3000); // Consulta a cada 3 segundos
+
+    return () => clearInterval(interval);
+  }, [pixData, userId]);
+
   const handleRetry = () => {
     setRetryCount(c => c + 1);
     generatePix();
