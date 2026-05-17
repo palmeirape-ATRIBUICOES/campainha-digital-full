@@ -848,6 +848,35 @@ app.post('/api/master/users/:id/promo', authenticate, async (req, res) => {
   res.json(updated);
 });
 
+// Gerar números únicos e sequenciais de placa
+app.post('/api/master/plates/generate', authenticate, async (req, res) => {
+  if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+  const { quantity } = req.body;
+  const qty = parseInt(quantity, 10) || 4;
+  
+  try {
+    let currentSeq = 0;
+    const setting = await prisma.systemSetting.findUnique({ where: { key: 'last_plate_seq' } });
+    if (setting && setting.value) {
+      currentSeq = parseInt(setting.value, 10);
+    }
+    
+    const startNum = currentSeq + 1;
+    const endNum = currentSeq + qty;
+    
+    await prisma.systemSetting.upsert({
+      where: { key: 'last_plate_seq' },
+      update: { value: String(endNum) },
+      create: { key: 'last_plate_seq', value: String(endNum) }
+    });
+    
+    res.json({ startNum, quantity: qty });
+  } catch (err) {
+    console.error('[Placas] Erro ao gerar numeração:', err);
+    res.status(500).json({ error: 'Erro ao gerar numeração de placas.' });
+  }
+});
+
 // Excluir usuário (Super Admin)
 app.delete('/api/master/users/:id', authenticate, async (req, res) => {
   if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });

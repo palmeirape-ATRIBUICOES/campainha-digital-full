@@ -1,43 +1,58 @@
 import React, { useState, useRef } from 'react';
-import { Printer, Download, QrCode } from 'lucide-react';
+import { Printer, QrCode, Smartphone, Bell } from 'lucide-react';
 import { API } from '../config';
+import Logo from './Logo';
 
 export default function PlateProductionPanel() {
-  const [startNum, setStartNum] = useState(1);
   const [quantity, setQuantity] = useState(4);
-  const [prefix, setPrefix] = useState('CD-');
   const [plates, setPlates] = useState([]);
   const [generating, setGenerating] = useState(false);
   
-  const printAreaRef = useRef(null);
-
   const generatePlates = async () => {
     setGenerating(true);
     const newPlates = [];
     const baseUrl = window.location.origin + window.location.pathname;
     
-    for (let i = 0; i < quantity; i++) {
-      const numStr = String(startNum + i).padStart(5, '0');
-      const plateCode = `${prefix}${numStr}`;
-      const url = `${baseUrl}#/auth?plate=${plateCode}`;
+    try {
+      const token = localStorage.getItem('cd_token');
+      const seqRes = await fetch(`${API}/api/master/plates/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
+        body: JSON.stringify({ quantity })
+      });
       
-      try {
+      if (!seqRes.ok) {
+        throw new Error('Erro ao buscar numeração do servidor.');
+      }
+      
+      const { startNum } = await seqRes.json();
+      
+      for (let i = 0; i < quantity; i++) {
+        const numStr = String(startNum + i).padStart(5, '0');
+        const plateCode = `CD-${numStr}`;
+        const url = `${baseUrl}#/auth?plate=${plateCode}`;
+        
         const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(url)}&json=true`);
         const data = await res.json();
         newPlates.push({ code: plateCode, qr: data.qrcode, url });
-      } catch (e) {
-        console.error('Error generating QR', e);
       }
+      
+      setPlates(newPlates);
+    } catch (e) {
+      console.error('Error generating plates:', e);
+      alert('Ocorreu um erro ao gerar as placas. Tente novamente.');
+    } finally {
+      setGenerating(false);
     }
-    setPlates(newPlates);
-    setGenerating(false);
   };
 
   const handlePrint = () => {
     window.print();
   };
 
-  // Divide plates into pages of 4
   const pages = [];
   for (let i = 0; i < plates.length; i += 4) {
     pages.push(plates.slice(i, i + 4));
@@ -72,31 +87,23 @@ export default function PlateProductionPanel() {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px' }}>Produção de Placas</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Gere QR Codes sequenciais formatados para folha A4 (4 por folha)</p>
+          <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A', letterSpacing: '-1px', margin: 0 }}>Produção de Placas Oficiais</h2>
+          <p style={{ color: '#64748B', fontSize: '15px', marginTop: '4px' }}>Geração automática de numeração única, anti-repetição.</p>
         </div>
       </div>
 
-      <div style={{ background: '#FFF', borderRadius: '16px', border: '1px solid var(--border-subtle)', padding: '24px', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-end' }}>
-        <div style={{ flex: '1 1 150px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>Prefixo</label>
-          <input type="text" value={prefix} onChange={e => setPrefix(e.target.value)} className="input-glass" style={{ width: '100%', padding: '12px' }} />
+      <div style={{ background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '24px', marginBottom: '32px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-end', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+        <div style={{ flex: '1 1 200px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quantidade de Placas</label>
+          <input type="number" min="1" max="100" value={quantity} onChange={e => setQuantity(Number(e.target.value))} className="input-glass" style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #E2E8F0', fontSize: '16px', fontWeight: 800, color: '#1E293B', outline: 'none' }} />
         </div>
-        <div style={{ flex: '1 1 150px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>Número Inicial</label>
-          <input type="number" value={startNum} onChange={e => setStartNum(Number(e.target.value))} className="input-glass" style={{ width: '100%', padding: '12px' }} />
-        </div>
-        <div style={{ flex: '1 1 150px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>Quantidade</label>
-          <input type="number" value={quantity} onChange={e => setQuantity(Number(e.target.value))} className="input-glass" style={{ width: '100%', padding: '12px' }} />
-        </div>
-        <div style={{ flex: '1 1 200px', display: 'flex', gap: '12px' }}>
-          <button onClick={generatePlates} disabled={generating} className="btn-primary" style={{ flex: 1, padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <QrCode size={18} /> {generating ? 'Gerando...' : 'Gerar Placas'}
+        <div style={{ flex: '1 1 300px', display: 'flex', gap: '12px' }}>
+          <button onClick={generatePlates} disabled={generating} className="btn-primary" style={{ flex: 1, padding: '14px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '15px' }}>
+            <QrCode size={20} /> {generating ? 'Processando (Mantenha Aberto)...' : 'Gerar Nova Sequência Única'}
           </button>
           {plates.length > 0 && (
-            <button onClick={handlePrint} className="btn-secondary" style={{ flex: 1, padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <Printer size={18} /> Imprimir
+            <button onClick={handlePrint} className="btn-secondary" style={{ flex: 1, padding: '14px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '15px', background: '#0F172A', color: '#FFF', border: 'none' }}>
+              <Printer size={20} /> Imprimir A4
             </button>
           )}
         </div>
@@ -107,38 +114,58 @@ export default function PlateProductionPanel() {
           <div key={pageIndex} className="a4-page" style={{ 
             width: '210mm', minHeight: '297mm', background: '#FFF', 
             margin: '0 auto 32px', padding: '10mm', 
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid #E2E8F0',
-            display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '10mm'
+            boxShadow: '0 10px 30px rgba(0,0,0,0.1)', border: '1px solid #E2E8F0',
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '10mm',
+            position: 'relative'
           }}>
             {pagePlates.map(plate => (
               <div key={plate.code} style={{ 
-                border: '2px dashed #CBD5E1', borderRadius: '16px', padding: '20px', 
+                border: '1px dashed #CBD5E1', borderRadius: '24px', padding: '0', 
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                textAlign: 'center'
+                textAlign: 'center', position: 'relative', overflow: 'hidden'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                  <div style={{ width: '32px', height: '32px', background: 'var(--primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 10V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v4"/><path d="M2 10h20"/><path d="M4 10v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10"/><path d="M12 10v4"/><path d="M9 10v4"/><path d="M15 10v4"/></svg>
-                  </div>
-                  <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', margin: 0 }}>Campainha Digital</h3>
-                </div>
                 
-                <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '20px', fontWeight: 600 }}>
-                  Aponte a câmera do celular para acessar a campainha.
-                </p>
+                <div style={{ position: 'absolute', top: 12, right: 12, fontSize: '10px', color: '#CBD5E1', fontWeight: 800, letterSpacing: '1px' }}>
+                  {plate.code}
+                </div>
 
-                <img src={plate.qr} alt={plate.code} style={{ width: '180px', height: '180px', marginBottom: '20px' }} />
-                
-                <div style={{ background: '#F8FAFC', padding: '10px 24px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', display: 'block', textTransform: 'uppercase', marginBottom: '4px' }}>CÓDIGO DA PLACA</span>
-                  <strong style={{ fontSize: '18px', color: '#0F172A', letterSpacing: '2px' }}>{plate.code}</strong>
+                <div style={{ padding: '30px 20px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  
+                  {/* LOGO AREA */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
+                    <Logo size={48} hideText={true} />
+                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#10526B', marginTop: '12px', letterSpacing: '-0.5px' }}>
+                      Campainha-Digital
+                    </h2>
+                  </div>
+
+                  {/* ICONS AND QR */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px', marginBottom: '32px' }}>
+                    <div style={{ color: '#10526B' }}>
+                      <Smartphone size={100} strokeWidth={1.5} />
+                    </div>
+                    
+                    <div style={{ position: 'relative' }}>
+                      <img src={plate.qr} alt={plate.code} style={{ width: '150px', height: '150px' }} />
+                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: '#FFF', padding: '6px', borderRadius: '8px' }}>
+                        <Bell size={24} color="#10526B" fill="#10526B" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* BOTTOM TEXT */}
+                  <div style={{ textAlign: 'center' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#10526B', lineHeight: 1.3 }}>
+                      ESCANEIE AQUI COM<br/>O SEU TELEFONE E<br/>FALE COM O MORADOR
+                    </h3>
+                  </div>
                 </div>
+
               </div>
             ))}
           </div>
         ))}
       </div>
-
     </div>
   );
 }
