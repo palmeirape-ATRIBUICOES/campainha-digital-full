@@ -420,6 +420,64 @@ app.post('/api/payment/webhook', async (req, res) => {
   res.status(200).send('OK');
 });
 
+// Processamento Transparente de Pagamento (Usado pelo MP Bricks)
+app.post('/api/payment/process', async (req, res) => {
+  try {
+    const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
+    const paymentData = req.body;
+    
+    // Configura os dados obrigatórios do Mercado Pago
+    const mpPayload = {
+      transaction_amount: 39.90, // Valor fixo do plano anual
+      description: 'Campainha Digital - Plano Anual Premium',
+      payment_method_id: paymentData.payment_method_id,
+      payer: {
+        email: paymentData.payer.email,
+        identification: paymentData.payer.identification
+      },
+      external_reference: paymentData.external_reference // ID do usuário
+    };
+
+    // Adiciona campos específicos para cartão de crédito
+    if (paymentData.token) mpPayload.token = paymentData.token;
+    if (paymentData.installments) mpPayload.installments = paymentData.installments;
+    if (paymentData.issuer_id) mpPayload.issuer_id = paymentData.issuer_id;
+
+    console.log('[MP] Processando pagamento interno:', mpPayload.payment_method_id);
+
+    const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${mpAccessToken}`,
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': Date.now().toString() // Previne pagamentos duplicados
+      },
+      body: JSON.stringify(mpPayload)
+    });
+
+    const data = await mpResponse.json();
+
+    if (mpResponse.ok) {
+      // Se for PIX ou Cartão aprovado na hora, o webhook vai ativar a conta.
+      // Retornamos os dados para o frontend (incluindo o QR Code do PIX se for o caso)
+      res.json({
+        id: data.id,
+        status: data.status,
+        status_detail: data.status_detail,
+        qr_code: data.point_of_interaction?.transaction_data?.qr_code,
+        qr_code_base64: data.point_of_interaction?.transaction_data?.qr_code_base64,
+        ticket_url: data.transaction_details?.external_resource_url
+      });
+    } else {
+      console.error('[MP] Erro da API MP:', data);
+      res.status(400).json({ error: 'Erro ao processar pagamento.', details: data });
+    }
+  } catch (err) {
+    console.error('[MP] Erro interno:', err);
+    res.status(500).json({ error: 'Erro de conexão com Mercado Pago.' });
+  }
+});
+
 // Criar preferência de pagamento de upgrade do Mercado Pago para usuário logado
 app.post('/api/payment/upgrade-preference', authenticate, async (req, res) => {
   try {

@@ -7,6 +7,7 @@ import Logo from '../components/Logo';
 import MessagesPanel from '../components/resident/MessagesPanel';
 import IntercomPanel from '../components/resident/IntercomPanel';
 import ServicesPanel from '../components/resident/ServicesPanel';
+import PaymentModal from '../components/PaymentModal';
 
 import { API } from '../config';
 const ICE = {
@@ -114,31 +115,12 @@ export default function ResidentDashboard() {
   const [userContact, setUserContact] = useState('');
   const [trialEndsAt, setTrialEndsAt] = useState(null);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  const handleUpgrade = async () => {
-    setUpgradeLoading(true);
-    try {
-      const activeToken = localStorage.getItem('cd_token');
-      const res = await fetch(`${API}/api/payment/upgrade-preference`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': activeToken
-        }
-      });
-      const data = await res.json();
-      if (res.ok && data.initPoint) {
-        window.location.href = data.initPoint;
-      } else {
-        alert(data.error || 'Erro ao gerar o link de pagamento do Mercado Pago.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Erro de conexão ao tentar assinar. Tente novamente mais tarde.');
-    } finally {
-      setUpgradeLoading(false);
-    }
+  const handleUpgrade = () => {
+    setShowPaymentModal(true);
   };
+
 
   // Novos estados para Caixa Postal de Moradores e Despacho de Alertas
   const [supportSubject, setSupportSubject] = useState('');
@@ -892,7 +874,7 @@ export default function ResidentDashboard() {
                   
                   <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '20px', display: 'flex', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
                     <img 
-                      src={`${API}/api/qrcode?text=${encodeURIComponent(`${window.location.origin}/#/chamada/${propertyId}`)}`} 
+                      src={`${API}/api/qrcode?text=${encodeURIComponent(`${window.location.origin + window.location.pathname}#/chamada/${propertyId}`)}`} 
                       alt="QR Code Campainha Digital" 
                       style={{ width: '180px', height: '180px', display: 'block', borderRadius: '12px' }} 
                     />
@@ -901,7 +883,7 @@ export default function ResidentDashboard() {
                   <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
                     <button 
                       onClick={() => {
-                        const url = `${window.location.origin}/#/chamada/${propertyId}`;
+                        const url = `${window.location.origin + window.location.pathname}#/chamada/${propertyId}`;
                         const shareText = `Toque a minha Campainha Digital online quando chegar:\n👉 ${url}`;
                         if (navigator.share) {
                           navigator.share({
@@ -919,7 +901,7 @@ export default function ResidentDashboard() {
                     </button>
                     <button 
                       onClick={() => {
-                        const url = `${API}/api/qrcode?text=${encodeURIComponent(`${window.location.origin}/#/chamada/${propertyId}`)}`;
+                        const url = `${API}/api/qrcode?text=${encodeURIComponent(`${window.location.origin + window.location.pathname}#/chamada/${propertyId}`)}`;
                         const a = document.createElement('a');
                         a.href = url;
                         a.download = `Campainha_Digital_${unitName}.png`;
@@ -939,7 +921,8 @@ export default function ResidentDashboard() {
                 <p style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 8px' }}>SEU CÓDIGO DE ACESSO</p>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                   <span style={{ fontSize: '24px', fontWeight: 900, color: '#3B82F6', letterSpacing: '4px', fontFamily: 'monospace' }}>{accessCode || '...'}</span>
-                  <button onClick={() => { const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin}/morador-login`; window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank'); }}
+                  <button onClick={() => { const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin + window.location.pathname}#/auth`; window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank'); }}
+
                     style={{ padding: '8px 14px', borderRadius: '10px', background: '#25D366', border: 'none', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <MessageCircle size={14}/> Compartilhar
                   </button>
@@ -1309,7 +1292,17 @@ export default function ResidentDashboard() {
 
       <HamburgerMenu />
       <NavBar />
+      
+      {showPaymentModal && (
+        <PaymentModal 
+          userId={localStorage.getItem('cd_user_id')}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={() => {
+            setShowPaymentModal(false);
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }
-

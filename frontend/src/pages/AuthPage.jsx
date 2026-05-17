@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, ShieldCheck, Home, Phone, Smartphone, KeyRound, Sparkles, ChevronLeft, TreePine, Building2 } from 'lucide-react';
 import Logo from '../components/Logo';
+import PaymentModal from '../components/PaymentModal';
 import { API } from '../config';
 
 export default function AuthPage() {
@@ -46,6 +47,10 @@ export default function AuthPage() {
   const [residenceType, setResidenceType] = useState('house');
   const [signUpStep, setSignUpStep] = useState(1);
   const [planType, setPlanType] = useState('trial');
+
+  // Modal de pagamento interno
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [registeredUserId, setRegisteredUserId] = useState(null);
 
   // Reage a mudanças na URL (ex: navegação interna para /auth?mode=register)
   useEffect(() => {
@@ -185,7 +190,9 @@ export default function AuthPage() {
       
       if (res.ok) {
         localStorage.setItem('cd_user_contact', data.user.email || data.user.phone || identifier || '');
-        if (data.initPoint) {
+        
+        // Se for o plano anual no momento do cadastro, exibe o modal de pagamento
+        if (data.initPoint && view === 'register') {
           localStorage.setItem('cd_token', data.token);
           localStorage.setItem('cd_user_id', data.user.id);
           localStorage.setItem('residentUnitId', data.user.unitId || '');
@@ -196,7 +203,8 @@ export default function AuthPage() {
           localStorage.setItem('cd_is_house_resident', data.user.isHouseResident ? 'true' : 'false');
           localStorage.setItem('cd_is_condo_resident', data.user.isCondoResident ? 'true' : 'false');
           
-          window.location.href = data.initPoint;
+          setRegisteredUserId(data.user.id);
+          setShowPaymentModal(true);
           return;
         }
 
@@ -677,6 +685,21 @@ export default function AuthPage() {
       <div style={{ position: 'absolute', bottom: '32px', textAlign: 'center', width: '100%', color: '#94A3B8', fontSize: '12px', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>
         Conexão Segura End-to-End
       </div>
+      
+      {showPaymentModal && (
+        <PaymentModal 
+          userId={registeredUserId}
+          onClose={() => {
+            setShowPaymentModal(false);
+            // Mesmo se fechar, vai pro painel como expirado ou trial
+            navigate(`/morador/${localStorage.getItem('residentUnitId') || localStorage.getItem('cd_user_id')}`);
+          }}
+          onSuccess={() => {
+            setShowPaymentModal(false);
+            navigate(`/morador/${localStorage.getItem('residentUnitId') || localStorage.getItem('cd_user_id')}`);
+          }}
+        />
+      )}
     </div>
   );
 }
