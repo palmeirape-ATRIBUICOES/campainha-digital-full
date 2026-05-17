@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Users, Building2, Gift, History, Settings2, LogOut, ChevronRight, RefreshCw, Search, ToggleRight, ToggleLeft, QrCode, Copy, Check, Download, X, Hash, Layers } from 'lucide-react';
 import Logo from '../components/Logo';
+import PlateProductionPanel from '../components/PlateProductionPanel';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../config';
 
@@ -264,6 +265,7 @@ export default function MasterAdminDashboard() {
         <nav style={{ padding: '0 12px', flex: 1 }}>
           <SidebarLink icon={Users} label="Usuários & Módulos" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
           <SidebarLink icon={Building2} label="Propriedades" active={activeTab === 'properties'} onClick={() => setActiveTab('properties')} />
+          <SidebarLink icon={QrCode} label="Produção de Placas" active={activeTab === 'production'} onClick={() => setActiveTab('production')} />
           <SidebarLink icon={Gift} label="Promoções" active={activeTab === 'promos'} onClick={() => setActiveTab('promos')} />
           <SidebarLink icon={History} label="Logs" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
           <SidebarLink icon={Settings2} label="Configurações" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
@@ -289,7 +291,8 @@ export default function MasterAdminDashboard() {
         <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A', letterSpacing: '-1px', margin: 0 }}>
-              {activeTab === 'users' ? 'Usuários & QR Codes' : 'Controle Master'}
+              {activeTab === 'users' ? 'Usuários & QR Codes' : 
+               activeTab === 'production' ? 'Produção de Placas' : 'Controle Master'}
             </h2>
             <p style={{ color: '#64748B', fontSize: '15px', marginTop: '4px' }}>Gerencie permissões, QR Codes e placas dos clientes.</p>
           </div>
@@ -447,7 +450,11 @@ export default function MasterAdminDashboard() {
           </div>
         )}
 
-        {activeTab !== 'users' && activeTab !== 'settings' && (
+        {activeTab === 'production' && (
+          <PlateProductionPanel />
+        )}
+
+        {activeTab !== 'users' && activeTab !== 'settings' && activeTab !== 'production' && (
           <div style={{ background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '60px', textAlign: 'center' }}>
             <p style={{ color: '#94A3B8', fontSize: '16px' }}>Seção em construção.</p>
           </div>
