@@ -174,3 +174,9 @@ model InternalMessage {
   body            String
   createdAt       DateTime @default(now())
 }
+
+model SystemSetting {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
+}

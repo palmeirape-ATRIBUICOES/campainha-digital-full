@@ -68,6 +68,19 @@ const authenticate = async (req, res, next) => {
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+const getPlanPrice = async () => {
+  try {
+    const setting = await prisma.systemSetting.findUnique({ where: { key: 'plan_price' } });
+    if (setting && setting.value) {
+      const parsed = parseFloat(setting.value);
+      if (!isNaN(parsed)) return parsed;
+    }
+  } catch (err) {
+    console.error('[Settings] Erro ao buscar preco do plano:', err.message);
+  }
+  return 39.90;
+};
+
 const generateAccessCode = () => crypto.randomBytes(3).toString('hex').toUpperCase();
 
 // Helper: Enviar push para todos os dispositivos de um usuário
@@ -253,6 +266,7 @@ app.post('/api/auth/register', async (req, res) => {
     let initPoint = null;
     if (planType === 'annual') {
       try {
+        const activePrice = await getPlanPrice();
         const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
         const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
           method: 'POST',
@@ -265,7 +279,7 @@ app.post('/api/auth/register', async (req, res) => {
               {
                 title: 'Campainha Digital - Plano Anual Premium',
                 quantity: 1,
-                unit_price: 39.90,
+                unit_price: activePrice,
                 currency_id: 'BRL'
               }
             ],
@@ -425,6 +439,7 @@ app.post('/api/payment/pix', async (req, res) => {
   try {
     const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
     const { email, userId, cpf } = req.body;
+    const activePrice = await getPlanPrice();
 
     if (!email) return res.status(400).json({ error: 'E-mail é obrigatório.' });
 
@@ -446,7 +461,7 @@ app.post('/api/payment/pix', async (req, res) => {
     }
 
     const mpPayload = {
-      transaction_amount: 39.90,
+      transaction_amount: activePrice,
       description: 'Campainha Digital - Plano Anual Premium',
       payment_method_id: 'pix',
       payer: {
@@ -461,7 +476,7 @@ app.post('/api/payment/pix', async (req, res) => {
       external_reference: userId || 'unknown'
     };
 
-    console.log('[MP PIX] Gerando pagamento PIX para:', email, '| Nome:', firstName, lastName);
+    console.log('[MP PIX] Gerando pagamento PIX para:', email, '| Nome:', firstName, lastName, '| Valor:', activePrice);
 
     let data;
     try {
@@ -492,8 +507,9 @@ app.post('/api/payment/pix', async (req, res) => {
     } catch (mpError) {
       console.warn('[MP PIX] API falhou, caindo para modo Simulação/Mock PIX:', mpError.message);
       
-      // Gera chave copia e cola simulada
-      const mockPixKey = `00020101021226870014br.gov.bcb.pix2565pix.campainhadigital.com/payment-${userId || 'anon'}-39.90520400005303986540539.905802BR5925CampainhaDigitalLtda6009SAOPAULO62070503***6304ABCD`;
+      // Gera chave copia e cola simulada com valor dinâmico formatado
+      const formattedPrice = activePrice.toFixed(2);
+      const mockPixKey = `00020101021226870014br.gov.bcb.pix2565pix.campainhadigital.com/payment-${userId || 'anon'}-${formattedPrice}5204000053039865405${formattedPrice}5802BR5925CampainhaDigitalLtda6009SAOPAULO62070503***6304ABCD`;
       
       // Converte para QR Code base64 usando o módulo qrcode existente
       const qrCodeDataUrl = await QRCode.toDataURL(mockPixKey, { width: 400, margin: 2 });
@@ -518,6 +534,7 @@ app.post('/api/payment/process', async (req, res) => {
   try {
     const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
     const paymentData = req.body;
+    const activePrice = await getPlanPrice();
     
     // Busca nome do usuário no banco se for PIX e não tiver first_name
     let firstName = 'Cliente';
@@ -536,7 +553,7 @@ app.post('/api/payment/process', async (req, res) => {
 
     // Configura os dados obrigatórios do Mercado Pago
     const mpPayload = {
-      transaction_amount: 39.90, // Valor fixo do plano anual
+      transaction_amount: activePrice, // Valor dinâmico do plano anual
       description: 'Campainha Digital - Plano Anual Premium',
       payment_method_id: paymentData.payment_method_id,
       payer: {
@@ -1521,7 +1538,35 @@ app.post('/api/master/users/:id/set-plate-code', authenticate, async (req, res) 
     where: { id: req.params.id },
     data: { plateCode }
   });
-  res.json({ plateCode: updated.plateCode });
+});
+
+// ─── System Settings Routes ──────────────────────────────────────────────────
+// Retorna configurações do sistema (público para o frontend de cadastro poder ler)
+app.get('/api/settings', async (req, res) => {
+  try {
+    const setting = await prisma.systemSetting.findUnique({ where: { key: 'plan_price' } });
+    res.json({ plan_price: setting?.value || '39.90' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao obter configurações.' });
+  }
+});
+
+// Atualiza uma configuração do sistema (apenas Master Admin)
+app.post('/api/settings', authenticate, async (req, res) => {
+  if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+  const { key, value } = req.body;
+  if (!key || value === undefined) return res.status(400).json({ error: 'Chave e valor são obrigatórios.' });
+
+  try {
+    const updated = await prisma.systemSetting.upsert({
+      where: { key },
+      update: { value: String(value) },
+      create: { key, value: String(value) }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar configuração.' });
+  }
 });
 
 // Gerar imagem de QR Code (retorna imagem PNG diretamente ou JSON se solicitado)

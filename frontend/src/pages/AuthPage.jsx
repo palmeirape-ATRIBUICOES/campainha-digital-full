@@ -51,6 +51,20 @@ export default function AuthPage() {
   // Modal de pagamento interno
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [registeredUserId, setRegisteredUserId] = useState(null);
+  const [planPrice, setPlanPrice] = useState('39.90');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API}/api/settings`);
+        const data = await res.json();
+        if (data.plan_price) setPlanPrice(data.plan_price);
+      } catch (err) {
+        console.error('[AuthPage] Erro ao buscar preco:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Reage a mudanças na URL (ex: navegação interna para /auth?mode=register)
   useEffect(() => {
@@ -641,7 +655,7 @@ export default function AuthPage() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#1E293B', margin: 0 }}>Plano Anual</h4>
-                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#2563EB' }}>R$ 39,90 / ano</span>
+                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#2563EB' }}>R$ {planPrice.replace('.', ',')} / ano</span>
                     </div>
                     <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0', lineHeight: 1.3 }}>Menos de R$ 3,33 por mês. Campainha ativa garantida pelo ano inteiro.</p>
                   </div>

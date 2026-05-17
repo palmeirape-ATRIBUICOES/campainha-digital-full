@@ -18,6 +18,10 @@ export default function MasterAdminDashboard() {
   const [editModal, setEditModal] = useState(null); // null or user to edit
   const navigate = useNavigate();
 
+  // Configurações globais de sistema
+  const [planPrice, setPlanPrice] = useState('39.90');
+  const [savingSettings, setSavingSettings] = useState(false);
+
   useEffect(() => {
     const token = localStorage.getItem('cd_token');
     if (!token) {
@@ -25,7 +29,40 @@ export default function MasterAdminDashboard() {
       return;
     }
     fetchUsers();
+    fetchSettings();
   }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch(`${API}/api/settings`);
+      const data = await res.json();
+      if (data.plan_price) setPlanPrice(data.plan_price);
+    } catch (err) {
+      console.error('[Settings] Erro ao buscar:', err);
+    }
+  };
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ key: 'plan_price', value: planPrice })
+      });
+      if (res.ok) {
+        alert('Configuração salva com sucesso!');
+      } else {
+        alert('Erro ao salvar configuração.');
+      }
+    } catch {
+      alert('Erro de conexão ao salvar.');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -358,7 +395,59 @@ export default function MasterAdminDashboard() {
           </div>
         )}
 
-        {activeTab !== 'users' && (
+        {activeTab === 'settings' && (
+          <div style={{ background: '#FFF', borderRadius: '24px', border: '1px solid #E2E8F0', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
+            <div style={{ marginBottom: '32px', borderBottom: '1px solid #F1F5F9', paddingBottom: '20px' }}>
+              <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: 0 }}>⚙️ Configurações do Sistema</h2>
+              <p style={{ color: '#64748B', fontSize: '14px', marginTop: '6px', margin: 0 }}>Gerencie as preferências globais e precificação da plataforma Campainha Digital.</p>
+            </div>
+
+            <form onSubmit={handleSaveSettings} style={{ maxWidth: '480px' }}>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Preço do Plano Anual (moradores)
+                </label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ position: 'absolute', left: '16px', fontWeight: 700, color: '#94A3B8', fontSize: '15px' }}>R$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="39.90"
+                    value={planPrice}
+                    onChange={e => setPlanPrice(e.target.value)}
+                    required
+                    style={{
+                      width: '100%', padding: '14px 16px 14px 44px', borderRadius: '12px', border: '2px solid #E2E8F0',
+                      fontSize: '16px', fontWeight: 800, color: '#1E293B', outline: 'none', transition: 'border-color 0.2s',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.01)'
+                    }}
+                    onFocus={e => e.target.style.borderColor = '#3B82F6'}
+                    onBlur={e => e.target.style.borderColor = '#E2E8F0'}
+                  />
+                </div>
+                <p style={{ color: '#64748B', fontSize: '12px', marginTop: '8px', lineHeight: 1.4 }}>
+                  Este valor será exibido no fluxo de cadastro dos moradores e será cobrado dinamicamente via Mercado Pago (PIX e Cartão de Crédito).
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingSettings}
+                style={{
+                  background: '#3B82F6', color: '#FFF', border: 'none', padding: '14px 28px', borderRadius: '12px',
+                  fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                  gap: '8px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)', transition: 'all 0.2s',
+                  opacity: savingSettings ? 0.7 : 1
+                }}
+              >
+                {savingSettings ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {activeTab !== 'users' && activeTab !== 'settings' && (
           <div style={{ background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '60px', textAlign: 'center' }}>
             <p style={{ color: '#94A3B8', fontSize: '16px' }}>Seção em construção.</p>
           </div>

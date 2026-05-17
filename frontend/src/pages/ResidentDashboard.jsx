@@ -116,6 +116,7 @@ export default function ResidentDashboard() {
   const [trialEndsAt, setTrialEndsAt] = useState(null);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [planPrice, setPlanPrice] = useState('39.90');
 
   const handleUpgrade = () => {
     setShowPaymentModal(true);
@@ -216,6 +217,17 @@ export default function ResidentDashboard() {
   };
 
   useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API}/api/settings`);
+        const data = await res.json();
+        if (data.plan_price) setPlanPrice(data.plan_price);
+      } catch (err) {
+        console.error('[ResidentDashboard] Erro ao buscar preco:', err);
+      }
+    };
+    fetchSettings();
+
     // Auth guard: redirect if not logged in
     if (!savedUnitId && !token) {
       navigate('/morador-login');
@@ -783,7 +795,7 @@ export default function ResidentDashboard() {
                     onClick={() => setShowPaymentModal(true)}
                     style={{ width: '100%', padding: '14px', borderRadius: '16px', background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 6px 15px rgba(239, 68, 68, 0.25)', transition: 'all 0.2s' }}
                   >
-                    🔔 Renovar Agora — R$ 39,90/ano
+                    🔔 Renovar Agora — R$ {planPrice.replace('.', ',')}/ano
                   </button>
                 </div>
               )}
@@ -806,7 +818,7 @@ export default function ResidentDashboard() {
                     disabled={upgradeLoading}
                     style={{ width: '100%', padding: '14px', borderRadius: '16px', background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 6px 15px rgba(245, 158, 11, 0.2)', transition: 'all 0.2s' }}
                   >
-                    {upgradeLoading ? 'Gerando Pagamento...' : 'Garantir Acesso Premium — R$ 39,90/ano'}
+                    {upgradeLoading ? 'Gerando Pagamento...' : `Garantir Acesso Premium — R$ ${planPrice.replace('.', ',')}/ano`}
                   </button>
                 </div>
               )}

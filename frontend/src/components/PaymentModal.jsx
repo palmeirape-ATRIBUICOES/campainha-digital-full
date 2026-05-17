@@ -22,6 +22,20 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
   const [pixError, setPixError] = useState('');
   const [retryCount, setRetryCount] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [planPrice, setPlanPrice] = useState('39.90');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API}/api/settings`);
+        const data = await res.json();
+        if (data.plan_price) setPlanPrice(data.plan_price);
+      } catch (err) {
+        console.error('[PaymentModal] Erro ao buscar preco:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // ── Campos Cartão ─────────────────────────────────────────────────────
   const [cardNumber, setCardNumber] = useState('');
@@ -166,7 +180,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           payment_method_id: detectCardBrand(rawCard),
-          transaction_amount: 39.90,
+          transaction_amount: parseFloat(planPrice),
           installments: 1,
           payer: {
             email: cardEmail,
@@ -203,7 +217,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
   if (result && result.status === 'approved') {
     return (
       <ModalWrapper onClose={onClose}>
-        <ModalHeader onClose={onClose} />
+        <ModalHeader onClose={onClose} planPrice={planPrice} />
         <div style={{ padding: '32px 24px', textAlign: 'center' }}>
           <CheckCircle size={72} color="#10B981" style={{ margin: '0 auto 20px', display: 'block' }} />
           <h4 style={{ fontSize: '22px', color: '#0F172A', margin: '0 0 10px', fontWeight: 800 }}>Pagamento Aprovado! 🎉</h4>
@@ -217,7 +231,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
   if (result && !result.qr_code_base64) {
     return (
       <ModalWrapper onClose={onClose}>
-        <ModalHeader onClose={onClose} />
+        <ModalHeader onClose={onClose} planPrice={planPrice} />
         <div style={{ padding: '32px 24px', textAlign: 'center' }}>
           <h4 style={{ fontSize: '18px', color: '#0F172A', margin: '0 0 10px', fontWeight: 700 }}>Pagamento em análise</h4>
           <p style={{ color: '#64748B', marginBottom: '28px', lineHeight: 1.6 }}>
@@ -232,7 +246,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
   // ────────────────────────────────────────────────────────────────────
   return (
     <ModalWrapper onClose={onClose}>
-      <ModalHeader onClose={onClose} />
+      <ModalHeader onClose={onClose} planPrice={planPrice} />
 
       <div style={{ padding: '0 24px 24px' }}>
         {/* Abas */}
@@ -345,7 +359,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
                     <span style={{ fontSize: '22px' }}>✅</span>
                     <div>
                       <p style={{ margin: 0, fontWeight: 700, color: '#166534', fontSize: '13px' }}>PIX gerado com sucesso!</p>
-                      <p style={{ margin: '2px 0 0', color: '#15803D', fontSize: '12px' }}>Escaneie ou copie o código — R$ 39,90</p>
+                      <p style={{ margin: '2px 0 0', color: '#15803D', fontSize: '12px' }}>Escaneie ou copie o código — R$ {planPrice.replace('.', ',')}</p>
                     </div>
                   </div>
                 )}
@@ -459,7 +473,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
             <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '14px', margin: '16px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '13px', color: '#64748B' }}>Total — 1x sem juros</span>
-                <span style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>R$ 39,90</span>
+                <span style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>R$ {planPrice.replace('.', ',')}</span>
               </div>
             </div>
 
@@ -505,12 +519,12 @@ function ModalWrapper({ children, onClose }) {
   );
 }
 
-function ModalHeader({ onClose }) {
+function ModalHeader({ onClose, planPrice }) {
   return (
     <div style={{ padding: '20px 24px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <div>
         <h3 style={{ margin: 0, fontSize: '17px', color: '#0F172A', fontWeight: 800 }}>Finalizar Assinatura</h3>
-        <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#64748B' }}>Plano Anual — R$ 39,90</p>
+        <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#64748B' }}>Plano Anual — R$ {planPrice ? planPrice.replace('.', ',') : '39,90'}</p>
       </div>
       <button onClick={onClose} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <X size={18} color="#475569" />
