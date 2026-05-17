@@ -5,6 +5,7 @@ import Logo from '../components/Logo';
 import UnitManager from '../components/UnitManager';
 import BroadcastPanel from '../components/BroadcastPanel';
 import ResidentManager from '../components/ResidentManager';
+import PlateProductionPanel from '../components/PlateProductionPanel';
 
 import { API } from '../config';
 
@@ -464,6 +465,7 @@ export default function AdminPanel() {
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', padding: '0 24px', gap: '0', overflowX: 'auto' }}>
         {[
           { key: 'properties', label: '🏠 Propriedades', desc: 'Gerencie placas físicas e downloads de QR Codes.' },
+          { key: 'production', label: '🖨️ Produção de Placas', desc: 'Gere placas para impressão física (4 por folha A4).' },
           { key: 'units',      label: '🏢 Unidades', desc: 'Cadastre e edite os blocos, ruas e casas da vila.' },
           { key: 'people',     label: '👥 Pessoas', desc: 'Gerencie e vincule moradores aos códigos de acesso.' },
           { key: 'mailbox',    label: '📬 Caixa Postal', desc: 'Veja as mensagens de suporte enviadas pelos moradores.' },
@@ -569,6 +571,11 @@ export default function AdminPanel() {
               </div>
             )}
           </>
+        )}
+
+        {/* ── ABA: PRODUCAO DE PLACAS ── */}
+        {activeTab === 'production' && (
+          <PlateProductionPanel />
         )}
 
         {/* ── ABA: UNIDADES ── */}
