@@ -258,6 +258,8 @@ app.post('/api/resident/login-by-code', async (req, res) => {
 
     res.json({
       role: user.isAdmin ? 'admin' : (user.isDoorman ? 'doorman' : 'resident'),
+      token: user.id,
+      userId: user.id,
       propertyId: property?.id,
       propertyName: property?.name,
       unitId: unit?.id,
@@ -299,6 +301,8 @@ app.post('/api/resident/login', async (req, res) => {
 
     res.json({
       role: user.isAdmin ? 'admin' : 'resident',
+      token: user.id,
+      userId: user.id,
       propertyId: property?.id,
       propertyName: property?.name,
       unitId: unit?.id,
@@ -458,7 +462,7 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
         clientCode: true,
         plateCode: true,
         propertiesManaged: { select: { id: true, name: true } },
-        units: { select: { propertyId: true, property: { select: { name: true } } } }
+        units: { select: { id: true, name: true, propertyId: true, property: { select: { name: true } } } }
       }
     });
     
@@ -468,7 +472,7 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
 
     // Obtém o propertyId sendo o usuário admin da propriedade ou morador de uma unidade
     const propertyId = user.propertiesManaged?.[0]?.id || user.units?.[0]?.propertyId;
-    const propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.property?.name || '';
+    const propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.name || '';
     
     res.json({ ...user, propertyId, propertyName });
   } catch (err) {
@@ -500,6 +504,18 @@ app.put('/api/user/settings', authenticate, async (req, res) => {
         where: { id: updated.propertiesManaged[0].id },
         data: { name: propertyName }
       });
+    } else if (propertyName) {
+      // Se for um morador comum, busca a primeira unidade vinculada a ele e atualiza o nome da unidade
+      const userWithUnits = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        include: { units: true }
+      });
+      if (userWithUnits.units && userWithUnits.units.length > 0) {
+        await prisma.unit.update({
+          where: { id: userWithUnits.units[0].id },
+          data: { name: propertyName }
+        });
+      }
     }
     
     res.json(updated);

@@ -177,17 +177,25 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
           localStorage.setItem('cd_unit_name', data.propertyName);
         }
         
-        const propId = data.propertyId || unitId;
-        if (data.clientCode || data.plateCode) loadQrCode(propId);
+        if (data.plateCode) {
+          loadQrCode(data.plateCode, true);
+        } else if (data.clientCode) {
+          loadQrCode(`CAMPAINHA:${data.clientCode}`, false);
+        } else {
+          const propId = data.propertyId || unitId;
+          if (propId) loadQrCode(propId, false);
+        }
       }
     } catch {}
   };
 
-  const loadQrCode = async (propId) => {
+  const loadQrCode = async (code, isPlate) => {
     setQrLoading(true);
     try {
       const baseUrl = window.location.origin + window.location.pathname;
-      const finalUrl = `${baseUrl}#/chamada/${propId}`;
+      const finalUrl = isPlate 
+        ? `${baseUrl}#/auth?plate=${code}`
+        : `${baseUrl}#/chamada/${code}`;
       const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(finalUrl)}`);
       const data = await res.json();
       setQrImage(data.qrcode || '');
@@ -210,7 +218,7 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
       const data = await res.json();
       if (data.clientCode) {
         setClientCode(data.clientCode);
-        loadQrCode(`CAMPAINHA:${data.clientCode}`);
+        loadQrCode(`CAMPAINHA:${data.clientCode}`, false);
         alert('Código único gerado com sucesso!');
         window.location.reload(); 
       }

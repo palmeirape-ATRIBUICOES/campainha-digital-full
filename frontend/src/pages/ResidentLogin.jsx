@@ -44,6 +44,10 @@ export default function ResidentLogin() {
     localStorage.setItem('residentPropertyId', data.propertyId || '');
     // Se o login for por código, o código já está no state, se for por email, vem no data
     localStorage.setItem('residentAccessCode', data.accessCode || accessCode || '');
+    if (data.token) {
+      localStorage.setItem('cd_token', data.token);
+      localStorage.setItem('cd_user_id', data.userId || data.token);
+    }
     navigate(`/morador/${data.unitId}`);
   };
 
