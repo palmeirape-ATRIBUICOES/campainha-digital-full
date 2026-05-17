@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag, BellOff, BellRing } from 'lucide-react';
 import { HistoryPanel, SettingsPanel, DEFAULT_CATEGORIES } from './ResidentPanels';
@@ -68,6 +68,7 @@ function stopDoorbell() {
 export default function ResidentDashboard() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const savedUnitId = localStorage.getItem('residentUnitId');
   const token = localStorage.getItem('cd_token');
@@ -258,48 +259,9 @@ export default function ResidentDashboard() {
       }
     };
 
-    const checkActiveCallParam = async () => {
-      const hashPart = window.location.hash;
-      const queryPart = hashPart.includes('?') ? hashPart.split('?')[1] : '';
-      const params = new URLSearchParams(queryPart);
-      const hasCallParam = params.get('call') === 'true';
-      const paramVisitorSocket = params.get('visitorSocketId');
-
-      if (hasCallParam && paramVisitorSocket) {
-        setVisitorSocketId(paramVisitorSocket);
-        setStatus('ringing');
-        setTab('home');
-        setSentMsg('');
-        
-        try {
-          const res = await fetch(`${API}/api/units/${id}/visitors`);
-          if (res.ok) {
-            const visitors = await res.json();
-            if (visitors && visitors.length > 0) {
-              const latest = visitors[0];
-              setCall({
-                visitorSocketId: paramVisitorSocket,
-                callerName: latest.callerName || 'Visitante',
-                photo: latest.photo,
-                timestamp: latest.timestamp,
-                visitId: latest.id
-              });
-            } else {
-              setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
-            }
-          } else {
-            setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
-          }
-        } catch {
-          setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
-        }
-      }
-    };
-
     fetchMessages();
     fetchUserProfile();
     healSession();
-    checkActiveCallParam();
 
     // Verifica se é iOS e se está instalado na tela inicial (necessário para Push no iOS)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -360,6 +322,48 @@ export default function ResidentDashboard() {
 
     return () => { s.disconnect(); window.removeEventListener('beforeinstallprompt', bip); stopAll(); };
   }, [id]);
+
+  useEffect(() => {
+    const checkActiveCallParam = async () => {
+      const hashPart = window.location.hash;
+      const queryPart = hashPart.includes('?') ? hashPart.split('?')[1] : '';
+      const params = new URLSearchParams(queryPart);
+      const hasCallParam = params.get('call') === 'true';
+      const paramVisitorSocket = params.get('visitorSocketId');
+
+      if (hasCallParam && paramVisitorSocket) {
+        setVisitorSocketId(paramVisitorSocket);
+        setStatus('ringing');
+        setTab('home');
+        setSentMsg('');
+        
+        try {
+          const res = await fetch(`${API}/api/units/${id}/visitors`);
+          if (res.ok) {
+            const visitors = await res.json();
+            if (visitors && visitors.length > 0) {
+              const latest = visitors[0];
+              setCall({
+                visitorSocketId: paramVisitorSocket,
+                callerName: latest.callerName || 'Visitante',
+                photo: latest.photo,
+                timestamp: latest.timestamp,
+                visitId: latest.id
+              });
+            } else {
+              setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
+            }
+          } else {
+            setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
+          }
+        } catch {
+          setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
+        }
+      }
+    };
+
+    checkActiveCallParam();
+  }, [location, id]);
 
   const stopRing = () => { stopDoorbell(); setAudioError(false); };
   const stopAll = () => {

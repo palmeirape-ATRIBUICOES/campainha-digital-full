@@ -758,7 +758,7 @@ io.on('connection', (socket) => {
             renotify: true,
             requireInteraction: true,
             vibrate: [400, 200, 400, 200, 800],
-            data: { url: `${baseUrl}/#/morador/${resident.id}`, unitId, propertyId }
+            data: { url: `${baseUrl}/#/morador/${unitId}?call=true&visitorSocketId=${socket.id}`, unitId, propertyId }
           });
         }
       });
