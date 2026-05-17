@@ -239,7 +239,7 @@ app.post('/api/auth/register', async (req, res) => {
         isResident: true,
         isHouseResident: !!isHouseResident,
         isCondoResident: !!isCondoResident,
-        trialEndsAt: new Date() // Começa expirado/agora para exigir o pagamento antes de liberar acesso
+        trialEndsAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) // 15 dias de teste grátis
       }
     });
 
@@ -253,7 +253,7 @@ app.post('/api/auth/register', async (req, res) => {
           clientAddress: 'Individual',
           type: isHouse ? 'individual' : 'condo_individual',
           adminId: user.id,
-          nextPaymentAt: new Date() // Começa expirado/agora para exigir o pagamento
+          nextPaymentAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) // 15 dias de teste grátis
         }
       });
       await prisma.unit.create({
