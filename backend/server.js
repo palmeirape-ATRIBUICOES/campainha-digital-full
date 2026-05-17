@@ -424,19 +424,44 @@ app.post('/api/payment/webhook', async (req, res) => {
 app.post('/api/payment/pix', async (req, res) => {
   try {
     const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
-    const { email, userId } = req.body;
+    const { email, userId, cpf } = req.body;
 
     if (!email) return res.status(400).json({ error: 'E-mail é obrigatório.' });
+
+    // Busca o nome do usuário no banco para enviar ao Mercado Pago
+    let firstName = 'Cliente';
+    let lastName = 'Campainha';
+    
+    if (userId) {
+      try {
+        const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+        if (user && user.name) {
+          const parts = user.name.trim().split(/\s+/);
+          firstName = parts[0] || 'Cliente';
+          lastName = parts.slice(1).join(' ') || 'Digital';
+        }
+      } catch (e) {
+        console.log('[MP PIX] Não conseguiu buscar nome do usuário:', e.message);
+      }
+    }
 
     const mpPayload = {
       transaction_amount: 39.90,
       description: 'Campainha Digital - Plano Anual Premium',
       payment_method_id: 'pix',
-      payer: { email },
+      payer: {
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        identification: {
+          type: 'CPF',
+          number: cpf || '12345678909' // CPF de teste válido (se não informado)
+        }
+      },
       external_reference: userId || 'unknown'
     };
 
-    console.log('[MP PIX] Gerando pagamento PIX para:', email);
+    console.log('[MP PIX] Gerando pagamento PIX para:', email, '| Nome:', firstName, lastName);
 
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
@@ -451,9 +476,12 @@ app.post('/api/payment/pix', async (req, res) => {
     const data = await mpResponse.json();
 
     if (!mpResponse.ok) {
-      console.error('[MP PIX] Erro da API MP:', data);
-      return res.status(400).json({ error: 'Erro ao gerar PIX.', details: data });
+      console.error('[MP PIX] Erro da API MP:', JSON.stringify(data, null, 2));
+      const cause = data.cause?.[0]?.description || data.message || 'Erro ao gerar PIX.';
+      return res.status(400).json({ error: cause, details: data });
     }
+
+    console.log('[MP PIX] PIX gerado com sucesso! ID:', data.id, '| Status:', data.status);
 
     res.json({
       id: data.id,
@@ -467,20 +495,37 @@ app.post('/api/payment/pix', async (req, res) => {
   }
 });
 
-// Processamento Transparente de Pagamento (Usado pelo MP Bricks)
+// Processamento Transparente de Pagamento (Usado pelo MP Bricks e fallback PIX)
 app.post('/api/payment/process', async (req, res) => {
   try {
     const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
     const paymentData = req.body;
     
+    // Busca nome do usuário no banco se for PIX e não tiver first_name
+    let firstName = 'Cliente';
+    let lastName = 'Digital';
+    
+    if (paymentData.external_reference && paymentData.payment_method_id === 'pix') {
+      try {
+        const user = await prisma.user.findUnique({ where: { id: paymentData.external_reference }, select: { name: true } });
+        if (user && user.name) {
+          const parts = user.name.trim().split(/\s+/);
+          firstName = parts[0] || 'Cliente';
+          lastName = parts.slice(1).join(' ') || 'Digital';
+        }
+      } catch (e) { /* ignora */ }
+    }
+
     // Configura os dados obrigatórios do Mercado Pago
     const mpPayload = {
       transaction_amount: 39.90, // Valor fixo do plano anual
       description: 'Campainha Digital - Plano Anual Premium',
       payment_method_id: paymentData.payment_method_id,
       payer: {
-        email: paymentData.payer.email,
-        identification: paymentData.payer.identification
+        email: paymentData.payer?.email || 'cliente@campainhadigital.com',
+        first_name: paymentData.payer?.first_name || firstName,
+        last_name: paymentData.payer?.last_name || lastName,
+        identification: paymentData.payer?.identification || { type: 'CPF', number: '12345678909' }
       },
       external_reference: paymentData.external_reference // ID do usuário
     };
@@ -490,7 +535,7 @@ app.post('/api/payment/process', async (req, res) => {
     if (paymentData.installments) mpPayload.installments = paymentData.installments;
     if (paymentData.issuer_id) mpPayload.issuer_id = paymentData.issuer_id;
 
-    console.log('[MP] Processando pagamento interno:', mpPayload.payment_method_id);
+    console.log('[MP] Processando pagamento interno:', mpPayload.payment_method_id, '| Payer:', mpPayload.payer.email);
 
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
@@ -505,8 +550,7 @@ app.post('/api/payment/process', async (req, res) => {
     const data = await mpResponse.json();
 
     if (mpResponse.ok) {
-      // Se for PIX ou Cartão aprovado na hora, o webhook vai ativar a conta.
-      // Retornamos os dados para o frontend (incluindo o QR Code do PIX se for o caso)
+      console.log('[MP] Pagamento criado com sucesso! ID:', data.id, '| Status:', data.status);
       res.json({
         id: data.id,
         status: data.status,
@@ -516,8 +560,9 @@ app.post('/api/payment/process', async (req, res) => {
         ticket_url: data.transaction_details?.external_resource_url
       });
     } else {
-      console.error('[MP] Erro da API MP:', data);
-      res.status(400).json({ error: 'Erro ao processar pagamento.', details: data });
+      console.error('[MP] Erro da API MP:', JSON.stringify(data, null, 2));
+      const cause = data.cause?.[0]?.description || data.message || 'Erro ao processar pagamento.';
+      res.status(400).json({ error: cause, details: data });
     }
   } catch (err) {
     console.error('[MP] Erro interno:', err);
