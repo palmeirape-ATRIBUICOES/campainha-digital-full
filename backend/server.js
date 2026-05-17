@@ -984,11 +984,18 @@ app.get('/api/properties', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Administrador não encontrado.' });
 
     // Injeta a url e qrCodeUrl dinamicamente para o frontend ler perfeitamente
-    const frontendUrl = process.env.FRONTEND_URL || 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    let frontendUrl = process.env.FRONTEND_URL || 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    
+    // Corrige automaticamente se o FRONTEND_URL de produção foi configurado sem o subdiretório do GitHub Pages
+    if (frontendUrl.includes('palmeirape-atribuicoes.github.io') && !frontendUrl.includes('campainha-digital-full')) {
+      frontendUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    }
+
     const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
 
     const propsWithUrls = user.propertiesManaged.map(p => {
       const url = `${frontendUrl}/#/chamada/${p.id}`;
+
       // Transforma cada unit.inviteCode em accessCode para compatibilidade com o frontend
       const unitsWithAccess = p.units.map(u => ({
         ...u,
