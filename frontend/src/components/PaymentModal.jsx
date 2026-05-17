@@ -66,19 +66,39 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
     setPixData(null);
 
     try {
-      const res = await fetch(`${API}/api/payment/process`, {
+      // Tenta a rota dedicada /api/payment/pix primeiro (payload simples, sem CPF)
+      let res = await fetch(`${API}/api/payment/pix`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          payment_method_id: 'pix',
-          payer: { email, identification: { type: 'CPF', number: '00000000000' } },
-          external_reference: uid
-        })
+        body: JSON.stringify({ email, userId: uid })
       });
 
-      const data = await res.json();
+      // Se a rota não existir no servidor (404), faz fallback para /api/payment/process
+      if (res.status === 404) {
+        res = await fetch(`${API}/api/payment/process`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            payment_method_id: 'pix',
+            payer: { email },
+            external_reference: uid
+          })
+        });
+      }
 
-      if (!res.ok || data.error) throw new Error(data.error || 'Erro ao gerar PIX.');
+      let data;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        // O servidor retornou HTML (ex: catch-all do frontend) — rota não existe
+        throw new Error('Servidor de pagamento indisponível. Tente novamente em alguns minutos.');
+      }
+
+      if (!res.ok || data.error) {
+        const detail = data.details?.message || data.details?.cause?.[0]?.description || '';
+        throw new Error(detail || data.error || 'Erro ao gerar PIX.');
+      }
       if (!data.qr_code_base64) throw new Error('QR Code não retornado pelo servidor.');
 
       setPixData(data);

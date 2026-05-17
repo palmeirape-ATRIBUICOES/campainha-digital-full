@@ -94,7 +94,7 @@ export default function LandingPage() {
                   <div style={{ width: '100%', height: '100%', background: '#000', position: 'relative', overflow: 'hidden' }}>
                     {/* Vídeo de Apresentação */}
                     <video 
-                      src="/avatar.mp4" 
+                      src={`${import.meta.env.BASE_URL}avatar.mp4`} 
                       autoPlay 
                       muted 
                       loop 
