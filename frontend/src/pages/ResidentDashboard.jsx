@@ -200,7 +200,8 @@ export default function ResidentDashboard() {
 
     const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 20 });
     socketRef.current = s;
-    s.emit('register_user', { userId: id });
+    const userIdToRegister = localStorage.getItem('cd_user_id') || id;
+    s.emit('register_user', { userId: userIdToRegister });
 
     // Fetch broadcast messages
     const fetchMessages = async () => {
@@ -247,6 +248,7 @@ export default function ResidentDashboard() {
             if (data.token) {
               localStorage.setItem('cd_token', data.token);
               localStorage.setItem('cd_user_id', data.userId || data.token);
+              s.emit('register_user', { userId: data.userId || data.token });
               fetchUserProfile(data.token);
             }
           }
