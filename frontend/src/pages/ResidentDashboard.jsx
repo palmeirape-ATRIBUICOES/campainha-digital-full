@@ -99,7 +99,7 @@ export default function ResidentDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
-  const [showIOSPrompt, setShowIOSPrompt] = useState(false);
+  const [userContact, setUserContact] = useState('');
 
   // Novos estados para Caixa Postal de Moradores e Despacho de Alertas
   const [supportSubject, setSupportSubject] = useState('');
@@ -237,6 +237,7 @@ export default function ResidentDashboard() {
           if (data.clientCode) setAccessCode(data.clientCode);
           else if (data.plateCode) setAccessCode(data.plateCode);
           if (data.name) setUnitName(data.name);
+          setUserContact(data.email || data.phone || data.clientCode || data.plateCode || '');
         }
       } catch {}
     };
@@ -640,18 +641,27 @@ export default function ResidentDashboard() {
           </button>
         </div>
 
-        <button onClick={() => {
-          [
-            'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
-            'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
-            'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
-            'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
-            'cd_admin_name', 'cd_admin_password', 'cd_property_type'
-          ].forEach(k => localStorage.removeItem(k));
-          navigate('/');
-        }} style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: '#FFF1F2', color: '#E11D48', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}>
-          <LogOut size={20} /> Sair do App
-        </button>
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {userContact && (
+            <div style={{ padding: '12px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Logado como:</span>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', wordBreak: 'break-all' }}>{userContact}</span>
+            </div>
+          )}
+
+          <button onClick={() => {
+            [
+              'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+              'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+              'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+              'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+              'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+            ].forEach(k => localStorage.removeItem(k));
+            navigate('/');
+          }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: '#FFF1F2', color: '#E11D48', fontWeight: 700, fontSize: '15px', cursor: 'pointer', width: '100%' }}>
+            <LogOut size={20} /> Sair do App
+          </button>
+        </div>
       </div>
     </>
   );

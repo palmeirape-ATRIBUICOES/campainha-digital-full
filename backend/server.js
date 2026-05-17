@@ -480,6 +480,8 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: {
+        email: true,
+        phone: true,
         doorbellEnabled: true,
         quietModeStart: true,
         quietModeEnd: true,
