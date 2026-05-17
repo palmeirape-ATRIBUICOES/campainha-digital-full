@@ -91,7 +91,12 @@ export function HistoryPanel({ unitId, propertyId }) {
     if (!unitId) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/visitors/by-user/${unitId}`);
+      // Tenta buscar por ID de Unidade diretamente
+      let res = await fetch(`${API}/api/visitors/${unitId}`);
+      if (!res.ok) {
+        // Se falhar (ex: se o ID na rota for o ID do usuário), busca por ID de Usuário
+        res = await fetch(`${API}/api/visitors/by-user/${unitId}`);
+      }
       if (res.ok) {
         const data = await res.json();
         setVisitors(data);
