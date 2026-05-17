@@ -84,8 +84,20 @@ export default function ResidentDashboard() {
   const [unitName, setUnitName] = useState(() => localStorage.getItem('cd_unit_name') || 'Minha Casa');
   const [accessCode, setAccessCode] = useState('');
   const [visitorSocketId, setVisitorSocketId] = useState(null);
+  const isHouseResident = localStorage.getItem('cd_is_house_resident') === 'true';
+  const HOUSE_QUICK_MSGS = [
+    { id: 'general', label: 'Geral', messages: ['Já estou indo', 'Já está Aberto', 'Pode entrar'] },
+    { id: 'services', label: 'Serviços', messages: ['Pode entrar pra marcar a luz', 'Pode entrar para marcar a água'] },
+    { id: 'delivery', label: 'Delivery', messages: ['Pode deixar no portão', 'Já estou descendo'] }
+  ];
+  const CONDO_QUICK_MSGS = [
+    { id: 'general', label: 'Geral', messages: ['Já estou descendo', 'Um momento', 'Pode subir', 'Deixar na portaria'] },
+    { id: 'services', label: 'Serviços', messages: ['Prestador autorizado', 'Aguarde na portaria'] },
+    { id: 'delivery', label: 'Delivery', messages: ['Pode deixar com o porteiro', 'Deixar no Locker'] }
+  ];
+
   const [quickMsgs] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('cd_quick_msgs') || 'null') || DEFAULT_CATEGORIES; } catch { return DEFAULT_CATEGORIES; }
+    return isHouseResident ? HOUSE_QUICK_MSGS : CONDO_QUICK_MSGS;
   });
   const [activeMsgCat, setActiveMsgCat] = useState('general');
   const [sentMsg, setSentMsg] = useState('');
@@ -100,6 +112,33 @@ export default function ResidentDashboard() {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [userContact, setUserContact] = useState('');
+  const [trialEndsAt, setTrialEndsAt] = useState(null);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+
+  const handleUpgrade = async () => {
+    setUpgradeLoading(true);
+    try {
+      const activeToken = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/payment/upgrade-preference`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': activeToken
+        }
+      });
+      const data = await res.json();
+      if (res.ok && data.initPoint) {
+        window.location.href = data.initPoint;
+      } else {
+        alert(data.error || 'Erro ao gerar o link de pagamento do Mercado Pago.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao tentar assinar. Tente novamente mais tarde.');
+    } finally {
+      setUpgradeLoading(false);
+    }
+  };
 
   // Novos estados para Caixa Postal de Moradores e Despacho de Alertas
   const [supportSubject, setSupportSubject] = useState('');
@@ -237,6 +276,11 @@ export default function ResidentDashboard() {
           if (data.clientCode) setAccessCode(data.clientCode);
           else if (data.plateCode) setAccessCode(data.plateCode);
           if (data.name) setUnitName(data.name);
+          if (data.trialEndsAt) setTrialEndsAt(data.trialEndsAt);
+          if (data.propertyId) {
+            setPropertyId(data.propertyId);
+            localStorage.setItem('residentPropertyId', data.propertyId);
+          }
           setUserContact(data.email || data.phone || data.clientCode || data.plateCode || '');
         }
       } catch {}
@@ -595,7 +639,7 @@ export default function ResidentDashboard() {
     <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', borderTop: '1px solid var(--border-subtle)', display: 'flex', zIndex: 100, paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {[
         { key: 'home', icon: <Home size={22} />, label: 'Início' },
-        { key: 'messages', icon: <Mail size={22} />, label: 'Avisos', badge: unreadCount },
+        ...(!isHouseResident ? [{ key: 'messages', icon: <Mail size={22} />, label: 'Avisos', badge: unreadCount }] : []),
         { key: 'history', icon: <History size={22} />, label: 'Atividade' },
       ].map(n => (
         <button key={n.key} onClick={() => { setTab(n.key); if (n.key === 'messages') markMessagesRead(); }} style={{ flex: 1, padding: '12px 4px 8px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: tab === n.key ? 'var(--primary)' : '#94A3B8', fontSize: '11px', fontWeight: 700, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative' }}>
@@ -624,9 +668,11 @@ export default function ResidentDashboard() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', marginBottom: '8px' }}>FUNCIONALIDADES</p>
           
-          <button onClick={() => { setTab('intercom'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'intercom' ? '#F0F9FF' : 'transparent', color: tab === 'intercom' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
-            <Building2 size={20} color={tab === 'intercom' ? '#0369A1' : '#64748B'} /> Interfone Digital
-          </button>
+          {!isHouseResident && (
+            <button onClick={() => { setTab('intercom'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'intercom' ? '#F0F9FF' : 'transparent', color: tab === 'intercom' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
+              <Building2 size={20} color={tab === 'intercom' ? '#0369A1' : '#64748B'} /> Interfone Digital
+            </button>
+          )}
 
           <button onClick={() => { setTab('services'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'services' ? '#F0F9FF' : 'transparent', color: tab === 'services' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
             <ShoppingBag size={20} color={tab === 'services' ? '#0369A1' : '#64748B'} /> Parceiros da Região
@@ -665,6 +711,12 @@ export default function ResidentDashboard() {
       </div>
     </>
   );
+
+  const trialEndsDate = trialEndsAt ? new Date(trialEndsAt) : null;
+  const isTrialExpired = trialEndsDate ? trialEndsDate < new Date() : false;
+  const isTrialExpiringSoon = trialEndsDate ? (trialEndsDate - new Date()) < (3 * 24 * 60 * 60 * 1000) && !isTrialExpired : false;
+  const formattedExpiryDate = trialEndsDate ? trialEndsDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+  const daysRemaining = trialEndsDate ? Math.ceil((trialEndsDate - new Date()) / (24 * 60 * 60 * 1000)) : 0;
 
   if (!savedUnitId && !token) {
     return null;
@@ -723,7 +775,69 @@ export default function ResidentDashboard() {
         <>
           {/* IDLE */}
           {status === 'idle' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 20px 32px', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 20px 32px', gap: '20px', width: '100%' }}>
+
+              {/* Banners de Assinatura Premium / Trial */}
+              {isTrialExpired && (
+                <div style={{ width: '100%', maxWidth: '380px', background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', border: '1px solid #FCA5A5', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(239, 68, 68, 0.08)' }}>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    <div style={{ background: '#EF4444', color: '#FFF', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 10px rgba(239, 68, 68, 0.2)' }}>
+                      <AlertCircle size={22} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#991B1B', margin: '0 0 4px' }}>Campainha Inativa!</h4>
+                      <p style={{ fontSize: '12px', color: '#B91C1C', margin: 0, lineHeight: 1.4 }}>
+                        Seu período de teste grátis expirou em <strong>{formattedExpiryDate}</strong>. Ative o plano anual para continuar recebendo chamadas.
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleUpgrade}
+                    disabled={upgradeLoading}
+                    style={{ width: '100%', padding: '14px', borderRadius: '16px', background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 6px 15px rgba(239, 68, 68, 0.25)', transition: 'all 0.2s' }}
+                  >
+                    {upgradeLoading ? 'Gerando Pagamento...' : 'Ativar Premium — R$ 39,90/ano'}
+                  </button>
+                </div>
+              )}
+
+              {isTrialExpiringSoon && (
+                <div style={{ width: '100%', maxWidth: '380px', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', border: '1px solid #FCD34D', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(245, 158, 11, 0.08)' }}>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    <div style={{ background: '#F59E0B', color: '#FFF', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 10px rgba(245, 158, 11, 0.2)' }}>
+                      <AlertCircle size={22} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#92400E', margin: '0 0 4px' }}>Renovação Pendente</h4>
+                      <p style={{ fontSize: '12px', color: '#B45309', margin: 0, lineHeight: 1.4 }}>
+                        Falta{daysRemaining !== 1 ? 'm' : ''} apenas <strong>{daysRemaining} dia{daysRemaining !== 1 ? 's' : ''}</strong> de testes grátis (expira em {formattedExpiryDate}). Assine o plano anual premium.
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleUpgrade}
+                    disabled={upgradeLoading}
+                    style={{ width: '100%', padding: '14px', borderRadius: '16px', background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 6px 15px rgba(245, 158, 11, 0.2)', transition: 'all 0.2s' }}
+                  >
+                    {upgradeLoading ? 'Gerando Pagamento...' : 'Garantir Acesso Premium — R$ 39,90/ano'}
+                  </button>
+                </div>
+              )}
+
+              {trialEndsDate && !isTrialExpired && !isTrialExpiringSoon && (
+                <div style={{ width: '100%', maxWidth: '380px', background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', border: '1px solid #A7F3D0', borderRadius: '18px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.04)' }}>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div style={{ background: '#10B981', color: '#FFF', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <ShieldCheck size={16} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#065F46', margin: 0 }}>Plano Premium Ativo</h4>
+                      <p style={{ fontSize: '11px', color: '#047857', margin: 0 }}>Válido até {formattedExpiryDate}</p>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '3px 8px', borderRadius: '100px' }}>ANUAL</span>
+                </div>
+              )}
 
               {/* Bell hero */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '16px' }}>
@@ -768,6 +882,58 @@ export default function ResidentDashboard() {
                 </div>
               </div>
 
+              {/* QR Code de Campainha Digital */}
+              {propertyId && (
+                <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '24px', padding: '24px', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textAlign: 'center' }}>
+                    <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: 0 }}>SUA CAMPAINHA DIGITAL</p>
+                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>Compartilhe com visitantes ou imprima para colar no portão!</span>
+                  </div>
+                  
+                  <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '20px', display: 'flex', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
+                    <img 
+                      src={`${API}/api/qrcode?text=${encodeURIComponent(`${window.location.origin}/#/chamada/${propertyId}`)}`} 
+                      alt="QR Code Campainha Digital" 
+                      style={{ width: '180px', height: '180px', display: 'block', borderRadius: '12px' }} 
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                    <button 
+                      onClick={() => {
+                        const url = `${window.location.origin}/#/chamada/${propertyId}`;
+                        const shareText = `Toque a minha Campainha Digital online quando chegar:\n👉 ${url}`;
+                        if (navigator.share) {
+                          navigator.share({
+                            title: 'Minha Campainha Digital',
+                            text: shareText,
+                            url: url
+                          }).catch(() => {});
+                        } else {
+                          window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+                        }
+                      }}
+                      style={{ flex: 1, padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)', border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}
+                    >
+                      <MessageCircle size={16} /> Compartilhar
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const url = `${API}/api/qrcode?text=${encodeURIComponent(`${window.location.origin}/#/chamada/${propertyId}`)}`;
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `Campainha_Digital_${unitName}.png`;
+                        a.click();
+                      }}
+                      style={{ padding: '12px 16px', borderRadius: '14px', background: '#F1F5F9', border: 'none', color: '#475569', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      title="Baixar QR Code"
+                    >
+                      <Download size={16} /> Baixar
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Código de Acesso */}
               <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '16px 18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
                 <p style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 8px' }}>SEU CÓDIGO DE ACESSO</p>
@@ -781,162 +947,168 @@ export default function ResidentDashboard() {
               </div>
 
               {/* Botões Rápidos e Dispositivos Sonoff */}
-              <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 12px' }}>⚡ DISPOSITIVOS & AÇÕES RÁPIDAS</p>
-                
-                {/* Sonoff gate release button */}
-                <button
-                  onClick={openGateSonoff}
-                  disabled={openGateLoading}
-                  style={{
-                    width: '100%',
-                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                    color: '#FFF',
-                    border: 'none',
-                    padding: '14px',
-                    borderRadius: '12px',
-                    fontWeight: 800,
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    marginBottom: '16px',
-                    boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
-                  }}
-                >
-                  <KeyRound size={18} />
-                  {openGateLoading ? 'Acionando...' : '🔓 ABRIR PORTÃO DE PEDESTRES'}
-                </button>
-
-                {/* Grid for alert dispatchers */}
-                <p style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', marginBottom: '8px' }}>Notificar Portaria / Zelador na Grade Visual:</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                  <button
-                    onClick={() => dispatchAlert('release', '🔑 Solicitação de Liberação', 'Morador solicita liberação de visitante na portaria.')}
-                    disabled={dispatchAlertLoading}
-                    style={{
-                      background: '#F0FDF4',
-                      border: '1px solid #DCFCE7',
-                      color: '#15803D',
-                      padding: '10px 8px',
-                      borderRadius: '10px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <span>🔑</span>
-                    <span>Liberação</span>
-                  </button>
+              {!isHouseResident && (
+                <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 12px' }}>⚡ DISPOSITIVOS & AÇÕES RÁPIDAS</p>
                   
+                  {/* Sonoff gate release button */}
                   <button
-                    onClick={() => dispatchAlert('package', '📦 Retirar Encomenda', 'Morador avisa que irá retirar encomenda na portaria.')}
-                    disabled={dispatchAlertLoading}
+                    onClick={openGateSonoff}
+                    disabled={openGateLoading}
                     style={{
-                      background: '#FEF3C7',
-                      border: '1px solid #FDE68A',
-                      color: '#B45309',
-                      padding: '10px 8px',
-                      borderRadius: '10px',
-                      fontSize: '11px',
-                      fontWeight: 700,
+                      width: '100%',
+                      background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                      color: '#FFF',
+                      border: 'none',
+                      padding: '14px',
+                      borderRadius: '12px',
+                      fontWeight: 800,
+                      fontSize: '14px',
                       cursor: 'pointer',
                       display: 'flex',
-                      flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '4px'
+                      justifyContent: 'center',
+                      gap: '8px',
+                      marginBottom: '16px',
+                      boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
                     }}
                   >
-                    <span>📦</span>
-                    <span>Encomenda</span>
+                    <KeyRound size={18} />
+                    {openGateLoading ? 'Acionando...' : '🔓 ABRIR PORTÃO DE PEDESTRES'}
                   </button>
-                </div>
 
-                <button
-                  onClick={() => dispatchAlert('alert', '⚠️ Pedido de Ajuda / Suporte', 'Morador solicita assistência urgente do zelador ou administração.')}
-                  disabled={dispatchAlertLoading}
-                  style={{
-                    width: '100%',
-                    background: '#FEF2F2',
-                    border: '1px solid #FEE2E2',
-                    color: '#991B1B',
-                    padding: '10px',
-                    borderRadius: '10px',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <span>⚠️</span>
-                  <span>Solicitar Assistência / Suporte Urgente</span>
-                </button>
-              </div>
+                  {/* Grid for alert dispatchers */}
+                  <p style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', marginBottom: '8px' }}>Notificar Portaria / Zelador na Grade Visual:</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <button
+                      onClick={() => dispatchAlert('release', '🔑 Solicitação de Liberação', 'Morador solicita liberação de visitante na portaria.')}
+                      disabled={dispatchAlertLoading}
+                      style={{
+                        background: '#F0FDF4',
+                        border: '1px solid #DCFCE7',
+                        color: '#15803D',
+                        padding: '10px 8px',
+                        borderRadius: '10px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <span>🔑</span>
+                      <span>Liberação</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => dispatchAlert('package', '📦 Retirar Encomenda', 'Morador avisa que irá retirar encomenda na portaria.')}
+                      disabled={dispatchAlertLoading}
+                      style={{
+                        background: '#FEF3C7',
+                        border: '1px solid #FDE68A',
+                        color: '#B45309',
+                        padding: '10px 8px',
+                        borderRadius: '10px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <span>📦</span>
+                      <span>Encomenda</span>
+                    </button>
+                  </div>
 
-              {/* Caixa Postal (Fale com o Síndico) */}
-              <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 12px' }}>📬 FALAR COM A ADMINISTRAÇÃO (CAIXA POSTAL)</p>
-                <form onSubmit={sendSupportMessage} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <input
-                    type="text"
-                    placeholder="Assunto (ex: Vazamento, Sugestão...)"
-                    value={supportSubject}
-                    onChange={e => setSupportSubject(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '10px',
-                      fontSize: '13px',
-                      outline: 'none'
-                    }}
-                  />
-                  <textarea
-                    placeholder="Descreva detalhadamente sua solicitação..."
-                    value={supportBody}
-                    onChange={e => setSupportBody(e.target.value)}
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '10px',
-                      fontSize: '13px',
-                      outline: 'none',
-                      resize: 'none'
-                    }}
-                  />
                   <button
-                    type="submit"
-                    disabled={supportSending}
+                    onClick={() => dispatchAlert('alert', '⚠️ Pedido de Ajuda / Suporte', 'Morador solicita assistência urgente do zelador ou administração.')}
+                    disabled={dispatchAlertLoading}
                     style={{
                       width: '100%',
-                      background: 'var(--primary)',
-                      color: '#000',
-                      border: 'none',
+                      background: '#FEF2F2',
+                      border: '1px solid #FEE2E2',
+                      color: '#991B1B',
                       padding: '10px',
                       borderRadius: '10px',
-                      fontSize: '13px',
-                      fontWeight: 800,
-                      cursor: 'pointer'
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
                     }}
                   >
-                    {supportSending ? 'Enviando...' : 'Enviar Mensagem ao Síndico'}
+                    <span>⚠️</span>
+                    <span>Solicitar Assistência / Suporte Urgente</span>
                   </button>
-                </form>
-              </div>
+                </div>
+              )}
 
-              {/* Mensagens do condomínio - colapssável */}
-              <MessagesPanel messages={broadcastMessages} unreadCount={unreadCount} onClear={markMessagesRead}/>
+              {/* Caixa Postal (Fale com o Síndico) */}
+              {!isHouseResident && (
+                <>
+                  <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                    <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 12px' }}>📬 FALAR COM A ADMINISTRAÇÃO (CAIXA POSTAL)</p>
+                    <form onSubmit={sendSupportMessage} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <input
+                        type="text"
+                        placeholder="Assunto (ex: Vazamento, Sugestão...)"
+                        value={supportSubject}
+                        onChange={e => setSupportSubject(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '10px',
+                          fontSize: '13px',
+                          outline: 'none'
+                        }}
+                      />
+                      <textarea
+                        placeholder="Descreva detalhadamente sua solicitação..."
+                        value={supportBody}
+                        onChange={e => setSupportBody(e.target.value)}
+                        rows={3}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '10px',
+                          fontSize: '13px',
+                          outline: 'none',
+                          resize: 'none'
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={supportSending}
+                        style={{
+                          width: '100%',
+                          background: 'var(--primary)',
+                          color: '#000',
+                          border: 'none',
+                          padding: '10px',
+                          borderRadius: '10px',
+                          fontSize: '13px',
+                          fontWeight: 800,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {supportSending ? 'Enviando...' : 'Enviar Mensagem ao Síndico'}
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Mensagens do condomínio - colapssável */}
+                  <MessagesPanel messages={broadcastMessages} unreadCount={unreadCount} onClear={markMessagesRead}/>
+                </>
+              )}
 
             </div>
           )}
@@ -1032,9 +1204,11 @@ export default function ResidentDashboard() {
                 <button onClick={() => handleAnswer(false)} className="btn-primary" style={{ flex: 1, padding: '14px', background: '#10B981', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <Phone size={18} /> Falar
                 </button>
-                <button onClick={authorizeEntry} style={{ flex: 1, padding: '14px', background: 'rgba(16,185,129,0.1)', color: '#10B981', border: '1px solid #10B981', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 700 }}>
-                  <KeyRound size={18} /> Abrir
-                </button>
+                {!isHouseResident && (
+                  <button onClick={authorizeEntry} style={{ flex: 1, padding: '14px', background: 'rgba(16,185,129,0.1)', color: '#10B981', border: '1px solid #10B981', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 700 }}>
+                    <KeyRound size={18} /> Abrir
+                  </button>
+                )}
                 <button onClick={handleEnd} style={{ width: '56px', height: '52px', borderRadius: '14px', border: 'none', background: 'rgba(239,68,68,0.15)', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <PhoneOff size={20} />
                 </button>
@@ -1079,9 +1253,11 @@ export default function ResidentDashboard() {
                 </button>
               </div>
 
-              <button onClick={handleOpenGate} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '16px', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                <KeyRound size={24} /> LIBERAR ENTRADA
-              </button>
+              {!isHouseResident && (
+                <button onClick={handleOpenGate} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '16px', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                  <KeyRound size={24} /> LIBERAR ENTRADA
+                </button>
+              )}
             </div>
           )}
         </>

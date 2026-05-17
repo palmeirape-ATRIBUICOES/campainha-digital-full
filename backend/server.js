@@ -175,6 +175,8 @@ app.post('/api/auth/login', async (req, res) => {
         isDoorman: user.isDoorman, 
         isResident: user.isResident, 
         isReseller: user.isReseller,
+        isHouseResident: user.isHouseResident,
+        isCondoResident: user.isCondoResident,
         unitId: unit?.id,
         unitName: user.name,
         propertyName: property?.name,
@@ -190,7 +192,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Registro Simples (E-mail ou Celular)
 app.post('/api/auth/register', async (req, res) => {
-  const { name, identifier, password } = req.body;
+  const { name, identifier, password, isHouseResident, isCondoResident, planType } = req.body;
   
   if (!name || !identifier || !password) {
     return res.status(400).json({ error: 'Nome, e-mail/celular e senha são obrigatórios para o cadastro.' });
@@ -208,6 +210,8 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Este usuário já está cadastrado.' });
     }
 
+    const durationDays = planType === 'annual' ? 365 : 15;
+
     const user = await prisma.user.create({
       data: {
         name,
@@ -216,20 +220,23 @@ app.post('/api/auth/register', async (req, res) => {
         password: password, // TODO: Hash password
         clientCode: generateAccessCode() + generateAccessCode(), // Gera código automaticamente na criação
         isResident: true,
-        trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        isHouseResident: !!isHouseResident,
+        isCondoResident: !!isCondoResident,
+        trialEndsAt: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000)
       }
     });
 
-    // Se for um morador comum, cria uma "Propriedade" e "Unidade" para ele receber chamadas
-    if (user.isResident) {
+    // Se for um morador de CASA ou CONDOMÍNIO individual, cria uma "Propriedade" e "Unidade" individual para ele receber chamadas imediatamente
+    if (user.isResident && (user.isHouseResident || user.isCondoResident)) {
+      const isHouse = user.isHouseResident;
       const property = await prisma.property.create({
         data: {
           id: crypto.randomUUID(), // Geração manual para garantir sucesso
-          name: `Residência de ${user.name}`,
+          name: isHouse ? `Residência de ${user.name}` : `Apartamento de ${user.name}`,
           clientAddress: 'Individual',
-          type: 'individual',
+          type: isHouse ? 'individual' : 'condo_individual',
           adminId: user.id,
-          nextPaymentAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          nextPaymentAt: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000)
         }
       });
       await prisma.unit.create({
@@ -242,14 +249,216 @@ app.post('/api/auth/register', async (req, res) => {
       });
     }
 
+    // Mercado Pago Preference Creation (Only for Annual Plan)
+    let initPoint = null;
+    if (planType === 'annual') {
+      try {
+        const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
+        const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${mpAccessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            items: [
+              {
+                title: 'Campainha Digital - Plano Anual Premium',
+                quantity: 1,
+                unit_price: 39.90,
+                currency_id: 'BRL'
+              }
+            ],
+            back_urls: {
+              success: (req.headers.referer && !req.headers.referer.includes('localhost') && !req.headers.referer.includes('127.0.0.1')) ? req.headers.referer.split('#')[0].split('?')[0] : 'https://palmeirape-atribuicoes.github.io/campainha-digital-full/',
+              failure: (req.headers.referer && !req.headers.referer.includes('localhost') && !req.headers.referer.includes('127.0.0.1')) ? req.headers.referer.split('#')[0].split('?')[0] : 'https://palmeirape-atribuicoes.github.io/campainha-digital-full/',
+              pending: (req.headers.referer && !req.headers.referer.includes('localhost') && !req.headers.referer.includes('127.0.0.1')) ? req.headers.referer.split('#')[0].split('?')[0] : 'https://palmeirape-atribuicoes.github.io/campainha-digital-full/'
+            },
+            auto_return: 'approved',
+            external_reference: user.id
+          })
+        });
+        
+        if (mpResponse.ok) {
+          const mpData = await mpResponse.json();
+          initPoint = mpData.init_point;
+          console.log('[MP] Preferência criada com sucesso:', initPoint);
+        } else {
+          console.error('[MP] Erro ao criar preferência:', await mpResponse.text());
+        }
+      } catch (err) {
+        console.error('[MP] Exceção ao integrar com Mercado Pago:', err);
+      }
+    }
+
+    // Reload user with relations to return all info
+    const reloadedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        propertiesManaged: true,
+        units: { include: { property: true } }
+      }
+    });
+
+    const finalProperty = reloadedUser.propertiesManaged[0] || (reloadedUser.units[0] ? reloadedUser.units[0].property : null);
+    const finalUnit = reloadedUser.units[0];
+
     res.status(201).json({ 
       success: true, 
       token: user.id, 
-      user: { id: user.id, name: user.name, role: 'resident' } 
+      initPoint,
+      user: { 
+        id: user.id, 
+        name: user.name, 
+        role: 'resident',
+        isSuperAdmin: user.isSuperAdmin,
+        isAdmin: user.isAdmin,
+        isDoorman: user.isDoorman,
+        isResident: user.isResident,
+        isReseller: user.isReseller,
+        isHouseResident: user.isHouseResident,
+        isCondoResident: user.isCondoResident,
+        unitId: finalUnit?.id,
+        unitName: user.name,
+        propertyName: finalProperty?.name,
+        propertyId: finalProperty?.id,
+        accessCode: user.clientCode || user.plateCode
+      } 
     });
   } catch (err) {
     console.error('REGISTRATION ERROR:', err);
     res.status(500).json({ error: 'Erro ao criar conta.', details: err.message });
+  }
+});
+
+// Confirmar pagamento Mercado Pago (ativar conta anual)
+app.post('/api/payment/confirm', async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: 'ID do usuário é obrigatório.' });
+
+  try {
+    // Estende a validade do plano anual
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        trialEndsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+      }
+    });
+
+    const userProp = await prisma.property.findFirst({ where: { adminId: userId } });
+    if (userProp) {
+      await prisma.property.update({
+        where: { id: userProp.id },
+        data: {
+          nextPaymentAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        }
+      });
+    }
+
+    res.json({ success: true, message: 'Pagamento confirmado e conta ativada por 365 dias!' });
+  } catch (err) {
+    console.error('[MP] Erro ao confirmar:', err);
+    res.status(500).json({ error: 'Erro ao confirmar ativação do pagamento.' });
+  }
+});
+
+// Webhook do Mercado Pago (Notificações automáticas de pagamento)
+app.post('/api/payment/webhook', async (req, res) => {
+  const { action, type, data } = req.body;
+  const topic = req.query.topic || type;
+  const paymentId = (data && data.id) || req.query.id;
+
+  if (topic === 'payment' || action === 'payment.updated') {
+    try {
+      const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
+      
+      // Busca detalhes do pagamento na API do Mercado Pago
+      const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+        headers: {
+          'Authorization': `Bearer ${mpAccessToken}`
+        }
+      });
+
+      if (mpRes.ok) {
+        const paymentDetails = await mpRes.json();
+        
+        // Verifica se o pagamento foi aprovado
+        if (paymentDetails.status === 'approved') {
+          const userId = paymentDetails.external_reference;
+          
+          if (userId) {
+            console.log(`[Webhook MP] Ativando conta para usuário: ${userId} - Pagamento: ${paymentId}`);
+            
+            // Estende a validade do plano anual
+            await prisma.user.update({
+              where: { id: userId },
+              data: {
+                trialEndsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+              }
+            });
+
+            const userProp = await prisma.property.findFirst({ where: { adminId: userId } });
+            if (userProp) {
+              await prisma.property.update({
+                where: { id: userProp.id },
+                data: {
+                  nextPaymentAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+                }
+              });
+            }
+            
+            console.log(`[Webhook MP] Conta ativada com sucesso!`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Webhook MP] Erro ao processar:', err);
+    }
+  }
+
+  // Sempre retorna 200/201 OK para o Mercado Pago
+  res.status(200).send('OK');
+});
+
+// Criar preferência de pagamento de upgrade do Mercado Pago para usuário logado
+app.post('/api/payment/upgrade-preference', authenticate, async (req, res) => {
+  try {
+    const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
+    const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${mpAccessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        items: [
+          {
+            title: 'Campainha Digital - Plano Anual Premium',
+            quantity: 1,
+            unit_price: 39.90,
+            currency_id: 'BRL'
+          }
+        ],
+        back_urls: {
+          success: (req.headers.referer && !req.headers.referer.includes('localhost') && !req.headers.referer.includes('127.0.0.1')) ? req.headers.referer.split('#')[0].split('?')[0] : 'https://palmeirape-atribuicoes.github.io/campainha-digital-full/',
+          failure: (req.headers.referer && !req.headers.referer.includes('localhost') && !req.headers.referer.includes('127.0.0.1')) ? req.headers.referer.split('#')[0].split('?')[0] : 'https://palmeirape-atribuicoes.github.io/campainha-digital-full/',
+          pending: (req.headers.referer && !req.headers.referer.includes('localhost') && !req.headers.referer.includes('127.0.0.1')) ? req.headers.referer.split('#')[0].split('?')[0] : 'https://palmeirape-atribuicoes.github.io/campainha-digital-full/'
+        },
+        auto_return: 'approved',
+        external_reference: req.user.id
+      })
+    });
+
+    if (mpResponse.ok) {
+      const data = await mpResponse.json();
+      res.json({ initPoint: data.init_point });
+    } else {
+      const errData = await mpResponse.json();
+      res.status(500).json({ error: 'Erro ao gerar preferência do Mercado Pago.', details: errData });
+    }
+  } catch (err) {
+    console.error('[MP] Erro ao criar preferência de upgrade:', err);
+    res.status(500).json({ error: 'Erro de conexão com Mercado Pago.' });
   }
 });
 
@@ -286,7 +495,9 @@ app.post('/api/resident/login-by-code', async (req, res) => {
       unitName: user.name,
       accessCode: user.clientCode || user.plateCode,
       clientCode: user.clientCode,
-      adminEmail: user.email
+      adminEmail: user.email,
+      isHouseResident: user.isHouseResident,
+      isCondoResident: user.isCondoResident
     });
   } catch (err) {
     res.status(500).json({ error: 'Erro no servidor.', details: err.message });
@@ -329,7 +540,9 @@ app.post('/api/resident/login', async (req, res) => {
       unitName: user.name,
       accessCode: user.clientCode || user.plateCode,
       clientCode: user.clientCode,
-      adminEmail: user.email
+      adminEmail: user.email,
+      isHouseResident: user.isHouseResident,
+      isCondoResident: user.isCondoResident
     });
   } catch (err) {
     res.status(500).json({ error: 'Erro no servidor.', details: err.message });
@@ -487,6 +700,7 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
         quietModeEnd: true,
         clientCode: true,
         plateCode: true,
+        trialEndsAt: true,
         propertiesManaged: { select: { id: true, name: true } },
         units: { select: { id: true, name: true, propertyId: true, property: { select: { name: true } } } }
       }
@@ -1135,14 +1349,23 @@ app.post('/api/master/users/:id/set-plate-code', authenticate, async (req, res) 
   res.json({ plateCode: updated.plateCode });
 });
 
-// Gerar imagem de QR Code (retorna URL de dados base64) para qualquer texto
+// Gerar imagem de QR Code (retorna imagem PNG diretamente ou JSON se solicitado)
 app.get('/api/qrcode', async (req, res) => {
-  const { text } = req.query;
+  const { text, json } = req.query;
   if (!text) return res.status(400).json({ error: 'Texto para QR code é obrigatório.' });
   try {
-    const qr = await QRCode.toDataURL(text, { width: 400, margin: 2, color: { dark: '#0F172A', light: '#FFFFFF' } });
-    res.json({ qrcode: qr });
+    const wantsJson = json === 'true' || (req.headers.accept && req.headers.accept.includes('application/json'));
+    
+    if (wantsJson) {
+      const qr = await QRCode.toDataURL(text, { width: 400, margin: 2, color: { dark: '#0F172A', light: '#FFFFFF' } });
+      return res.json({ qrcode: qr });
+    } else {
+      const qrBuffer = await QRCode.toBuffer(text, { width: 400, margin: 2, color: { dark: '#0F172A', light: '#FFFFFF' } });
+      res.setHeader('Content-Type', 'image/png');
+      return res.send(qrBuffer);
+    }
   } catch (err) {
+    console.error('[QRCode] Erro ao gerar:', err);
     res.status(500).json({ error: 'Erro ao gerar QR Code.' });
   }
 });
@@ -1188,6 +1411,18 @@ io.on('connection', (socket) => {
     });
 
     if (!unit) return;
+
+    // Filtra moradores que ainda possuem a assinatura ativa
+    const activeResidents = unit.residents.filter(resident => {
+      if (!resident.trialEndsAt) return true; // Conta vitalícia (legada/super admin)
+      return new Date(resident.trialEndsAt) >= new Date();
+    });
+
+    if (activeResidents.length === 0) {
+      console.log(`[WS Call] Chamada recusada! Unidade ${unit.name} com licença expirada.`);
+      socket.emit('call_failed', { reason: 'license_expired', message: 'A campainha digital desta residência está inativa. O período de teste expirou.' });
+      return;
+    }
 
     try {
       const visit = await prisma.visitor.create({

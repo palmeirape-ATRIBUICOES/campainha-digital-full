@@ -325,6 +325,13 @@ export default function AdminPanel() {
 
   const downloadQR = (url, name) => { const a = document.createElement('a'); a.href = url; a.download = `QR_${name}.png`; a.click(); };
 
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+      <div className="spinner" style={{ width: '40px', height: '40px', border: '3px solid var(--border-subtle)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)' }}>Carregando painel...</p>
+    </div>
+  );
+
   // ── Onboarding ─────────────────────────────────────────────────────────────
   if (onboardingStep === 'scan') return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
@@ -360,7 +367,6 @@ export default function AdminPanel() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {[
-            { val: 'individual', icon: Home,      label: 'Casa Simples',   desc: '1 placa, 1 morador',          color: '#10B981' },
             { val: 'village',   icon: TreePine,   label: 'Vila de Casas',  desc: '1 placa, várias casas',       color: '#F59E0B' },
             { val: 'condo',     icon: Building2,  label: 'Condomínio',     desc: '1 placa, vários apartamentos', color: 'var(--primary)' }
           ].map(t => (
@@ -435,24 +441,6 @@ export default function AdminPanel() {
 
 
       {/* Paywall removido - condomínios gerenciam unidades diretamente */}
-
-
-      {/* Trial Countdown / Upgrade Banner */}
-      {properties.find(p => p.id === selectedProperty)?.type === 'individual' && properties.find(p => p.id === selectedProperty)?.nextPaymentDate && (
-        <div style={{ background: 'linear-gradient(90deg, #3B82F6, #6366F1)', color: '#fff', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, fontSize: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Zap size={18} />
-            {Math.ceil((new Date(properties.find(p => p.id === selectedProperty).nextPaymentDate) - new Date()) / (1000 * 60 * 60 * 24)) > 0 ? (
-              <span>Você está no período de teste: <strong style={{ color: '#FFF' }}>{Math.ceil((new Date(properties.find(p => p.id === selectedProperty).nextPaymentDate) - new Date()) / (1000 * 60 * 60 * 24))} dias restantes</strong></span>
-            ) : (
-              <span>Seu período de teste expirou!</span>
-            )}
-          </div>
-          <button onClick={() => alert('Redirecionando para pagamento Pix (R$ 39,90)...')} style={{ background: '#fff', color: '#3B82F6', border: 'none', padding: '6px 16px', borderRadius: '8px', fontWeight: 800, fontSize: '12px', cursor: 'pointer' }}>
-            ASSINAR AGORA (R$ 39,90/ANO)
-          </button>
-        </div>
-      )}
 
       <header style={{ background: 'var(--bg-surface-elevated)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

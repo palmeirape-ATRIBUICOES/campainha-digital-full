@@ -201,7 +201,7 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
       const finalUrl = isPlate 
         ? `${baseUrl}#/auth?plate=${code}`
         : `${baseUrl}#/chamada/${code}`;
-      const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(finalUrl)}`);
+      const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(finalUrl)}&json=true`);
       const data = await res.json();
       setQrImage(data.qrcode || '');
     } catch {

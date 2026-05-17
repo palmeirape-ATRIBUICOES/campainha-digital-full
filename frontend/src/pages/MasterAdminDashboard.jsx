@@ -129,7 +129,7 @@ export default function MasterAdminDashboard() {
       : `${baseUrl}#/chamada/${text}`; // Aqui text será o ID da propriedade/unidade
     
     try {
-      const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(finalUrl)}`);
+      const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(finalUrl)}&json=true`);
       const data = await res.json();
       setQrImage(data.qrcode || '');
     } catch { setQrImage(''); }

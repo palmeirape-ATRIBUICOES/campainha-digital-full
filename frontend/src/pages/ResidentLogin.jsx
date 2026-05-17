@@ -44,6 +44,8 @@ export default function ResidentLogin() {
     localStorage.setItem('residentPropertyId', data.propertyId || '');
     // Se o login for por código, o código já está no state, se for por email, vem no data
     localStorage.setItem('residentAccessCode', data.accessCode || accessCode || '');
+    localStorage.setItem('cd_is_house_resident', data.isHouseResident ? 'true' : 'false');
+    localStorage.setItem('cd_is_condo_resident', data.isCondoResident ? 'true' : 'false');
     if (data.token) {
       localStorage.setItem('cd_token', data.token);
       localStorage.setItem('cd_user_id', data.userId || data.token);

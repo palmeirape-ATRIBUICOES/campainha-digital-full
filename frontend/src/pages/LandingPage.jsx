@@ -1,9 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Smartphone, ArrowRight, Video, BellRing, Smartphone as PhoneIcon, Play, CheckCircle2, ChevronRight } from 'lucide-react';
 import Logo from '../components/Logo';
 
 export default function LandingPage() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status') || params.get('collection_status');
+    const extRef = params.get('external_reference');
+
+    if (extRef && (status === 'approved' || status === 'pending')) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      window.location.hash = `#/payment-success?status=${status}&external_reference=${extRef}`;
+    } else if (extRef && status === 'rejected') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      window.location.hash = `#/payment-failure`;
+    }
+  }, []);
+
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', color: '#0F172A', overflowX: 'hidden' }}>
       {/* Aurora Background Decor */}
@@ -15,8 +29,8 @@ export default function LandingPage() {
         <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Logo size={36} />
           <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-            <Link to="/morador-login" style={{ color: '#64748B', textDecoration: 'none', fontWeight: 600, fontSize: '14px', transition: 'color 0.2s' }}>Acessar Conta</Link>
-            <Link to="/auth" style={{ textDecoration: 'none' }}>
+            <Link to="/auth" style={{ color: '#64748B', textDecoration: 'none', fontWeight: 600, fontSize: '14px', transition: 'color 0.2s' }}>Acessar Conta</Link>
+            <Link to="/auth?mode=register" style={{ textDecoration: 'none' }}>
               <button className="btn-primary" style={{ padding: '10px 24px', borderRadius: '12px', fontSize: '14px' }}>
                 Criar Conta
               </button>
@@ -44,7 +58,7 @@ export default function LandingPage() {
               </p>
               
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '48px' }}>
-                <Link to="/auth" style={{ textDecoration: 'none' }}>
+              <Link to="/auth?mode=register" style={{ textDecoration: 'none' }}>
                   <button className="btn-primary" style={{ padding: '18px 36px', fontSize: '17px', borderRadius: '16px', boxShadow: '0 20px 40px rgba(59,130,246,0.25)' }}>
                     Começar Agora <ArrowRight size={20} />
                   </button>
@@ -185,12 +199,12 @@ export default function LandingPage() {
                <p style={{ fontSize: '18px', color: '#94A3B8', marginBottom: '40px', lineHeight: 1.6 }}>Seja uma casa individual ou um condomínio de 500 unidades, temos o plano ideal para sua segurança.</p>
                
                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                 <Link to="/auth" style={{ textDecoration: 'none' }}>
+                 <Link to="/auth?mode=register" style={{ textDecoration: 'none' }}>
                    <button style={{ padding: '16px 32px', borderRadius: '12px', background: '#FFF', color: '#0F172A', border: 'none', fontWeight: 800, fontSize: '16px', cursor: 'pointer' }}>
                      Simular Condomínio
                    </button>
                  </Link>
-                 <Link to="/auth" style={{ textDecoration: 'none' }}>
+                 <Link to="/auth?mode=register" style={{ textDecoration: 'none' }}>
                    <button style={{ padding: '16px 32px', borderRadius: '12px', background: 'transparent', color: '#FFF', border: '1px solid rgba(255,255,255,0.2)', fontWeight: 800, fontSize: '16px', cursor: 'pointer' }}>
                      Ver Planos Individuais
                    </button>

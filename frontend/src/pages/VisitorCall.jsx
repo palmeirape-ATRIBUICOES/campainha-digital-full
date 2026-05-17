@@ -112,6 +112,13 @@ export default function VisitorCall() {
       stopAll();
     });
 
+    // Chamada falhou / Licença inativa
+    socket.on('call_failed', ({ reason, message }) => {
+      setStatus('call_failed_license');
+      setErrorMsg(message || 'A campainha digital desta residência está inativa.');
+      stopAll();
+    });
+
     // Portão liberado pelo morador
     socket.on('entry_authorized', () => {
       setStatus('authorized');
@@ -509,6 +516,23 @@ export default function VisitorCall() {
           <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '12px' }}>Chamada Encerrada</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>O morador encerrou a chamada.</p>
           <button className="btn-primary" onClick={() => { setStatus('idle'); setCallingUnit(null); }}>Tocar Novamente</button>
+        </div>
+      )}
+
+      {/* ── Licença Expirada / Campainha Inativa ─────────────────────────────────── */}
+      {status === 'call_failed_license' && (
+        <div className="glass-panel fade-in" style={{ padding: '48px 24px', width: '100%', maxWidth: '400px', textAlign: 'center', border: '2px solid #EF4444', background: 'rgba(239,68,68,0.02)' }}>
+          <div style={{ width: '80px', height: '80px', background: '#EF4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 8px 20px rgba(239,68,68,0.3)' }}>
+            <PhoneOff size={36} color="#FFF" />
+          </div>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#EF4444', marginBottom: '12px' }}>Campainha Inativa</h2>
+          <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '24px' }}>
+            {errorMsg}
+          </p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '32px' }}>
+            Por favor, tente contato com o morador de outra maneira.
+          </p>
+          <button className="btn-secondary" style={{ width: '100%' }} onClick={() => { setStatus('idle'); setCallingUnit(null); }}>Voltar ao Início</button>
         </div>
       )}
 
