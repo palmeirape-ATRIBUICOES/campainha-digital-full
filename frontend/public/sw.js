@@ -1,11 +1,11 @@
 // ─── Campainha Digital — Service Worker ───────────────────────────────────────
 // Versão do cache — altere para forçar atualização
-const CACHE_NAME = 'campainha-v2';
+const CACHE_NAME = 'campainha-v3';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/logo.png',
-  '/badge.png'
+  './',
+  './index.html',
+  './logo.png',
+  './badge.png'
 ];
 
 // ─── Install: Pré-cache de assets estáticos ───────────────────────────────────
@@ -56,12 +56,12 @@ self.addEventListener('push', (event) => {
   let data = {
     title: '🔔 Alguém na sua porta!',
     body: 'Toque para atender.',
-    icon: '/logo.png',
-    badge: '/badge.png',
+    icon: './logo.png',
+    badge: './badge.png',
     tag: 'incoming-call',
     requireInteraction: true,
     vibrate: [400, 200, 400, 200, 800],
-    data: { url: '/' }
+    data: { url: './' }
   };
 
   try {
@@ -97,7 +97,7 @@ self.addEventListener('notificationclick', (event) => {
 
   if (event.action === 'dismiss') return;
 
-  const targetUrl = event.notification.data?.url || '/';
+  const targetUrl = event.notification.data?.url || './';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

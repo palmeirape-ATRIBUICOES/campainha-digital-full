@@ -94,6 +94,7 @@ export default function ResidentDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [showIOSPrompt, setShowIOSPrompt] = useState(false);
 
   const audioRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -102,7 +103,95 @@ export default function ResidentDashboard() {
   const pcRef = useRef(null);
   const socketRef = useRef(null);
 
+  const checkPushSubscription = useCallback(async () => {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      
+      const swUrl = import.meta.env.BASE_URL + 'sw.js';
+      const reg = await navigator.serviceWorker.register(swUrl, { scope: import.meta.env.BASE_URL });
+      await navigator.serviceWorker.ready;
+      
+      const sub = await reg.pushManager.getSubscription();
+      if (sub && Notification.permission === 'granted') {
+        setPushEnabled(true);
+      } else {
+        setPushEnabled(false);
+      }
+    } catch (err) {
+      console.warn('[Push] Erro ao verificar sub:', err);
+    }
+  }, []);
+
+  const enablePushNotifications = async () => {
+    setPushLoading(true);
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        alert('Este dispositivo não suporta notificações Push.');
+        return;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        alert('Permissão de notificações negada. Por favor, ative nas configurações do Safari/Aparelho.');
+        return;
+      }
+
+      const swUrl = import.meta.env.BASE_URL + 'sw.js';
+      const reg = await navigator.serviceWorker.register(swUrl, { scope: import.meta.env.BASE_URL });
+      await navigator.serviceWorker.ready;
+
+      const vapidRes = await fetch(`${API}/api/push/vapid-public-key`);
+      const { publicKey } = await vapidRes.json();
+
+      const urlBase64ToUint8 = (base64) => {
+        const pad = '='.repeat((4 - base64.length % 4) % 4);
+        const b64 = (base64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+        const raw = atob(b64);
+        return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+      };
+
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8(publicKey)
+        });
+      }
+
+      const token = localStorage.getItem('cd_token');
+      if (token) {
+        const saveRes = await fetch(`${API}/api/push/subscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': token },
+          body: JSON.stringify(sub.toJSON())
+        });
+        if (saveRes.ok) {
+          setPushEnabled(true);
+          alert('Notificações ativadas com sucesso!');
+        } else {
+          alert('Falha ao registrar no servidor.');
+        }
+      } else {
+        alert('Faça login primeiro para ativar as notificações.');
+      }
+    } catch (err) {
+      console.error('[Push] Erro ao ativar:', err);
+      alert('Erro ao ativar notificações: ' + err.message);
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
   useEffect(() => {
+    const savedUnitId = localStorage.getItem('residentUnitId');
+    const token = localStorage.getItem('cd_token');
+
+    // Auth guard: redirect if not logged in
+    if (!savedUnitId && !token) {
+      navigate('/morador-login');
+      return;
+    }
+
     // Busca informações salvas localmente para evitar consultas inseguras
     const savedCode = localStorage.getItem('residentAccessCode');
     const savedPropId = localStorage.getItem('residentPropertyId');
@@ -145,60 +234,14 @@ export default function ResidentDashboard() {
     fetchMessages();
     fetchUserProfile();
 
-    // ─── Registrar Service Worker e Push Subscription ──────────────────────
-    const registerPush = async () => {
-      try {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-        
-        // Registra o SW
-        const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        await navigator.serviceWorker.ready;
-        console.log('[SW] Registrado com sucesso:', reg.scope);
+    // Verifica se é iOS e se está instalado na tela inicial (necessário para Push no iOS)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (isIOS && !isStandalone) {
+      setShowIOSPrompt(true);
+    }
 
-        // Pede permissão
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') return;
-
-        // Busca chave pública VAPID
-        const vapidRes = await fetch(`${API}/api/push/vapid-public-key`);
-        const { publicKey } = await vapidRes.json();
-
-        // Converte a chave VAPID para o formato correto
-        const urlBase64ToUint8 = (base64) => {
-          const pad = '='.repeat((4 - base64.length % 4) % 4);
-          const b64 = (base64 + pad).replace(/-/g, '+').replace(/_/g, '/');
-          const raw = atob(b64);
-          return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-        };
-
-        // Verifica se já existe uma subscription
-        let sub = await reg.pushManager.getSubscription();
-        if (!sub) {
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8(publicKey)
-          });
-        }
-
-        // Envia a subscription para o servidor
-        const token = localStorage.getItem('cd_token');
-        if (token) {
-          const saveRes = await fetch(`${API}/api/push/subscribe`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': token },
-            body: JSON.stringify(sub.toJSON())
-          });
-          if (saveRes.ok) {
-            setPushEnabled(true);
-            console.log('[Push] Dispositivo registrado!');
-          }
-        }
-      } catch (err) {
-        console.warn('[Push] Erro ao registrar:', err);
-      }
-    };
-
-    registerPush();
+    checkPushSubscription();
 
 
     s.on('incoming_call', (data) => {
@@ -442,7 +485,16 @@ export default function ResidentDashboard() {
           </button>
         </div>
 
-        <button onClick={() => navigate('/')} style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: '#FFF1F2', color: '#E11D48', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}>
+        <button onClick={() => {
+          [
+            'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+            'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+            'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+            'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+            'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+          ].forEach(k => localStorage.removeItem(k));
+          navigate('/');
+        }} style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: '#FFF1F2', color: '#E11D48', fontWeight: 700, fontSize: '15px', cursor: 'pointer' }}>
           <LogOut size={20} /> Sair do App
         </button>
       </div>
@@ -495,6 +547,23 @@ export default function ResidentDashboard() {
 
       {audioError && <div style={{ margin: '12px 24px 0', background: '#EF4444', color: '#fff', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, display: 'flex', gap: '8px', alignItems: 'center' }}><AlertCircle size={16} />Toque na tela para ativar o som!</div>}
 
+      {showIOSPrompt && (
+        <div style={{ margin: '12px 24px 0', background: 'linear-gradient(135deg, #FF9900 0%, #FF5E00 100%)', color: '#fff', padding: '16px', borderRadius: '16px', fontSize: '14px', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 4px 15px rgba(255, 94, 0, 0.3)' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <AlertCircle size={20} />
+            <span style={{ fontSize: '15px', fontWeight: 800 }}>Atenção Morador com iPhone (iOS)</span>
+          </div>
+          <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5', opacity: 0.95 }}>
+            Para receber chamadas com o <strong>aplicativo fechado</strong>, você precisa instalá-lo na tela inicial:
+          </p>
+          <ol style={{ margin: '0 0 0 20px', padding: 0, fontSize: '13px', lineHeight: '1.5', opacity: 0.95 }}>
+            <li>Toque no ícone de <strong>Compartilhar</strong> (ícone de seta para cima) na barra do Safari.</li>
+            <li>Role a lista para baixo e escolha <strong>"Adicionar à Tela de Início"</strong>.</li>
+            <li>Abra o aplicativo a partir do ícone criado e faça o login.</li>
+          </ol>
+        </div>
+      )}
+
       {/* ── HOME TAB ── */}
       {tab === 'home' && (
         <>
@@ -519,7 +588,7 @@ export default function ResidentDashboard() {
                     {pushEnabled ? <BellRing size={12} /> : <BellOff size={12} />}
                     {pushEnabled ? 'Push Ativo' : 'Push Inativo'}
                   </div>
-                  {pushEnabled && (
+                  {pushEnabled ? (
                     <button
                       onClick={async () => {
                         setPushLoading(true);
@@ -532,6 +601,14 @@ export default function ResidentDashboard() {
                       style={{ padding: '5px 12px', borderRadius: '99px', background: 'rgba(59,130,246,0.1)', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
                     >
                       {pushLoading ? '...' : '🔔 Testar'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={enablePushNotifications}
+                      disabled={pushLoading}
+                      style={{ padding: '5px 12px', borderRadius: '99px', background: 'rgba(16,185,129,0.1)', border: 'none', color: '#10B981', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      {pushLoading ? '...' : '🔔 Ativar Notificações'}
                     </button>
                   )}
                 </div>

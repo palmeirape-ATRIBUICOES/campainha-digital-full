@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { LogOut, Building2, Phone, Search, KeyRound, CheckCircle2, MessageSquare, Send, X, ShieldCheck } from 'lucide-react';
@@ -25,6 +25,11 @@ export default function PorteiroDashboard() {
     const role = localStorage.getItem('cd_admin_role');
     const adminEmail = localStorage.getItem('cd_admin_email');
     const singlePropertyId = localStorage.getItem('cd_doorman_propertyId');
+
+    if (!singlePropertyId && !adminEmail && role !== 'master') {
+      navigate('/portaria-login');
+      return;
+    }
 
     const fetchData = async () => {
       try {
@@ -122,7 +127,16 @@ export default function PorteiroDashboard() {
           <Logo size={28} showText={false} />
           <h1 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>Painel da Portaria</h1>
         </div>
-        <button onClick={() => navigate('/auth')} style={{ background: 'none', border: 'none', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}>
+        <button onClick={() => {
+          [
+            'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+            'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+            'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+            'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+            'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+          ].forEach(k => localStorage.removeItem(k));
+          navigate('/');
+        }} style={{ background: 'none', border: 'none', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}>
           <LogOut size={16}/> Sair
         </button>
       </header>

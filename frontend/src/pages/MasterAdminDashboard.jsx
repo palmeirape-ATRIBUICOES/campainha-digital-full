@@ -16,13 +16,31 @@ export default function MasterAdminDashboard() {
   const [copiedId, setCopiedId] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    const token = localStorage.getItem('cd_token');
+    if (!token) {
+      navigate('/auth');
+      return;
+    }
+    fetchUsers();
+  }, []);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('cd_token');
       const res = await fetch(`${API}/api/master/users`, { headers: { 'Authorization': token } });
+      if (res.status === 401 || res.status === 403) {
+        [
+          'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+          'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+          'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+          'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+          'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+        ].forEach(k => localStorage.removeItem(k));
+        navigate('/auth');
+        return;
+      }
       const data = await res.json();
       if (Array.isArray(data)) setUsers(data);
     } catch (err) { console.error(err); }
@@ -160,7 +178,16 @@ export default function MasterAdminDashboard() {
           <SidebarLink icon={Settings2} label="Configurações" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         </nav>
         <div style={{ padding: '20px', borderTop: '1px solid #F1F5F9' }}>
-          <button onClick={() => { localStorage.clear(); navigate('/auth'); }} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', color: '#DC2626', background: '#FEF2F2', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
+          <button onClick={() => {
+            [
+              'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+              'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+              'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+              'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+              'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+            ].forEach(k => localStorage.removeItem(k));
+            navigate('/auth');
+          }} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', color: '#DC2626', background: '#FEF2F2', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
             <LogOut size={16} /> Sair do Painel
           </button>
         </div>

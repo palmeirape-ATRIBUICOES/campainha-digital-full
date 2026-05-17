@@ -410,14 +410,13 @@ export default function AdminPanel() {
           <Logo size={32} />
         </div>
         <button onClick={() => {
-          localStorage.removeItem('cd_admin_email');
-          localStorage.removeItem('cd_admin_role');
-          localStorage.removeItem('cd_admin_propertyId');
-          localStorage.removeItem('cd_admin_clientCode');
-          localStorage.removeItem('cd_admin_propertyName');
-          localStorage.removeItem('cd_admin_name');
-          localStorage.removeItem('cd_admin_password');
-          localStorage.removeItem('cd_property_type');
+          [
+            'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+            'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+            'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+            'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+            'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+          ].forEach(k => localStorage.removeItem(k));
           navigate('/');
         }} style={{ color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
           <LogOut size={18} /> Sair
