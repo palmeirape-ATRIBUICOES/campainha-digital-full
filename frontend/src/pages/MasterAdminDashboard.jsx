@@ -307,11 +307,13 @@ export default function MasterAdminDashboard() {
                       <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>Desde {new Date(user.createdAt).toLocaleDateString('pt-BR')}</div>
                     </td>
                     <td style={{ padding: '18px 24px' }}>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', maxWidth: '280px' }}>
                         <ModuleBadge label="Cliente Final" active={user.isResident} onClick={() => toggleModule(user.id, 'isResident', user.isResident)} />
                         <ModuleBadge label="Admin de Vilas" active={user.isAdmin} onClick={() => toggleModule(user.id, 'isAdmin', user.isAdmin)} />
                         <ModuleBadge label="Zelador" active={user.isDoorman} onClick={() => toggleModule(user.id, 'isDoorman', user.isDoorman)} />
                         <ModuleBadge label="Revendedor" active={user.isReseller} onClick={() => toggleModule(user.id, 'isReseller', user.isReseller)} />
+                        <ModuleBadge label="Morador de Casas" active={user.isHouseResident} onClick={() => toggleModule(user.id, 'isHouseResident', user.isHouseResident)} />
+                        <ModuleBadge label="Morador Vilas/Condomínios" active={user.isCondoResident} onClick={() => toggleModule(user.id, 'isCondoResident', user.isCondoResident)} />
                       </div>
                     </td>
                     <td style={{ padding: '18px 24px' }}>

@@ -27,6 +27,8 @@ model User {
   isResident      Boolean   @default(false)
   isDoorman       Boolean   @default(false)
   isReseller      Boolean   @default(false)
+  isHouseResident Boolean   @default(false)
+  isCondoResident Boolean   @default(false)
   
   propertiesManaged Property[] @relation("PropertyAdmin")
   propertiesDoorman Property[] @relation("PropertyDoorman")

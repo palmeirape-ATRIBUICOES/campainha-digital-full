@@ -416,11 +416,11 @@ app.get('/api/master/users', authenticate, async (req, res) => {
 // Ativar/Desativar módulos de um usuário
 app.post('/api/master/users/:id/modules', authenticate, async (req, res) => {
   if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
-  const { isAdmin, isDoorman, isResident, isSuperAdmin, isReseller } = req.body;
+  const { isAdmin, isDoorman, isResident, isSuperAdmin, isReseller, isHouseResident, isCondoResident } = req.body;
   
   const updated = await prisma.user.update({
     where: { id: req.params.id },
-    data: { isAdmin, isDoorman, isResident, isSuperAdmin, isReseller }
+    data: { isAdmin, isDoorman, isResident, isSuperAdmin, isReseller, isHouseResident, isCondoResident }
   });
   
   res.json(updated);
