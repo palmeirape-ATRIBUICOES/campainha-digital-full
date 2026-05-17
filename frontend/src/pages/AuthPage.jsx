@@ -8,11 +8,30 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Com HashRouter, react-router-dom popula location.search corretamente
-  // Ex: URL /#/auth?mode=register => location.search = '?mode=register'
-  const queryParams = new URLSearchParams(location.search);
-  const modeFromUrl = queryParams.get('mode') || '';
-  const plateFromUrl = queryParams.get('plate') || '';
+  // Lê o parâmetro 'mode' tanto de location.search quanto do hash bruto da URL
+  // Isso garante compatibilidade com GitHub Pages + HashRouter
+  const getModeParam = () => {
+    // Tenta via react-router (mais confiável)
+    const fromRouter = new URLSearchParams(location.search).get('mode');
+    if (fromRouter) return fromRouter;
+    // Fallback: lê direto do hash da URL (ex: #/auth?mode=register)
+    const hash = window.location.hash; // '#/auth?mode=register'
+    const qi = hash.indexOf('?');
+    if (qi >= 0) return new URLSearchParams(hash.slice(qi + 1)).get('mode') || '';
+    return '';
+  };
+
+  const getPlateParam = () => {
+    const fromRouter = new URLSearchParams(location.search).get('plate');
+    if (fromRouter) return fromRouter;
+    const hash = window.location.hash;
+    const qi = hash.indexOf('?');
+    if (qi >= 0) return new URLSearchParams(hash.slice(qi + 1)).get('plate') || '';
+    return '';
+  };
+
+  const modeFromUrl = getModeParam();
+  const plateFromUrl = getPlateParam();
 
   const [name, setName] = useState('');
   const [identifier, setIdentifier] = useState('');
@@ -28,8 +47,17 @@ export default function AuthPage() {
   const [signUpStep, setSignUpStep] = useState(1);
   const [planType, setPlanType] = useState('trial');
 
+  // Reage a mudanças na URL (ex: navegação interna para /auth?mode=register)
   useEffect(() => {
-    // Redireciona retornos do Mercado Pago (query params podem vir na URL real ou no hash)
+    const mode = getModeParam();
+    if (mode === 'register') {
+      setView('register');
+      setSignUpStep(1);
+    }
+  }, [location.search, location.hash]);
+
+  useEffect(() => {
+    // Redireciona retornos do Mercado Pago
     const rawSearch = window.location.search;
     const hashSearch = (() => {
       const h = window.location.hash;
