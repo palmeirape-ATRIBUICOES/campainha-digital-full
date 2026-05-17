@@ -699,6 +699,12 @@ export default function AuthPage() {
             setShowPaymentModal(false);
             navigate(`/morador/${localStorage.getItem('residentUnitId') || localStorage.getItem('cd_user_id')}`);
           }}
+          onPaymentFailed={() => {
+            // Volta para a escolha de plano — usuário pode escolher o trial gratuito
+            setShowPaymentModal(false);
+            setPlanType('trial');
+            setSignUpStep(3);
+          }}
         />
       )}
     </div>

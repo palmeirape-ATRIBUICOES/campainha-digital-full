@@ -732,8 +732,10 @@ export default function ResidentDashboard() {
           <div>
             <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#0F172A' }}>{unitName}</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: status === 'idle' ? '#10B981' : '#EF4444' }} />
-              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>{status === 'idle' ? 'Disponível' : 'Em Chamada'}</span>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#94A3B8' : (status === 'idle' ? '#10B981' : '#EF4444') }} />
+              <span style={{ fontSize: '11px', color: isTrialExpired ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
+                {isTrialExpired ? 'Campainha OFF' : (status === 'idle' ? 'Disponível' : 'Em Chamada')}
+              </span>
             </div>
           </div>
         </div>
@@ -762,6 +764,10 @@ export default function ResidentDashboard() {
               {/* Banners de Assinatura Premium / Trial */}
               {isTrialExpired && (
                 <div style={{ width: '100%', maxWidth: '380px', background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', border: '1px solid #FCA5A5', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(239, 68, 68, 0.08)' }}>
+                  {/* Badge OFF */}
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <span style={{ background: '#EF4444', color: '#fff', fontWeight: 900, fontSize: '13px', letterSpacing: '2px', padding: '4px 16px', borderRadius: '100px', boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}>⛔ CAMPAINHA OFF</span>
+                  </div>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                     <div style={{ background: '#EF4444', color: '#FFF', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 10px rgba(239, 68, 68, 0.2)' }}>
                       <AlertCircle size={22} />
@@ -774,11 +780,10 @@ export default function ResidentDashboard() {
                     </div>
                   </div>
                   <button 
-                    onClick={handleUpgrade}
-                    disabled={upgradeLoading}
+                    onClick={() => setShowPaymentModal(true)}
                     style={{ width: '100%', padding: '14px', borderRadius: '16px', background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 6px 15px rgba(239, 68, 68, 0.25)', transition: 'all 0.2s' }}
                   >
-                    {upgradeLoading ? 'Gerando Pagamento...' : 'Ativar Premium — R$ 39,90/ano'}
+                    🔔 Renovar Agora — R$ 39,90/ano
                   </button>
                 </div>
               )}
@@ -1300,7 +1305,12 @@ export default function ResidentDashboard() {
           onClose={() => setShowPaymentModal(false)}
           onSuccess={() => {
             setShowPaymentModal(false);
+            // Recarrega para refletir o novo status ativo
             window.location.reload();
+          }}
+          onPaymentFailed={() => {
+            // No dashboard, apenas fecha o modal — usuário vê o status OFF e pode tentar de novo
+            setShowPaymentModal(false);
           }}
         />
       )}

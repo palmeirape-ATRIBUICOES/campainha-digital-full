@@ -1,8 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, CheckCircle, Copy, CreditCard, Smartphone, RefreshCw } from 'lucide-react';
+import { X, CheckCircle, Copy, CreditCard, Smartphone, RefreshCw, AlertTriangle } from 'lucide-react';
 import { API } from '../config';
 
-export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) {
+/**
+ * PaymentModal
+ * Props:
+ *  - userId       : ID do usuário no banco
+ *  - userEmail    : E-mail pré-preenchido
+ *  - onClose      : Fecha o modal sem fazer nada
+ *  - onSuccess    : Chamado quando pagamento é concluído com sucesso
+ *  - onPaymentFailed : Chamado quando o PIX falha ao gerar (ex: erro de rede / token inválido)
+ *                     Permite que o pai decida o que fazer (ex: voltar para escolha de plano)
+ */
+export default function PaymentModal({ userId, userEmail, onClose, onSuccess, onPaymentFailed }) {
   const [tab, setTab] = useState('pix');
   const [loading, setLoading] = useState(false);
   const [pixLoading, setPixLoading] = useState(true);
@@ -10,6 +20,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
   const [pixData, setPixData] = useState(null);
   const [error, setError] = useState('');
   const [pixError, setPixError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const [copied, setCopied] = useState(false);
 
   // ── Campos Cartão ─────────────────────────────────────────────────────
@@ -39,13 +50,13 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
     }
   };
 
-  // ── Gera PIX usando /api/payment/process (rota que já existe no Render) ──
+  // ── Gera PIX automático ao abrir ──────────────────────────────────────
   const generatePix = useCallback(async () => {
     const email = userEmail || localStorage.getItem('cd_user_contact') || '';
     const uid = userId || localStorage.getItem('cd_user_id') || '';
 
     if (!email) {
-      setPixError('E-mail não encontrado. Tente fazer login novamente.');
+      setPixError('E-mail não encontrado. Faça login novamente.');
       setPixLoading(false);
       return;
     }
@@ -55,8 +66,6 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
     setPixData(null);
 
     try {
-      // Usa /api/payment/process com payment_method_id: 'pix'
-      // Esta rota já existe no servidor de produção
       const res = await fetch(`${API}/api/payment/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,17 +78,12 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
 
       const data = await res.json();
 
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Erro ao gerar PIX.');
-      }
-
-      if (!data.qr_code_base64) {
-        throw new Error('QR Code não retornado pelo servidor.');
-      }
+      if (!res.ok || data.error) throw new Error(data.error || 'Erro ao gerar PIX.');
+      if (!data.qr_code_base64) throw new Error('QR Code não retornado pelo servidor.');
 
       setPixData(data);
     } catch (err) {
-      setPixError(err.message || 'Erro ao gerar o código PIX. Tente novamente.');
+      setPixError(err.message || 'Erro ao gerar PIX. Verifique sua conexão.');
     } finally {
       setPixLoading(false);
     }
@@ -89,7 +93,12 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
     generatePix();
   }, [generatePix]);
 
-  // ── Cartão ─────────────────────────────────────────────────────────────
+  const handleRetry = () => {
+    setRetryCount(c => c + 1);
+    generatePix();
+  };
+
+  // ── Cartão ────────────────────────────────────────────────────────────
   const handleCardSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -146,7 +155,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
     return 'visa';
   };
 
-  // ── Resultado cartão aprovado ──────────────────────────────────────────
+  // ── Telas de resultado finais ─────────────────────────────────────────
   if (result && result.status === 'approved') {
     return (
       <ModalWrapper onClose={onClose}>
@@ -154,7 +163,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
         <div style={{ padding: '32px 24px', textAlign: 'center' }}>
           <CheckCircle size={72} color="#10B981" style={{ margin: '0 auto 20px', display: 'block' }} />
           <h4 style={{ fontSize: '22px', color: '#0F172A', margin: '0 0 10px', fontWeight: 800 }}>Pagamento Aprovado! 🎉</h4>
-          <p style={{ color: '#64748B', marginBottom: '28px', lineHeight: 1.6, fontSize: '15px' }}>Sua conta anual Premium foi ativada!</p>
+          <p style={{ color: '#64748B', marginBottom: '28px', lineHeight: 1.6, fontSize: '15px' }}>Sua Campainha Digital está ativa por 12 meses!</p>
           <button onClick={onSuccess} style={primaryBtn}>Entrar no Painel →</button>
         </div>
       </ModalWrapper>
@@ -167,13 +176,16 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
         <ModalHeader onClose={onClose} />
         <div style={{ padding: '32px 24px', textAlign: 'center' }}>
           <h4 style={{ fontSize: '18px', color: '#0F172A', margin: '0 0 10px', fontWeight: 700 }}>Pagamento em análise</h4>
-          <p style={{ color: '#64748B', marginBottom: '28px', lineHeight: 1.6 }}>Aguardando confirmação. Você receberá um e-mail.</p>
+          <p style={{ color: '#64748B', marginBottom: '28px', lineHeight: 1.6 }}>
+            Aguardando confirmação da operadora. Você receberá um e-mail.
+          </p>
           <button onClick={onSuccess} style={primaryBtn}>Ir para o Painel</button>
         </div>
       </ModalWrapper>
     );
   }
 
+  // ────────────────────────────────────────────────────────────────────
   return (
     <ModalWrapper onClose={onClose}>
       <ModalHeader onClose={onClose} />
@@ -199,7 +211,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
           ))}
         </div>
 
-        {/* ═══ ABA PIX ═══════════════════════════════════════════════════ */}
+        {/* ═══ ABA PIX ════════════════════════════════════════════════ */}
         {tab === 'pix' && (
           <>
             {pixLoading && (
@@ -214,26 +226,46 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
               </div>
             )}
 
+            {/* Erro ao gerar PIX */}
             {!pixLoading && pixError && (
-              <div style={{ textAlign: 'center', padding: '10px 0 20px' }}>
-                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
-                  <p style={{ margin: '0 0 4px', color: '#DC2626', fontSize: '14px', fontWeight: 700 }}>⚠ Erro ao gerar PIX</p>
-                  <p style={{ margin: 0, color: '#EF4444', fontSize: '12px' }}>{pixError}</p>
+              <div style={{ padding: '8px 0 16px' }}>
+                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '12px', padding: '16px', marginBottom: '16px', textAlign: 'center' }}>
+                  <AlertTriangle size={32} color="#EF4444" style={{ marginBottom: '8px' }} />
+                  <p style={{ margin: '0 0 4px', color: '#DC2626', fontSize: '14px', fontWeight: 700 }}>Falha ao gerar o PIX</p>
+                  <p style={{ margin: 0, color: '#EF4444', fontSize: '12px', lineHeight: 1.5 }}>{pixError}</p>
                 </div>
-                <button onClick={generatePix}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 28px', borderRadius: '12px', background: '#3B82F6', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>
-                  <RefreshCw size={16} /> Tentar novamente
-                </button>
+
+                {/* Opções: tentar de novo ou voltar */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <button onClick={handleRetry}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', borderRadius: '12px', background: '#3B82F6', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>
+                    <RefreshCw size={16} /> Tentar novamente
+                  </button>
+
+                  {/* Botão "Voltar para escolha de plano" — só aparece se existir o callback */}
+                  {onPaymentFailed && (
+                    <button onClick={onPaymentFailed}
+                      style={{ padding: '13px', borderRadius: '12px', background: '#F1F5F9', color: '#475569', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>
+                      ← Escolher outro plano
+                    </button>
+                  )}
+
+                  <button onClick={onClose}
+                    style={{ padding: '11px', borderRadius: '12px', background: 'transparent', color: '#94A3B8', border: '1px solid #E2E8F0', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>
+                    Fechar e tentar mais tarde
+                  </button>
+                </div>
               </div>
             )}
 
+            {/* QR Code PIX */}
             {!pixLoading && pixData?.qr_code_base64 && (
               <>
                 <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontSize: '22px' }}>✅</span>
                   <div>
                     <p style={{ margin: 0, fontWeight: 700, color: '#166534', fontSize: '13px' }}>PIX gerado com sucesso!</p>
-                    <p style={{ margin: '2px 0 0', color: '#15803D', fontSize: '12px' }}>Escaneie ou copie o código para pagar — R$ 39,90</p>
+                    <p style={{ margin: '2px 0 0', color: '#15803D', fontSize: '12px' }}>Escaneie ou copie o código — R$ 39,90</p>
                   </div>
                 </div>
 
@@ -279,7 +311,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
           </>
         )}
 
-        {/* ═══ ABA CARTÃO ════════════════════════════════════════════════ */}
+        {/* ═══ ABA CARTÃO ════════════════════════════════════════════ */}
         {tab === 'card' && (
           <form onSubmit={handleCardSubmit}>
             {error && (
@@ -327,6 +359,13 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
             <button type="submit" disabled={loading} style={submitBtnStyle(loading)}>
               {loading ? 'Processando...' : '💳 Pagar com Cartão'}
             </button>
+
+            {onPaymentFailed && (
+              <button type="button" onClick={onPaymentFailed}
+                style={{ width: '100%', marginTop: '10px', padding: '11px', borderRadius: '12px', background: 'transparent', color: '#94A3B8', border: '1px solid #E2E8F0', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>
+                ← Escolher outro plano
+              </button>
+            )}
           </form>
         )}
 
@@ -340,12 +379,11 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess }) 
   );
 }
 
-// ── Subcomponentes e estilos ─────────────────────────────────────────────────
 function ModalWrapper({ children, onClose }) {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(8px)',
+      backgroundColor: 'rgba(15,23,42,0.78)', backdropFilter: 'blur(8px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       zIndex: 9999, padding: '20px'
     }} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -376,5 +414,5 @@ function ModalHeader({ onClose }) {
 
 const labelStyle = { display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px', marginTop: '14px' };
 const inputStyle = { width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '15px', outline: 'none', color: '#0F172A', background: '#fff', boxSizing: 'border-box', fontFamily: 'inherit' };
-const primaryBtn = { width: '100%', padding: '14px', borderRadius: '12px', background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '16px', cursor: 'pointer' };
+const primaryBtn = { width: '100%', padding: '14px', borderRadius: '12px', background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '16px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(59,130,246,0.4)' };
 const submitBtnStyle = (disabled) => ({ width: '100%', padding: '14px', borderRadius: '12px', background: disabled ? '#94A3B8' : 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '16px', cursor: disabled ? 'not-allowed' : 'pointer', boxShadow: disabled ? 'none' : '0 4px 14px rgba(59,130,246,0.4)', transition: 'all 0.2s' });
