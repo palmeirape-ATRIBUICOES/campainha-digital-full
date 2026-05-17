@@ -1296,6 +1296,7 @@ export default function ResidentDashboard() {
       {showPaymentModal && (
         <PaymentModal 
           userId={localStorage.getItem('cd_user_id')}
+          userEmail={localStorage.getItem('cd_user_contact') || ''}
           onClose={() => setShowPaymentModal(false)}
           onSuccess={() => {
             setShowPaymentModal(false);

@@ -689,6 +689,7 @@ export default function AuthPage() {
       {showPaymentModal && (
         <PaymentModal 
           userId={registeredUserId}
+          userEmail={identifier}
           onClose={() => {
             setShowPaymentModal(false);
             // Mesmo se fechar, vai pro painel como expirado ou trial

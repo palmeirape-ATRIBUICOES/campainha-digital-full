@@ -420,6 +420,53 @@ app.post('/api/payment/webhook', async (req, res) => {
   res.status(200).send('OK');
 });
 
+// ─── Rota dedicada para gerar pagamento PIX (sem SDK externo) ────────────────
+app.post('/api/payment/pix', async (req, res) => {
+  try {
+    const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || 'TEST-5606754895781726-041915-c17390a96f0746d646437c09305e1a3f-126980400';
+    const { email, userId } = req.body;
+
+    if (!email) return res.status(400).json({ error: 'E-mail é obrigatório.' });
+
+    const mpPayload = {
+      transaction_amount: 39.90,
+      description: 'Campainha Digital - Plano Anual Premium',
+      payment_method_id: 'pix',
+      payer: { email },
+      external_reference: userId || 'unknown'
+    };
+
+    console.log('[MP PIX] Gerando pagamento PIX para:', email);
+
+    const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${mpAccessToken}`,
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': `pix-${userId || 'anon'}-${Date.now()}`
+      },
+      body: JSON.stringify(mpPayload)
+    });
+
+    const data = await mpResponse.json();
+
+    if (!mpResponse.ok) {
+      console.error('[MP PIX] Erro da API MP:', data);
+      return res.status(400).json({ error: 'Erro ao gerar PIX.', details: data });
+    }
+
+    res.json({
+      id: data.id,
+      status: data.status,
+      qr_code: data.point_of_interaction?.transaction_data?.qr_code,
+      qr_code_base64: data.point_of_interaction?.transaction_data?.qr_code_base64
+    });
+  } catch (err) {
+    console.error('[MP PIX] Erro interno:', err);
+    res.status(500).json({ error: 'Erro de conexão com Mercado Pago.' });
+  }
+});
+
 // Processamento Transparente de Pagamento (Usado pelo MP Bricks)
 app.post('/api/payment/process', async (req, res) => {
   try {
