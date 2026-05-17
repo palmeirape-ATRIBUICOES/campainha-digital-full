@@ -329,16 +329,30 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
             {/* QR Code PIX */}
             {!pixLoading && pixData?.qr_code_base64 && (
               <>
-                <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '22px' }}>✅</span>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 700, color: '#166534', fontSize: '13px' }}>PIX gerado com sucesso!</p>
-                    <p style={{ margin: '2px 0 0', color: '#15803D', fontSize: '12px' }}>Escaneie ou copie o código — R$ 39,90</p>
+                {/* Banner de status do PIX (Real vs Simulado) */}
+                {pixData.is_mock ? (
+                  <div style={{ background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', border: '1px solid #A7F3D0', borderRadius: '12px', padding: '14px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 4px 12px rgba(16,185,129,0.05)' }}>
+                    <span style={{ fontSize: '24px' }}>⚡</span>
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 800, color: '#065F46', fontSize: '13px' }}>PIX de Teste (Simulado)</p>
+                      <p style={{ margin: '2px 0 0', color: '#047857', fontSize: '11px', lineHeight: 1.4 }}>
+                        Mercado Pago indisponível. Geramos este PIX simulado para você testar a experiência real!
+                      </p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '22px' }}>✅</span>
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 700, color: '#166534', fontSize: '13px' }}>PIX gerado com sucesso!</p>
+                      <p style={{ margin: '2px 0 0', color: '#15803D', fontSize: '12px' }}>Escaneie ou copie o código — R$ 39,90</p>
+                    </div>
+                  </div>
+                )}
 
+                {/* QR Code */}
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                  <div style={{ background: '#fff', padding: '12px', borderRadius: '16px', border: '2px solid #BBF7D0', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+                  <div style={{ background: '#fff', padding: '12px', borderRadius: '16px', border: pixData.is_mock ? '2px solid #A7F3D0' : '2px solid #BBF7D0', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
                     <img
                       src={`data:image/jpeg;base64,${pixData.qr_code_base64}`}
                       alt="QR Code PIX"
@@ -347,6 +361,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
                   </div>
                 </div>
 
+                {/* Código Copia e Cola */}
                 <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '10px', border: '1px dashed #CBD5E1', marginBottom: '16px', position: 'relative' }}>
                   <p style={{ margin: '0 0 4px', fontSize: '10px', color: '#94A3B8', fontWeight: 700, letterSpacing: '1px' }}>CÓDIGO PIX COPIA E COLA</p>
                   <p style={{ margin: 0, fontSize: '10px', wordBreak: 'break-all', color: '#475569', paddingRight: '70px', fontFamily: 'monospace', lineHeight: 1.6 }}>
@@ -366,14 +381,38 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
                   </button>
                 </div>
 
-                <p style={{ fontSize: '12px', color: '#94A3B8', textAlign: 'center', marginBottom: '16px', lineHeight: 1.5 }}>
-                  Após o pagamento, a ativação é automática em segundos.
-                </p>
+                {/* Botões de Ação baseados em PIX Real vs PIX de Simulação */}
+                {pixData.is_mock ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <button onClick={handleSimulatePayment} disabled={simulating}
+                      style={{
+                        width: '100%', padding: '14px', borderRadius: '12px', background: '#10B981', color: '#fff',
+                        border: 'none', fontWeight: 800, cursor: 'pointer', fontSize: '14px',
+                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)', transition: 'all 0.2s'
+                      }}>
+                      {simulating ? 'Ativando Conta de Teste...' : 'Confirmar Pagamento Simulado'}
+                    </button>
+                    
+                    <button onClick={onClose}
+                      style={{
+                        width: '100%', padding: '11px', borderRadius: '12px', background: 'transparent',
+                        color: '#94A3B8', border: '1px solid #E2E8F0', fontWeight: 600, cursor: 'pointer', fontSize: '13px'
+                      }}>
+                      Fechar e testar depois
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <p style={{ fontSize: '12px', color: '#94A3B8', textAlign: 'center', marginBottom: '16px', lineHeight: 1.5 }}>
+                      Após o pagamento, a ativação é automática em segundos.
+                    </p>
 
-                <button onClick={onSuccess}
-                  style={{ width: '100%', padding: '13px', borderRadius: '12px', background: '#F1F5F9', color: '#475569', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>
-                  Já paguei – Ir para o Painel
-                </button>
+                    <button onClick={onSuccess}
+                      style={{ width: '100%', padding: '13px', borderRadius: '12px', background: '#F1F5F9', color: '#475569', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}>
+                      Já paguei – Ir para o Painel
+                    </button>
+                  </>
+                )}
               </>
             )}
           </>
