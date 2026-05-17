@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, UserX, Shield, ShieldOff, Plus, Trash2, Mail, Key, Copy, Check, RefreshCw } from 'lucide-react';
 
 import { API } from '../config';
@@ -14,6 +14,7 @@ export default function ResidentManager({ propertyId, property, adminEmail, onRe
   const [doormanEmail, setDoormanEmail] = useState(property?.doormanEmail || '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
 
   // Residents are derived from property units
   const units = property?.units || [];
@@ -76,21 +77,51 @@ export default function ResidentManager({ propertyId, property, adminEmail, onRe
         <div>
           <p style={{ fontSize:'12px', color:'#64748B', marginBottom:'16px' }}>Cada unidade tem um código de acesso. Compartilhe com o morador para ele acessar a campainha.</p>
           <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-            {units.map(u => (
-              <div key={u.id} style={{ background:'#FFF', border:'1px solid #E2E8F0', borderRadius:'12px', padding:'14px' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <div>
-                    <span style={{ fontWeight:700, fontSize:'14px' }}>{u.name}</span>
-                    {(u.block || u.street) && <span style={{ fontSize:'11px', color:'#64748B', marginLeft:'8px' }}>{u.block && `Bloco ${u.block}`} {u.street && `Rua ${u.street}`} {u.number && `Nº ${u.number}`}</span>}
-                  </div>
-                  <div style={{ display:'flex', gap:'6px', alignItems:'center' }}>
-                    <code style={{ fontSize:'13px', fontWeight:800, color:'#3B82F6', letterSpacing:'1px' }}>{u.accessCode}</code>
-                    <CopyBtn text={u.accessCode || ''}/>
-                    <button onClick={() => regenerateCode(u.id)} title="Regenerar código (bloqueia acesso atual)" style={{ background:'rgba(245,158,11,0.1)', border:'none', color:'#F59E0B', padding:'6px', borderRadius:'6px', cursor:'pointer' }}><RefreshCw size={12}/></button>
+            {units.map(u => {
+              const showPass = !!visiblePasswords[u.id];
+              return (
+                <div key={u.id} style={{ background:'#FFF', border:'1px solid #E2E8F0', borderRadius:'12px', padding:'14px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div>
+                      <span style={{ fontWeight:700, fontSize:'14px' }}>{u.name}</span>
+                      {(u.block || u.street) && <span style={{ fontSize:'11px', color:'#64748B', marginLeft:'8px' }}>{u.block && `Bloco ${u.block}`} {u.street && `Rua ${u.street}`} {u.number && `Nº ${u.number}`}</span>}
+                      
+                      {/* Mostrar Moradores Vinculados com E-mail e Senha */}
+                      {u.residents && u.residents.length > 0 && (
+                        <div style={{ marginTop:'8px', padding:'8px 10px', background:'#F8FAFC', borderRadius:'8px', border:'1px solid #EDF2F7' }}>
+                          <span style={{ fontSize:'10px', fontWeight:800, color:'#A0AEC0', display:'block', marginBottom:'4px' }}>MORADORES CADASTRADOS</span>
+                          {u.residents.map(res => (
+                            <div key={res.id} style={{ display:'flex', flexDirection:'column', gap:'2px', marginBottom:'4px', borderBottom:'1px dashed #EDF2F7', paddingBottom:'4px' }}>
+                              <span style={{ fontSize:'12px', fontWeight:600, color:'#4A5568' }}>{res.name} ({res.email || 'Celular/Outro'})</span>
+                              <div style={{ display:'flex', alignItems:'center', gap:'8px', marginTop:'2px' }}>
+                                <span style={{ fontSize:'11px', color:'#718096' }}>Senha:</span>
+                                <input 
+                                  type={showPass ? "text" : "password"} 
+                                  value={res.password || ''} 
+                                  readOnly 
+                                  style={{ border:'none', background:'transparent', fontSize:'12px', fontWeight:700, color:'#2D3748', fontFamily:'monospace', outline:'none', width:'150px' }}
+                                />
+                                <button 
+                                  onClick={() => setVisiblePasswords(prev => ({ ...prev, [u.id]: !showPass }))} 
+                                  style={{ background:'none', border:'none', color:'#3182CE', fontSize:'10px', fontWeight:800, cursor:'pointer', padding:0 }}
+                                >
+                                  {showPass ? "👁️ Ocultar" : "👁️ Revelar"}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display:'flex', gap:'6px', alignItems:'center' }}>
+                      <code style={{ fontSize:'13px', fontWeight:800, color:'#3B82F6', letterSpacing:'1px' }}>{u.accessCode}</code>
+                      <CopyBtn text={u.accessCode || ''}/>
+                      <button onClick={() => regenerateCode(u.id)} title="Regenerar código (bloqueia acesso atual)" style={{ background:'rgba(245,158,11,0.1)', border:'none', color:'#F59E0B', padding:'6px', borderRadius:'6px', cursor:'pointer' }}><RefreshCw size={12}/></button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <p style={{ fontSize:'11px', color:'#94A3B8', marginTop:'12px', lineHeight:1.5 }}>
             💡 Para bloquear um morador, clique no ícone 🔄 para regenerar o código de acesso. O código antigo será invalidado.

@@ -150,6 +150,10 @@ app.post('/api/auth/login', async (req, res) => {
           isEmail ? { email: loginId } : { phone: loginId },
           { password: password }
         ]
+      },
+      include: {
+        propertiesManaged: true,
+        units: { include: { property: true } }
       }
     });
 
@@ -157,10 +161,26 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Credenciais incorretas.' });
     }
 
+    const property = user.propertiesManaged[0] || (user.units[0] ? user.units[0].property : null);
+    const unit = user.units[0];
+
     res.json({ 
       success: true, 
       token: user.id, 
-      user: { id: user.id, name: user.name, isSuperAdmin: user.isSuperAdmin, isAdmin: user.isAdmin, isDoorman: user.isDoorman, isResident: user.isResident, isReseller: user.isReseller } 
+      user: { 
+        id: user.id, 
+        name: user.name, 
+        isSuperAdmin: user.isSuperAdmin, 
+        isAdmin: user.isAdmin, 
+        isDoorman: user.isDoorman, 
+        isResident: user.isResident, 
+        isReseller: user.isReseller,
+        unitId: unit?.id,
+        unitName: user.name,
+        propertyName: property?.name,
+        propertyId: property?.id,
+        accessCode: user.clientCode || user.plateCode
+      } 
     });
   } catch (err) {
     console.error('LOGIN ERROR:', err);
@@ -377,35 +397,8 @@ app.post('/api/auth/reset-password', async (req, res) => {
   }
 });
 
-// Login Unificado
-app.post('/api/auth/login', async (req, res) => {
-  const { identifier, password } = req.body;
-  const isEmail = identifier.includes('@');
+// Login Unificado is handled above in server.js
 
-  try {
-    const user = await prisma.user.findFirst({
-      where: {
-        AND: [
-          isEmail ? { email: identifier.toLowerCase() } : { phone: identifier },
-          { password: password } // TODO: Compare hash
-        ]
-      }
-    });
-
-    if (!user) {
-      return res.status(401).json({ error: 'Credenciais inválidas.' });
-    }
-
-    res.json({ 
-      success: true, 
-      token: user.id, 
-      user: { id: user.id, name: user.name, role: user.isAdmin ? 'admin' : (user.isDoorman ? 'doorman' : 'resident') } 
-    });
-  } catch (err) {
-    console.error('LOGIN ERROR:', err);
-    res.status(500).json({ error: 'Erro ao processar login.', details: err.message });
-  }
-});
 
 
 // ─── Super Admin (Master) Routes ──────────────────────────────────────────────
@@ -447,6 +440,37 @@ app.post('/api/master/users/:id/promo', authenticate, async (req, res) => {
   });
   
   res.json(updated);
+});
+
+// Excluir usuário (Super Admin)
+app.delete('/api/master/users/:id', authenticate, async (req, res) => {
+  if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+  try {
+    await prisma.user.delete({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'Usuário excluído com sucesso.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao excluir usuário.', details: err.message });
+  }
+});
+
+// Editar usuário (Super Admin)
+app.put('/api/master/users/:id', authenticate, async (req, res) => {
+  if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+  const { name, email, phone, password } = req.body;
+  try {
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: {
+        name,
+        email: email || null,
+        phone: phone || null,
+        password
+      }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao editar usuário.', details: err.message });
+  }
 });
 
 // ─── Configurações de Usuário (Horários, etc) ────────────────────────────────
@@ -529,24 +553,64 @@ app.put('/api/user/settings', authenticate, async (req, res) => {
 // ─── Propriedades e Unidades (Adaptado) ──────────────────────────────────────
 
 // Registro de Propriedade (Não obrigatório QR Code na hora)
-app.post('/api/properties', authenticate, async (req, res) => {
-  const { name, type } = req.body;
+app.post('/api/properties', async (req, res) => {
+  const { name, type, id, clientName, units, adminEmail } = req.body;
   
-  // Se não fornecer ID, gera um temporário
-  const id = req.body.id || uuidv4();
+  try {
+    const finalId = id || uuidv4();
+    let adminId = null;
 
-  const property = await prisma.property.create({
-    data: {
-      id,
-      name,
-      type,
-      adminId: req.user.id,
-      nextPaymentAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias de teste
-      url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/chamada/${id}`
+    // Se estiver autenticado via token na request
+    if (req.headers.authorization) {
+      const user = await prisma.user.findFirst({ where: { id: req.headers.authorization } });
+      if (user) adminId = user.id;
     }
-  });
 
-  res.status(201).json(property);
+    // Se não tiver adminId mas tiver adminEmail (do onboarding)
+    if (!adminId && adminEmail) {
+      const user = await prisma.user.findUnique({ where: { email: adminEmail } });
+      if (user) adminId = user.id;
+    }
+
+    if (!adminId) {
+      return res.status(401).json({ error: 'Sessão administrativa inválida. Faça login novamente.' });
+    }
+
+    // Cria a propriedade de forma limpa
+    const property = await prisma.property.create({
+      data: {
+        id: finalId,
+        name,
+        type: type === 'individual' ? 'individual' : 'collective',
+        clientName: clientName || '',
+        adminId,
+        nextPaymentAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 dias de teste
+      }
+    });
+
+    // Se tiver unidades especificadas, cria as unidades
+    if (Array.isArray(units) && units.length > 0) {
+      await Promise.all(units.map(async (u) => {
+        const inviteCode = crypto.randomBytes(3).toString('hex').toUpperCase();
+        await prisma.unit.create({
+          data: {
+            id: crypto.randomUUID(),
+            propertyId: finalId,
+            name: u.name,
+            block: u.block || null,
+            street: u.street || null,
+            number: u.number || null,
+            inviteCode
+          }
+        });
+      }));
+    }
+
+    res.status(201).json(property);
+  } catch (err) {
+    console.error('Create property error:', err);
+    res.status(500).json({ error: 'Erro ao criar/ativar propriedade.', details: err.message });
+  }
 });
 
 // Buscar dados de uma Propriedade para o Visitante (Acesso Público)
@@ -619,7 +683,419 @@ app.get('/api/visitors/by-user/:userId', async (req, res) => {
   }
 });
 
-// TODO: Implementar demais rotas (Units, Visitors, Messages) migrando para Prisma
+// ─── Propriedades / Unidades APIs ─────────────────────────────────────────────
+
+// Buscar todas as propriedades de um administrador (por e-mail)
+app.get('/api/properties', async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: 'E-mail do administrador é obrigatório.' });
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        propertiesManaged: {
+          include: {
+            units: {
+              orderBy: { name: 'asc' },
+              include: {
+                residents: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!user) return res.status(404).json({ error: 'Administrador não encontrado.' });
+
+    // Injeta a url e qrCodeUrl dinamicamente para o frontend ler perfeitamente
+    const frontendUrl = process.env.FRONTEND_URL || 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+
+    const propsWithUrls = user.propertiesManaged.map(p => {
+      const url = `${frontendUrl}/#/chamada/${p.id}`;
+      // Transforma cada unit.inviteCode em accessCode para compatibilidade com o frontend
+      const unitsWithAccess = p.units.map(u => ({
+        ...u,
+        accessCode: u.inviteCode
+      }));
+      return {
+        ...p,
+        url,
+        qrCodeUrl: `${backendUrl}/api/qrcode?text=${encodeURIComponent(url)}`,
+        units: unitsWithAccess
+      };
+    });
+
+    res.json(propsWithUrls);
+  } catch (err) {
+    console.error('Fetch properties managed error:', err);
+    res.status(500).json({ error: 'Erro ao buscar propriedades.' });
+  }
+});
+
+// Deletar propriedade
+app.delete('/api/properties/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.property.delete({ where: { id } });
+    res.json({ success: true, message: 'Propriedade excluída com sucesso.' });
+  } catch (err) {
+    console.error('Delete property error:', err);
+    res.status(500).json({ error: 'Erro ao excluir propriedade.' });
+  }
+});
+
+// Buscar unidades de uma propriedade
+app.get('/api/properties/:propertyId/units', async (req, res) => {
+  try {
+    const units = await prisma.unit.findMany({
+      where: { propertyId: req.params.propertyId },
+      orderBy: { name: 'asc' },
+      include: { residents: true }
+    });
+    // Injeta accessCode como o inviteCode
+    const mapped = units.map(u => ({
+      ...u,
+      accessCode: u.inviteCode
+    }));
+    res.json(mapped);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar unidades.' });
+  }
+});
+
+// Adicionar unidade
+app.post('/api/properties/:propertyId/units', async (req, res) => {
+  try {
+    const { name, block, street, number } = req.body;
+    const { propertyId } = req.params;
+
+    if (!name) return res.status(400).json({ error: 'Nome da unidade é obrigatório.' });
+
+    const inviteCode = crypto.randomBytes(3).toString('hex').toUpperCase();
+
+    const unit = await prisma.unit.create({
+      data: {
+        id: crypto.randomUUID(),
+        propertyId,
+        name,
+        block: block || null,
+        street: street || null,
+        number: number || null,
+        inviteCode
+      }
+    });
+
+    res.status(201).json({ ...unit, accessCode: inviteCode });
+  } catch (err) {
+    console.error('Create unit error:', err);
+    res.status(500).json({ error: 'Erro ao criar unidade.' });
+  }
+});
+
+// Editar unidade
+app.put('/api/properties/:propertyId/units/:unitId', async (req, res) => {
+  try {
+    const { name, block, street, number } = req.body;
+    const updated = await prisma.unit.update({
+      where: { id: req.params.unitId },
+      data: {
+        name,
+        block: block || null,
+        street: street || null,
+        number: number || null
+      }
+    });
+    res.json({ ...updated, accessCode: updated.inviteCode });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar unidade.' });
+  }
+});
+
+// Excluir unidade
+app.delete('/api/properties/:propertyId/units/:unitId', async (req, res) => {
+  try {
+    await prisma.unit.delete({ where: { id: req.params.unitId } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao excluir unidade.' });
+  }
+});
+
+// Buscar visitantes de uma propriedade (Histórico do Painel)
+app.get('/api/visitors/property/:propertyId', async (req, res) => {
+  try {
+    const visitors = await prisma.visitor.findMany({
+      where: { propertyId: req.params.propertyId },
+      orderBy: { timestamp: 'desc' },
+      take: 100
+    });
+    res.json(visitors);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar histórico de visitantes da propriedade.' });
+  }
+});
+
+
+// ─── Caixa Postal (Fale com a Administração) ─────────────────────────────────
+
+// Enviar mensagem de unidade à administração
+app.post('/api/properties/:propertyId/mailbox', async (req, res) => {
+  try {
+    const { unitId, subject, body } = req.body;
+    const { propertyId } = req.params;
+
+    if (!unitId || !subject || !body) {
+      return res.status(400).json({ error: 'Dados incompletos para envio da mensagem.' });
+    }
+
+    const message = await prisma.mailboxMessage.create({
+      data: {
+        id: crypto.randomUUID(),
+        propertyId,
+        unitId,
+        subject,
+        body
+      }
+    });
+
+    res.status(201).json(message);
+  } catch (err) {
+    console.error('Mailbox message creation error:', err);
+    res.status(500).json({ error: 'Erro ao enviar mensagem.' });
+  }
+});
+
+// Buscar todas as mensagens da Caixa Postal da administração
+app.get('/api/properties/:propertyId/mailbox', async (req, res) => {
+  try {
+    const messages = await prisma.mailboxMessage.findMany({
+      where: { propertyId: req.params.propertyId },
+      include: { unit: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar caixa postal.' });
+  }
+});
+
+// Atualizar status de mensagem da Caixa Postal (Ex: Resolvido)
+app.put('/api/properties/:propertyId/mailbox/:msgId', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const updated = await prisma.mailboxMessage.update({
+      where: { id: req.params.msgId },
+      data: { status }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar mensagem.' });
+  }
+});
+
+
+// ─── Alertas Visuais de Unidade (Flashing Mini Blocks) ───────────────────────
+
+// Criar Alerta de Unidade (ex: solicitação de liberação, encomenda, etc)
+app.post('/api/properties/:propertyId/alerts', async (req, res) => {
+  try {
+    const { unitId, type, title, description } = req.body;
+    const { propertyId } = req.params;
+
+    if (!unitId || !title) {
+      return res.status(400).json({ error: 'Unidade e título do alerta são obrigatórios.' });
+    }
+
+    const alert = await prisma.unitAlert.create({
+      data: {
+        id: crypto.randomUUID(),
+        propertyId,
+        unitId,
+        type: type || 'alert',
+        title,
+        description: description || ''
+      }
+    });
+
+    // Avisa via Socket.io em tempo real para piscar o bloco correspondente no painel do porteiro
+    io.emit('new_unit_alert', { propertyId, unitId, alert });
+
+    res.status(201).json(alert);
+  } catch (err) {
+    console.error('UnitAlert error:', err);
+    res.status(500).json({ error: 'Erro ao disparar alerta.' });
+  }
+});
+
+// Buscar todos os alertas ativos do condomínio
+app.get('/api/properties/:propertyId/alerts', async (req, res) => {
+  try {
+    const alerts = await prisma.unitAlert.findMany({
+      where: { propertyId: req.params.propertyId, active: true },
+      include: { unit: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(alerts);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar alertas.' });
+  }
+});
+
+// Limpar/Resolver Alerta
+app.delete('/api/properties/:propertyId/alerts/:alertId', async (req, res) => {
+  try {
+    const { alertId } = req.params;
+    const updated = await prisma.unitAlert.update({
+      where: { id: alertId },
+      data: { active: false }
+    });
+    io.emit('clear_unit_alert', { propertyId: req.params.propertyId, unitId: updated.unitId, alertId });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao limpar alerta.' });
+  }
+});
+
+
+// ─── Comunicação Interna (Condômino-a-Condômino) ─────────────────────────────
+
+// Solicitar conexão entre unidades
+app.post('/api/units/:unitId/connections', async (req, res) => {
+  try {
+    const { targetUnitId, propertyId } = req.body;
+    const { unitId } = req.params;
+
+    if (!targetUnitId || !propertyId) {
+      return res.status(400).json({ error: 'Parâmetros inválidos.' });
+    }
+
+    // Evita duplicados
+    const existing = await prisma.internalConnection.findFirst({
+      where: {
+        propertyId,
+        OR: [
+          { senderUnitId: unitId, receiverUnitId: targetUnitId },
+          { senderUnitId: targetUnitId, receiverUnitId: unitId }
+        ]
+      }
+    });
+
+    if (existing) {
+      return res.json(existing);
+    }
+
+    const conn = await prisma.internalConnection.create({
+      data: {
+        id: crypto.randomUUID(),
+        propertyId,
+        senderUnitId: unitId,
+        receiverUnitId: targetUnitId
+      }
+    });
+
+    res.status(201).json(conn);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao criar solicitação de conversa.' });
+  }
+});
+
+// Listar conexões da unidade
+app.get('/api/units/:unitId/connections', async (req, res) => {
+  try {
+    const { unitId } = req.params;
+    const connections = await prisma.internalConnection.findMany({
+      where: {
+        OR: [
+          { senderUnitId: unitId },
+          { receiverUnitId: unitId }
+        ]
+      },
+      include: {
+        senderUnit: true,
+        receiverUnit: true
+      }
+    });
+    res.json(connections);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar conversas.' });
+  }
+});
+
+// Aceitar/Bloquear conexão
+app.put('/api/units/:unitId/connections/:connId', async (req, res) => {
+  try {
+    const { status } = req.body; // 'connected' | 'blocked'
+    const updated = await prisma.internalConnection.update({
+      where: { id: req.params.connId },
+      data: { status }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao alterar status.' });
+  }
+});
+
+// Enviar mensagem de chat interno
+app.post('/api/units/:unitId/connections/:connId/messages', async (req, res) => {
+  try {
+    const { body } = req.body;
+    const { connId, unitId } = req.params;
+
+    const message = await prisma.internalMessage.create({
+      data: {
+        id: crypto.randomUUID(),
+        connectionId: connId,
+        senderUnitId: unitId,
+        body
+      }
+    });
+
+    res.status(201).json(message);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao enviar mensagem.' });
+  }
+});
+
+// Buscar mensagens do chat
+app.get('/api/units/:unitId/connections/:connId/messages', async (req, res) => {
+  try {
+    const messages = await prisma.internalMessage.findMany({
+      where: { connectionId: req.params.connId },
+      orderBy: { createdAt: 'asc' }
+    });
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao carregar mensagens.' });
+  }
+});
+
+
+// ─── Integração eWelink / Sonoff Mock ────────────────────────────────────────
+
+// Trigger para abertura de portão
+app.post('/api/units/:unitId/open-gate', async (req, res) => {
+  try {
+    const { unitId } = req.params;
+    const unit = await prisma.unit.findUnique({
+      where: { id: unitId },
+      include: { property: true }
+    });
+
+    if (!unit) return res.status(404).json({ error: 'Unidade não encontrada.' });
+
+    console.log(`[Sonoff / eWelink] COMANDO ABRIR PORTÃO RECEBIDO PARA A UNIDADE: ${unit.name} no condomínio ${unit.property.name}`);
+
+    // Avisa em tempo real via Socket.io para o painel de gerenciamento registrar a abertura
+    io.emit('gate_opened', { unitId, unitName: unit.name, propertyId: unit.propertyId, timestamp: new Date() });
+
+    res.json({ success: true, message: 'Comando Sonoff disparado com sucesso! Portão liberado.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao disparar acionamento do portão.' });
+  }
+});
 
 // ─── QR Code & Código de Cliente ─────────────────────────────────────────────
 

@@ -14,6 +14,15 @@ function fmtDate(ts) {
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function HoverHelp({ text, children, style = {} }) {
+  return (
+    <span className="tooltip-wrapper" style={{ display: 'inline-flex', ...style }}>
+      {children}
+      <span className="tooltip-text">{text}</span>
+    </span>
+  );
+}
+
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = (e) => {
@@ -68,6 +77,14 @@ export default function AdminPanel() {
   const [visitors, setVisitors]     = useState([]);
   const [loadingVisitors, setLoadingVisitors] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
+  
+  // Novos estados para Caixa Postal, Alertas de Portão e Grade Visual Interativa
+  const [mailboxMessages, setMailboxMessages] = useState([]);
+  const [loadingMailbox, setLoadingMailbox]   = useState(false);
+  const [activeAlerts, setActiveAlerts]       = useState([]);
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [replyText, setReplyText]             = useState('');
+  const [alertTypeFilter, setAlertTypeFilter] = useState('all');
   const [showPaywall, setShowPaywall] = useState(false);
   const [loginError, setLoginError] = useState('');
   const videoRef = useRef(null);
@@ -147,9 +164,84 @@ export default function AdminPanel() {
     finally { setLoadingVisitors(false); }
   };
 
+  const fetchMailbox = async (propertyId) => {
+    setLoadingMailbox(true);
+    try {
+      const res = await fetch(`${API}/api/properties/${propertyId}/mailbox`);
+      if (res.ok) {
+        const data = await res.json();
+        setMailboxMessages(data);
+      }
+    } catch (e) {
+      console.error('Mailbox fetch failed:', e);
+    } finally {
+      setLoadingMailbox(false);
+    }
+  };
+
+  const fetchAlerts = async (propertyId) => {
+    try {
+      const res = await fetch(`${API}/api/properties/${propertyId}/alerts`);
+      if (res.ok) {
+        const data = await res.json();
+        setActiveAlerts(data);
+      }
+    } catch (e) {
+      console.error('Alerts fetch failed:', e);
+    }
+  };
+
+  const resolveAlert = async (alertId) => {
+    if (!selectedProperty) return;
+    try {
+      const res = await fetch(`${API}/api/properties/${selectedProperty}/alerts/${alertId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        fetchAlerts(selectedProperty);
+      }
+    } catch (e) {
+      console.error('Failed to resolve alert:', e);
+    }
+  };
+
+  const resolveMailboxMessage = async (msgId, currentStatus) => {
+    if (!selectedProperty) return;
+    const newStatus = currentStatus === 'pending' ? 'resolved' : 'pending';
+    try {
+      const res = await fetch(`${API}/api/properties/${selectedProperty}/mailbox/${msgId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        fetchMailbox(selectedProperty);
+      }
+    } catch (e) {
+      console.error('Failed to resolve mailbox message:', e);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'history' && selectedProperty) fetchVisitors(selectedProperty);
+    if (activeTab === 'mailbox' && selectedProperty) fetchMailbox(selectedProperty);
+    if (activeTab === 'control_panel' && selectedProperty) fetchAlerts(selectedProperty);
   }, [activeTab, selectedProperty]);
+
+  // Polling automático para alertas de segurança e solicitações de portão na Grade Visual
+  useEffect(() => {
+    if (!selectedProperty) return;
+    
+    // Roda a cada 4 segundos se a aba ativa for o painel de controle
+    const interval = setInterval(() => {
+      fetchAlerts(selectedProperty);
+    }, 4000);
+
+    // Roda uma vez imediatamente
+    fetchAlerts(selectedProperty);
+
+    return () => clearInterval(interval);
+  }, [selectedProperty, activeTab]);
 
   const startScan = async () => {
     setScanning(true);
@@ -426,19 +518,23 @@ export default function AdminPanel() {
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', padding: '0 24px', gap: '0', overflowX: 'auto' }}>
         {[
-          { key: 'properties', label: '🏠 Propriedades' },
-          { key: 'units',      label: '🏢 Unidades' },
-          { key: 'people',     label: '👥 Pessoas' },
-          { key: 'broadcast',  label: '📢 Mensagens' },
-          { key: 'history',    label: '📋 Histórico' }
+          { key: 'properties', label: '🏠 Propriedades', desc: 'Gerencie placas físicas e downloads de QR Codes.' },
+          { key: 'units',      label: '🏢 Unidades', desc: 'Cadastre e edite os blocos, ruas e casas da vila.' },
+          { key: 'people',     label: '👥 Pessoas', desc: 'Gerencie e vincule moradores aos códigos de acesso.' },
+          { key: 'mailbox',    label: '📬 Caixa Postal', desc: 'Veja as mensagens de suporte enviadas pelos moradores.' },
+          { key: 'control_panel', label: '🎮 Painel de Controle', desc: 'Visualização interativa das unidades em tempo real.' },
+          { key: 'broadcast',  label: '📢 Comunicados', desc: 'Envie avisos gerais para todos os moradores de uma vez.' },
+          { key: 'history',    label: '📋 Histórico', desc: 'Lista de visitas completas com foto e data/hora.' }
         ].filter(tab => {
           const isIndividual = properties.some(p => p.type === 'individual');
-          if (isIndividual && ['units', 'people', 'broadcast'].includes(tab.key)) return false;
+          if (isIndividual && ['units', 'people', 'broadcast', 'mailbox', 'control_panel'].includes(tab.key)) return false;
           return true;
         }).map(tab => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ padding: '14px 16px', background: 'none', border: 'none', borderBottom: activeTab === tab.key ? '2px solid var(--primary)' : '2px solid transparent', color: activeTab === tab.key ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
-            {tab.label}
-          </button>
+          <HoverHelp key={tab.key} text={tab.desc}>
+            <button onClick={() => setActiveTab(tab.key)} style={{ padding: '14px 16px', background: 'none', border: 'none', borderBottom: activeTab === tab.key ? '2px solid var(--primary)' : '2px solid transparent', color: activeTab === tab.key ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+              {tab.label}
+            </button>
+          </HoverHelp>
         ))}
       </div>
 
@@ -453,12 +549,14 @@ export default function AdminPanel() {
                 <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Gerencie placas e unidades</p>
               </div>
               {!properties.some(p => p.type === 'individual') && (
-                <button className="btn-primary" onClick={() => {
-                  if (properties.length >= 1) { setShowPaywall(true); }
-                  else { setOnboardingStep('scan'); }
-                }} style={{ padding: '12px 24px' }}>
-                  <Plus size={20} /> Nova Placa
-                </button>
+                <HoverHelp text="Cadastre uma nova placa física de campainha virtual">
+                  <button className="btn-primary" onClick={() => {
+                    if (properties.length >= 1) { setShowPaywall(true); }
+                    else { setOnboardingStep('scan'); }
+                  }} style={{ padding: '12px 24px' }}>
+                    <Plus size={20} /> Nova Placa
+                  </button>
+                </HoverHelp>
               )}
             </div>
 
@@ -471,7 +569,7 @@ export default function AdminPanel() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                       <div>
                         <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>{p.name}</h3>
-                        <span style={{ fontSize: '12px', padding: '4px 10px', background: p.type === 'individual' ? 'rgba(16,185,129,0.1)' : 'rgba(0,229,255,0.1)', color: p.type === 'individual' ? '#10B981' : 'var(--primary)', borderRadius: '100px', fontWeight: 600 }}>
+                        <span style={{ fontSize: '12px', padding: '4px 10px', background: p.type === 'individual' ? 'rgba(16,185,129,0.1)' : 'rgba(59,130,246,0.1)', color: p.type === 'individual' ? '#10B981' : 'var(--primary)', borderRadius: '100px', fontWeight: 600 }}>
                           {p.type === 'individual' ? 'Casa Única' : `${p.units.length} unidades`}
                         </span>
                       </div>
@@ -484,9 +582,11 @@ export default function AdminPanel() {
                       <img src={p.qrCodeUrl} alt="QR" style={{ width: '140px', height: 'auto' }} />
                     </div>
 
-                    <button className="btn-secondary" style={{ width: '100%', padding: '12px', fontSize: '13px', marginBottom: '16px' }} onClick={() => downloadQR(p.qrCodeUrl, p.name)}>
-                      <Download size={16} /> Baixar QR Code
-                    </button>
+                    <HoverHelp text="Baixa o QR Code em PNG de alta resolução para impressão física" style={{ width: '100%' }}>
+                      <button className="btn-secondary" style={{ width: '100%', padding: '12px', fontSize: '13px', marginBottom: '16px' }} onClick={() => downloadQR(p.qrCodeUrl, p.name)}>
+                        <Download size={16} /> Baixar QR Code
+                      </button>
+                    </HoverHelp>
 
                     <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
                       <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
@@ -499,19 +599,25 @@ export default function AdminPanel() {
                             <code style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 800, letterSpacing: '2px', background: 'rgba(0,229,255,0.08)', padding: '3px 8px', borderRadius: '4px' }}>{u.accessCode || '---'}</code>
                           </div>
                           <div style={{ display: 'flex', gap: '6px' }}>
-                            <CopyButton text={u.accessCode || ''} />
-                            <WhatsAppButton code={u.accessCode || ''} />
+                            <HoverHelp text="Copia o código do morador para colar">
+                              <CopyButton text={u.accessCode || ''} />
+                            </HoverHelp>
+                            <HoverHelp text="Envia o código de morador diretamente via WhatsApp">
+                              <WhatsAppButton code={u.accessCode || ''} />
+                            </HoverHelp>
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    <button
-                      onClick={() => { setSelectedProperty(p.id); setActiveTab('history'); }}
-                      style={{ marginTop: '12px', width: '100%', background: 'rgba(0,229,255,0.05)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', padding: '10px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                    >
-                      <Clock size={14} /> Ver Histórico de Visitantes
-                    </button>
+                    <HoverHelp text="Acessa a galeria fotográfica e de horários das visitas desta propriedade" style={{ width: '100%' }}>
+                      <button
+                        onClick={() => { setSelectedProperty(p.id); setActiveTab('history'); }}
+                        style={{ marginTop: '12px', width: '100%', background: 'rgba(59,130,246,0.05)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', padding: '10px', borderRadius: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      >
+                        <Clock size={14} /> Ver Histórico de Visitantes
+                      </button>
+                    </HoverHelp>
                   </div>
                 ))}
               </div>
@@ -537,6 +643,291 @@ export default function AdminPanel() {
         {/* ── ABA: MENSAGENS ── */}
         {activeTab === 'broadcast' && selectedProperty && (
           <BroadcastPanel propertyId={selectedProperty} adminEmail={localStorage.getItem('cd_admin_email')} />
+        )}
+
+        {/* ── ABA: CAIXA POSTAL (MAILBOX) ── */}
+        {activeTab === 'mailbox' && selectedProperty && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div>
+                <h2 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px' }}>Caixa Postal da Vila</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Mensagens e solicitações de moradores enviadas ao síndico</p>
+              </div>
+              <button className="btn-secondary" style={{ padding: '10px 16px', fontSize: '13px' }} onClick={() => fetchMailbox(selectedProperty)}>
+                <RefreshCw size={16} /> Atualizar Inbox
+              </button>
+            </div>
+
+            {loadingMailbox ? (
+              <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px' }}>Carregando caixa postal...</p>
+            ) : mailboxMessages.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 24px', background: '#FFF', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
+                <Send size={40} color="var(--text-muted)" style={{ opacity: 0.3, marginBottom: '16px' }} />
+                <p style={{ fontWeight: 700, color: 'var(--text-main)' }}>Sua Caixa Postal está vazia!</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '6px' }}>Nenhum morador enviou mensagens ou solicitações de suporte ainda.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {mailboxMessages.map(msg => (
+                  <div key={msg.id} style={{ background: '#FFF', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
+                    <div style={{ flex: 1, paddingRight: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 800, background: 'rgba(59,130,246,0.1)', color: 'var(--primary)', padding: '4px 10px', borderRadius: '100px' }}>
+                          🏢 {msg.unit?.name || 'Unidade'}
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                          {fmtDate(msg.createdAt)}
+                        </span>
+                        <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', fontWeight: 700, background: msg.status === 'resolved' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', color: msg.status === 'resolved' ? '#10B981' : '#D97706' }}>
+                          {msg.status === 'resolved' ? 'RESOLVIDO' : 'PENDENTE'}
+                        </span>
+                      </div>
+                      <h4 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>{msg.subject}</h4>
+                      <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{msg.body}</p>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      <HoverHelp text={msg.status === 'resolved' ? 'Reabrir chamado' : 'Marcar solicitação como concluída'}>
+                        <button
+                          onClick={() => resolveMailboxMessage(msg.id, msg.status)}
+                          style={{
+                            background: msg.status === 'resolved' ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)',
+                            border: 'none',
+                            color: msg.status === 'resolved' ? '#EF4444' : '#10B981',
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            fontWeight: 700,
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {msg.status === 'resolved' ? 'Reabrir' : 'Concluir'}
+                        </button>
+                      </HoverHelp>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── ABA: PAINEL DE CONTROLE / GRADE VISUAL (CONTROL_PANEL) ── */}
+        {activeTab === 'control_panel' && selectedProperty && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px' }}>Dashboard Central</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Grade visual de unidades com alertas e acionamento Sonoff em tempo real</p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <select value={alertTypeFilter} onChange={e => setAlertTypeFilter(e.target.value)} className="input-glass" style={{ padding: '8px 12px', fontSize: '13px', width: 'auto' }}>
+                  <option value="all">🔍 Todos os Status</option>
+                  <option value="active">⚠️ Somente Alertas Ativos</option>
+                </select>
+                <button className="btn-secondary" style={{ padding: '8px 12px', fontSize: '13px' }} onClick={() => fetchAlerts(selectedProperty)}>
+                  <RefreshCw size={14} /> Recarregar
+                </button>
+              </div>
+            </div>
+
+            {/* Mock do Dispositivo Físico Sonoff no Dashboard */}
+            <div style={{ background: 'linear-gradient(135deg, #1E293B, #0F172A)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', padding: '20px', marginBottom: '32px', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Zap size={24} color="var(--primary)" />
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '16px', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Rele Sonoff Dual / eWelink 
+                    <span style={{ fontSize: '10px', background: '#10B981', color: '#FFF', padding: '2px 6px', borderRadius: '100px', fontWeight: 800 }}>MOCK ONLINE</span>
+                  </h4>
+                  <p style={{ fontSize: '12px', color: '#94A3B8', margin: '4px 0 0' }}>Dispositivo de contato seco associado ao portão social e de veículos.</p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <HoverHelp text="Mimetiza o acionamento elétrico do portão de pedestres via eWelink">
+                  <button onClick={() => alert('[Sonoff] Comando de abertura portão SOCIAL enviado com sucesso!')} style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '10px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    🔓 Abrir Social
+                  </button>
+                </HoverHelp>
+                <HoverHelp text="Mimetiza o acionamento do portão de veículos">
+                  <button onClick={() => alert('[Sonoff] Comando de abertura portão VEÍCULOS enviado com sucesso!')} style={{ background: 'var(--primary)', color: '#FFF', border: 'none', padding: '10px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    🚗 Abrir Veículos
+                  </button>
+                </HoverHelp>
+              </div>
+            </div>
+
+            {/* Agrupamento e Renderização de Unidades por Subdivisão (Bloco/Rua) */}
+            {(() => {
+              const currentProperty = properties.find(p => p.id === selectedProperty);
+              if (!currentProperty) return <p>Carregando unidades...</p>;
+
+              // Agrupa unidades
+              const grouped = {};
+              currentProperty.units.forEach(u => {
+                const blockKey = u.block ? `Bloco ${u.block}` : (u.street ? `Rua ${u.street}` : 'Geral');
+                if (!grouped[blockKey]) grouped[blockKey] = [];
+                grouped[blockKey].push(u);
+              });
+
+              const blockKeys = Object.keys(grouped).sort();
+
+              if (blockKeys.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '40px' }}>
+                    <p style={{ color: 'var(--text-muted)' }}>Nenhuma unidade cadastrada. Adicione unidades na aba Unidades.</p>
+                  </div>
+                );
+              }
+
+              return blockKeys.map(blockKey => {
+                const unitsInBlock = grouped[blockKey];
+                
+                // Filtra se a busca pedir apenas alertas ativos
+                const filteredUnits = alertTypeFilter === 'active' 
+                  ? unitsInBlock.filter(u => activeAlerts.some(a => a.unitId === u.id))
+                  : unitsInBlock;
+
+                if (filteredUnits.length === 0) return null;
+
+                return (
+                  <div key={blockKey} style={{ marginBottom: '32px' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', borderBottom: '2px solid var(--border-subtle)', paddingBottom: '8px', color: 'var(--text-main)' }}>
+                      🏢 {blockKey} <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>({filteredUnits.length} unidade{filteredUnits.length !== 1 ? 's' : ''})</span>
+                    </h3>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
+                      {filteredUnits.map(u => {
+                        const unitAlerts = activeAlerts.filter(a => a.unitId === u.id);
+                        const hasAlert = unitAlerts.length > 0;
+                        const mainAlert = unitAlerts[0];
+                        
+                        let cardClass = '';
+                        let alertBadge = null;
+
+                        if (hasAlert) {
+                          if (mainAlert.type === 'package') {
+                            cardClass = 'pulse-alert-yellow';
+                            alertBadge = '📦 ENCOMENDA';
+                          } else if (mainAlert.type === 'release') {
+                            cardClass = 'pulse-alert-green';
+                            alertBadge = '🔑 LIBERAÇÃO';
+                          } else {
+                            cardClass = 'pulse-alert-green';
+                            alertBadge = '⚠️ ALERTA!';
+                          }
+                        }
+
+                        return (
+                          <HoverHelp key={u.id} text={hasAlert ? `${mainAlert.title}: ${mainAlert.description || ''} (Clique para resolver)` : `Status normal da unidade ${u.name}`}>
+                            <div
+                              onClick={() => {
+                                if (hasAlert) {
+                                  setSelectedMessage(mainAlert);
+                                }
+                              }}
+                              style={{
+                                background: '#FFF',
+                                border: '1px solid var(--border-subtle)',
+                                borderRadius: '12px',
+                                padding: '16px 12px',
+                                textAlign: 'center',
+                                cursor: hasAlert ? 'pointer' : 'default',
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minHeight: '100px',
+                                transition: 'all 0.2s',
+                                boxShadow: hasAlert ? 'none' : '0 2px 6px rgba(0,0,0,0.01)'
+                              }}
+                              className={cardClass}
+                            >
+                              <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>{u.name}</span>
+                              {u.number && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Nº {u.number}</span>}
+                              
+                              {alertBadge && (
+                                <span style={{
+                                  marginTop: '8px',
+                                  fontSize: '9px',
+                                  fontWeight: 800,
+                                  background: mainAlert.type === 'package' ? '#F59E0B' : '#10B981',
+                                  color: '#FFF',
+                                  padding: '2px 6px',
+                                  borderRadius: '100px',
+                                  letterSpacing: '0.5px'
+                                }}>
+                                  {alertBadge}
+                                </span>
+                              )}
+                            </div>
+                          </HoverHelp>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+
+            {/* Modal de Alerta Ativo */}
+            {selectedMessage && (
+              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', backdropFilter: 'blur(4px)' }}>
+                <div style={{ background: '#FFF', borderRadius: '24px', maxWidth: '440px', width: '100%', padding: '32px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', border: '1px solid var(--border-subtle)', position: 'relative' }}>
+                  <button onClick={() => setSelectedMessage(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: selectedMessage.type === 'package' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {selectedMessage.type === 'package' ? <Zap size={24} color="#F59E0B" /> : <ShieldCheck size={24} color="#10B981" />}
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>{selectedMessage.title}</h3>
+                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Unidade {selectedMessage.unit?.name || 'Morador'}</p>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '24px' }}>
+                    {selectedMessage.description || 'Nenhuma descrição adicional.'}
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {selectedMessage.type === 'release' && (
+                      <button
+                        onClick={() => {
+                          alert('[eWelink/Sonoff] Comando de liberação de portão disparado!');
+                          resolveAlert(selectedMessage.id);
+                          setSelectedMessage(null);
+                        }}
+                        style={{ width: '100%', background: '#10B981', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        🔑 AUTORIZAR E ABRIR PORTÃO
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={() => {
+                        resolveAlert(selectedMessage.id);
+                        setSelectedMessage(null);
+                      }}
+                      style={{ width: '100%', background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      ✅ MARCAR COMO RESOLVIDO
+                    </button>
+                    
+                    <button
+                      onClick={() => setSelectedMessage(null)}
+                      style={{ width: '100%', background: '#F1F5F9', color: 'var(--text-muted)', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* ── ABA: HISTÓRICO ── */}

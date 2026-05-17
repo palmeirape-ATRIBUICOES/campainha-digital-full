@@ -101,6 +101,13 @@ export default function ResidentDashboard() {
   const [pushLoading, setPushLoading] = useState(false);
   const [showIOSPrompt, setShowIOSPrompt] = useState(false);
 
+  // Novos estados para Caixa Postal de Moradores e Despacho de Alertas
+  const [supportSubject, setSupportSubject] = useState('');
+  const [supportBody, setSupportBody]       = useState('');
+  const [supportSending, setSupportSending]   = useState(false);
+  const [dispatchAlertLoading, setDispatchAlertLoading] = useState(false);
+  const [openGateLoading, setOpenGateLoading] = useState(false);
+
   const audioRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const localVideoRef = useRef(null);
@@ -503,6 +510,90 @@ export default function ResidentDashboard() {
 
   const saveSettings = () => { localStorage.setItem('cd_unit_name', unitName); };
 
+  const sendSupportMessage = async (e) => {
+    e.preventDefault();
+    if (!supportSubject || !supportBody) {
+      alert('Por favor, preencha o assunto e a mensagem.');
+      return;
+    }
+    setSupportSending(true);
+    try {
+      const propId = propertyId || localStorage.getItem('residentPropertyId');
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/properties/${propId}/mailbox`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token 
+        },
+        body: JSON.stringify({
+          subject: supportSubject,
+          body: supportBody,
+          unitId: id
+        })
+      });
+      if (res.ok) {
+        alert('Mensagem enviada com sucesso para a administração!');
+        setSupportSubject('');
+        setSupportBody('');
+      } else {
+        alert('Erro ao enviar mensagem.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao enviar mensagem.');
+    } finally {
+      setSupportSending(false);
+    }
+  };
+
+  const dispatchAlert = async (type, title, description) => {
+    setDispatchAlertLoading(true);
+    try {
+      const propId = propertyId || localStorage.getItem('residentPropertyId');
+      const res = await fetch(`${API}/api/properties/${propId}/alerts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          unitId: id,
+          type,
+          title,
+          description
+        })
+      });
+      if (res.ok) {
+        alert(`Alerta do tipo "${title}" enviado com sucesso! O painel do administrador já está piscando.`);
+      } else {
+        alert('Erro ao despachar alerta.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao enviar alerta.');
+    } finally {
+      setDispatchAlertLoading(false);
+    }
+  };
+
+  const openGateSonoff = async () => {
+    setOpenGateLoading(true);
+    try {
+      const res = await fetch(`${API}/api/units/${id}/open-gate`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        alert(`[Sonoff eWelink Dual Relay]: Abertura acionada via contato seco! ${data.message || ''}`);
+      } else {
+        alert('Erro ao acionar abertura do portão.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão com o dispositivo.');
+    } finally {
+      setOpenGateLoading(false);
+    }
+  };
+
   const activeC = quickMsgs.find(c => c.id === activeMsgCat);
 
   // ── Bottom Nav (Only Essentials) ──────────────────────────────────────────
@@ -699,6 +790,161 @@ export default function ResidentDashboard() {
                     <MessageCircle size={14}/> Compartilhar
                   </button>
                 </div>
+              </div>
+
+              {/* Botões Rápidos e Dispositivos Sonoff */}
+              <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 12px' }}>⚡ DISPOSITIVOS & AÇÕES RÁPIDAS</p>
+                
+                {/* Sonoff gate release button */}
+                <button
+                  onClick={openGateSonoff}
+                  disabled={openGateLoading}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                    color: '#FFF',
+                    border: 'none',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    fontWeight: 800,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    marginBottom: '16px',
+                    boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
+                  }}
+                >
+                  <KeyRound size={18} />
+                  {openGateLoading ? 'Acionando...' : '🔓 ABRIR PORTÃO DE PEDESTRES'}
+                </button>
+
+                {/* Grid for alert dispatchers */}
+                <p style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', marginBottom: '8px' }}>Notificar Portaria / Zelador na Grade Visual:</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                  <button
+                    onClick={() => dispatchAlert('release', '🔑 Solicitação de Liberação', 'Morador solicita liberação de visitante na portaria.')}
+                    disabled={dispatchAlertLoading}
+                    style={{
+                      background: '#F0FDF4',
+                      border: '1px solid #DCFCE7',
+                      color: '#15803D',
+                      padding: '10px 8px',
+                      borderRadius: '10px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <span>🔑</span>
+                    <span>Liberação</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => dispatchAlert('package', '📦 Retirar Encomenda', 'Morador avisa que irá retirar encomenda na portaria.')}
+                    disabled={dispatchAlertLoading}
+                    style={{
+                      background: '#FEF3C7',
+                      border: '1px solid #FDE68A',
+                      color: '#B45309',
+                      padding: '10px 8px',
+                      borderRadius: '10px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <span>📦</span>
+                    <span>Encomenda</span>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => dispatchAlert('alert', '⚠️ Pedido de Ajuda / Suporte', 'Morador solicita assistência urgente do zelador ou administração.')}
+                  disabled={dispatchAlertLoading}
+                  style={{
+                    width: '100%',
+                    background: '#FEF2F2',
+                    border: '1px solid #FEE2E2',
+                    color: '#991B1B',
+                    padding: '10px',
+                    borderRadius: '10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>⚠️</span>
+                  <span>Solicitar Assistência / Suporte Urgente</span>
+                </button>
+              </div>
+
+              {/* Caixa Postal (Fale com o Síndico) */}
+              <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 12px' }}>📬 FALAR COM A ADMINISTRAÇÃO (CAIXA POSTAL)</p>
+                <form onSubmit={sendSupportMessage} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <input
+                    type="text"
+                    placeholder="Assunto (ex: Vazamento, Sugestão...)"
+                    value={supportSubject}
+                    onChange={e => setSupportSubject(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      outline: 'none'
+                    }}
+                  />
+                  <textarea
+                    placeholder="Descreva detalhadamente sua solicitação..."
+                    value={supportBody}
+                    onChange={e => setSupportBody(e.target.value)}
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      outline: 'none',
+                      resize: 'none'
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={supportSending}
+                    style={{
+                      width: '100%',
+                      background: 'var(--primary)',
+                      color: '#000',
+                      border: 'none',
+                      padding: '10px',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {supportSending ? 'Enviando...' : 'Enviar Mensagem ao Síndico'}
+                  </button>
+                </form>
               </div>
 
               {/* Mensagens do condomínio - colapssável */}

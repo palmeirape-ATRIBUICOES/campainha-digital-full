@@ -14,6 +14,8 @@ export default function MasterAdminDashboard() {
   const [plateInput, setPlateInput] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [visiblePassMap, setVisiblePassMap] = useState({});
+  const [editModal, setEditModal] = useState(null); // null or user to edit
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,6 +66,58 @@ export default function MasterAdminDashboard() {
     const token = localStorage.getItem('cd_token');
     const res = await fetch(`${API}/api/master/users/${userId}/promo`, { method: 'POST', headers: { 'Authorization': token } });
     if (res.ok) { alert('Promoção ativada!'); fetchUsers(); }
+  };
+
+  const deleteUser = async (userId) => {
+    if (!window.confirm('Tem certeza que deseja excluir permanentemente este usuário e todos os seus dados? Esta ação não pode ser desfeita.')) return;
+    const token = localStorage.getItem('cd_token');
+    try {
+      const res = await fetch(`${API}/api/master/users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': token }
+      });
+      if (res.ok) {
+        alert('Usuário excluído com sucesso!');
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Erro ao excluir usuário.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao excluir usuário.');
+    }
+  };
+
+  const handleEditUser = async (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('cd_token');
+    try {
+      const res = await fetch(`${API}/api/master/users/${editModal.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
+        body: JSON.stringify({
+          name: editModal.name,
+          email: editModal.email,
+          phone: editModal.phone,
+          password: editModal.password
+        })
+      });
+      if (res.ok) {
+        alert('Usuário atualizado com sucesso!');
+        setEditModal(null);
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Erro ao atualizar usuário.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao atualizar usuário.');
+    }
   };
 
   // Gerar QR Code a partir de texto
@@ -238,8 +292,19 @@ export default function MasterAdminDashboard() {
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <td style={{ padding: '18px 24px' }}>
                       <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '15px' }}>{user.name}</div>
-                      <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>{user.email || user.phone}</div>
-                      <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '3px' }}>Desde {new Date(user.createdAt).toLocaleDateString('pt-BR')}</div>
+                      <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{user.email || user.phone}</span>
+                        <span style={{ color: '#E2E8F0' }}>|</span>
+                        <span style={{ fontSize: '11px', color: '#94A3B8' }}>Senha:</span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#475569' }}>
+                          {visiblePassMap[user.id] ? user.password : '••••••'}
+                        </span>
+                        <button onClick={() => setVisiblePassMap(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
+                          style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+                          {visiblePassMap[user.id] ? 'ocultar' : 'revelar'}
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>Desde {new Date(user.createdAt).toLocaleDateString('pt-BR')}</div>
                     </td>
                     <td style={{ padding: '18px 24px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -269,10 +334,20 @@ export default function MasterAdminDashboard() {
                       </div>
                     </td>
                     <td style={{ padding: '18px 24px' }}>
-                      <button onClick={() => giveFreeMonth(user.id)}
-                        style={{ padding: '8px 14px', borderRadius: '10px', background: '#3B82F6', color: '#FFF', border: 'none', fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        +1 Mês
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button onClick={() => giveFreeMonth(user.id)} title="Dar +1 Mês Grátis"
+                          style={{ padding: '8px 12px', borderRadius: '10px', background: '#3B82F6', color: '#FFF', border: 'none', fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          +1 Mês
+                        </button>
+                        <button onClick={() => setEditModal(user)} title="Editar dados e senha"
+                          style={{ padding: '8px 12px', borderRadius: '10px', background: '#F59E0B', color: '#FFF', border: 'none', fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          Editar
+                        </button>
+                        <button onClick={() => deleteUser(user.id)} title="Excluir Usuário"
+                          style={{ padding: '8px 12px', borderRadius: '10px', background: '#EF4444', color: '#FFF', border: 'none', fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -396,6 +471,84 @@ export default function MasterAdminDashboard() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* EDIT USER MODAL */}
+      {editModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', backdropFilter: 'blur(8px)' }}
+          onClick={e => { if (e.target === e.currentTarget) setEditModal(null); }}>
+          <div style={{ background: '#FFF', borderRadius: '28px', padding: '40px', width: '100%', maxWidth: '500px', boxShadow: '0 40px 100px rgba(0,0,0,0.2)', position: 'relative' }}>
+
+            <button onClick={() => setEditModal(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={18} color="#64748B" />
+            </button>
+
+            <div style={{ marginBottom: '28px' }}>
+              <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', marginBottom: '4px' }}>
+                ✏️ Editar Dados do Usuário
+              </h3>
+              <p style={{ color: '#64748B', fontSize: '14px' }}>
+                Altere o nome, contato ou a senha de acesso do usuário.
+              </p>
+            </div>
+
+            <form onSubmit={handleEditUser} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#64748B', marginBottom: '6px', textTransform: 'uppercase' }}>Nome do Usuário</label>
+                <input
+                  type="text"
+                  required
+                  value={editModal.name || ''}
+                  onChange={e => setEditModal({ ...editModal, name: e.target.value })}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '14px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#64748B', marginBottom: '6px', textTransform: 'uppercase' }}>E-mail</label>
+                <input
+                  type="email"
+                  value={editModal.email || ''}
+                  onChange={e => setEditModal({ ...editModal, email: e.target.value })}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '14px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#64748B', marginBottom: '6px', textTransform: 'uppercase' }}>Celular</label>
+                <input
+                  type="text"
+                  value={editModal.phone || ''}
+                  onChange={e => setEditModal({ ...editModal, phone: e.target.value })}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '14px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#64748B', marginBottom: '6px', textTransform: 'uppercase' }}>Senha de Acesso</label>
+                <input
+                  type="text"
+                  required
+                  value={editModal.password || ''}
+                  onChange={e => setEditModal({ ...editModal, password: e.target.value })}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '14px', fontFamily: 'monospace', fontWeight: 700 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                <button type="button" onClick={() => setEditModal(null)}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', background: '#F1F5F9', border: 'none', color: '#64748B', fontWeight: 700, cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+                <button type="submit"
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', background: '#F59E0B', border: 'none', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}>
+                  Salvar Alterações
+                </button>
+              </div>
+            </form>
+
           </div>
         </div>
       )}

@@ -13,6 +13,8 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('login'); // 'login' | 'register' | 'reset'
   const [recoveryToken, setRecoveryToken] = useState('');
+  const [loginType, setLoginType] = useState('email'); // 'email' | 'code'
+  const [accessCode, setAccessCode] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
@@ -22,6 +24,57 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     
+    if (view === 'login' && loginType === 'code') {
+      try {
+        const res = await fetch(`${API}/api/resident/login-by-code`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessCode: accessCode.trim().toUpperCase() })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+          if (data.role === 'doorman') {
+            localStorage.setItem('cd_token', data.token);
+            localStorage.setItem('cd_user_id', data.userId || data.token);
+            localStorage.setItem('cd_doorman_propertyId', data.propertyId);
+            localStorage.setItem('cd_doorman_propertyName', data.propertyName);
+            navigate('/portaria');
+          } else if (data.role === 'admin') {
+            localStorage.setItem('cd_token', data.token);
+            localStorage.setItem('cd_user_id', data.userId || data.token);
+            localStorage.setItem('cd_admin_email', data.adminEmail || '');
+            localStorage.setItem('cd_admin_role', 'client');
+            localStorage.setItem('cd_admin_propertyId', data.propertyId);
+            localStorage.setItem('cd_admin_clientCode', data.clientCode || '');
+            localStorage.setItem('cd_admin_propertyName', data.propertyName || '');
+            navigate('/admin');
+          } else if (data.unitId) {
+            localStorage.setItem('residentUnitId', data.unitId);
+            localStorage.setItem('residentName', data.unitName || 'Morador');
+            localStorage.setItem('residentPropertyName', data.propertyName || '');
+            localStorage.setItem('residentPropertyId', data.propertyId || '');
+            localStorage.setItem('residentAccessCode', data.accessCode || accessCode || '');
+            if (data.token) {
+              localStorage.setItem('cd_token', data.token);
+              localStorage.setItem('cd_user_id', data.userId || data.token);
+            }
+            navigate(`/morador/${data.unitId}`);
+          } else {
+            alert('Não foi possível identificar o destino do seu perfil.');
+          }
+        } else {
+          alert(data.error || 'Código de acesso incorreto ou expirado.');
+        }
+      } catch (err) {
+        console.error('Code login error:', err);
+        alert('Erro ao tentar logar por código.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     const endpoint = view === 'login' ? '/api/auth/login' : '/api/auth/register';
     
     try {
@@ -53,10 +106,32 @@ export default function AuthPage() {
           }
         }
 
-        if (data.user.isSuperAdmin) navigate('/master-admin');
-        else if (data.user.isAdmin) navigate('/admin');
-        else if (data.user.isDoorman) navigate('/portaria');
-        else navigate(`/morador/${data.user.id}`);
+        // Salvar chaves locais dependendo do perfil para persistência premium
+        if (data.user.isSuperAdmin) {
+          navigate('/master-admin');
+        } else if (data.user.isAdmin) {
+          localStorage.setItem('cd_admin_email', data.user.email || identifier || '');
+          localStorage.setItem('cd_admin_role', 'client');
+          localStorage.setItem('cd_admin_propertyId', data.user.propertyId || '');
+          localStorage.setItem('cd_admin_clientCode', data.user.accessCode || '');
+          localStorage.setItem('cd_admin_propertyName', data.user.propertyName || '');
+          localStorage.setItem('cd_admin_name', data.user.name || '');
+          navigate('/admin');
+        } else if (data.user.isDoorman) {
+          localStorage.setItem('cd_doorman_propertyId', data.user.propertyId || '');
+          localStorage.setItem('cd_doorman_propertyName', data.user.propertyName || '');
+          navigate('/portaria');
+        } else if (data.user.isResident) {
+          localStorage.setItem('residentUnitId', data.user.unitId || '');
+          localStorage.setItem('residentName', data.user.name || 'Morador');
+          localStorage.setItem('residentPropertyName', data.user.propertyName || '');
+          localStorage.setItem('residentPropertyId', data.user.propertyId || '');
+          localStorage.setItem('residentAccessCode', data.user.accessCode || '');
+          navigate(`/morador/${data.user.unitId || data.user.id}`);
+        } else {
+          // Fallback padrão
+          navigate(`/morador/${data.user.id}`);
+        }
       } else {
         const errorMsg = data.details ? `Erro: ${data.error}\nDetalhes: ${data.details}` : (data.error || 'Erro ao processar solicitação.');
         alert(errorMsg);
@@ -148,6 +223,51 @@ export default function AuthPage() {
           </form>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            
+            {/* Seletor de Tipo de Login (Apenas na Tela de Login) */}
+            {view === 'login' && (
+              <div style={{ display: 'flex', gap: '8px', background: '#F1F5F9', padding: '4px', borderRadius: '12px', marginBottom: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setLoginType('email')}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: loginType === 'email' ? '#FFF' : 'transparent',
+                    color: loginType === 'email' ? '#1E293B' : '#64748B',
+                    boxShadow: loginType === 'email' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <Mail size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> E-mail / Celular
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginType('code')}
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: loginType === 'code' ? '#FFF' : 'transparent',
+                    color: loginType === 'code' ? '#1E293B' : '#64748B',
+                    boxShadow: loginType === 'code' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <KeyRound size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> Código de Acesso
+                </button>
+              </div>
+            )}
+
             {view === 'register' && (
               <div className="input-group">
                 <span className="input-icon"><User size={20} /></span>
@@ -155,21 +275,39 @@ export default function AuthPage() {
               </div>
             )}
             
-            <div className="input-group">
-              <span className="input-icon">{identifier.includes('@') ? <Mail size={20} /> : <Phone size={20} />}</span>
-              <input type="text" placeholder="E-mail ou Celular" className="input-glass" value={identifier} onChange={e => setIdentifier(e.target.value)} required />
-            </div>
+            {view === 'login' && loginType === 'code' ? (
+              <div className="input-group">
+                <span className="input-icon"><KeyRound size={20} /></span>
+                <input
+                  type="text"
+                  placeholder="Seu Código de Acesso (Ex: ABCD12)"
+                  className="input-glass"
+                  value={accessCode}
+                  onChange={e => setAccessCode(e.target.value)}
+                  style={{ textTransform: 'uppercase' }}
+                  required
+                />
+              </div>
+            ) : (
+              <>
+                <div className="input-group">
+                  <span className="input-icon">{identifier.includes('@') ? <Mail size={20} /> : <Phone size={20} />}</span>
+                  <input type="text" placeholder="E-mail ou Celular" className="input-glass" value={identifier} onChange={e => setIdentifier(e.target.value)} required />
+                </div>
 
-            <div className="input-group">
-              <span className="input-icon"><Lock size={20} /></span>
-              <input type="password" placeholder="Senha" className="input-glass" value={password} onChange={e => setPassword(e.target.value)} required />
-            </div>
+                <div className="input-group">
+                  <span className="input-icon"><Lock size={20} /></span>
+                  <input type="password" placeholder="Senha" className="input-glass" value={password} onChange={e => setPassword(e.target.value)} required />
+                </div>
+              </>
+            )}
 
-            <button type="submit" disabled={loading} className="btn-primary">
+            <button type="submit" disabled={loading} className="btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
               {loading ? 'Processando...' : (view === 'register' ? 'CRIAR MINHA CONTA' : 'ENTRAR NO PAINEL')}
+              {!loading && <ArrowRight size={16} />}
             </button>
 
-            {view === 'login' && (
+            {view === 'login' && loginType === 'email' && (
               <button type="button" onClick={handleForgotPassword} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}>
                 Esqueci minha senha
               </button>

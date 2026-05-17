@@ -82,19 +82,26 @@ model Property {
   units           Unit[]
   messages        Message[]
   visitors        Visitor[]
+  mailboxMessages MailboxMessage[]
+  alerts          UnitAlert[]
+  connections     InternalConnection[]
 }
 
 model Unit {
-  id              String     @id @default(uuid())
-  propertyId      String
-  property        Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  name            String
-  block           String?
-  street          String?
-  number          String?
-  inviteCode      String?    @unique 
-  residents       User[]     @relation("UnitResidents")
-  visitors        Visitor[]
+  id                  String     @id @default(uuid())
+  propertyId          String
+  property            Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  name                String
+  block               String?
+  street              String?
+  number              String?
+  inviteCode          String?    @unique 
+  residents           User[]     @relation("UnitResidents")
+  visitors            Visitor[]
+  mailboxMessages     MailboxMessage[]
+  alerts              UnitAlert[]
+  sentConnections     InternalConnection[] @relation("SenderConnection")
+  receivedConnections InternalConnection[] @relation("ReceiverConnection")
 }
 
 model Visitor {
@@ -116,5 +123,52 @@ model Message {
   body            String   
   priority        String   @default("normal")
   senderId        String
+  createdAt       DateTime @default(now())
+}
+
+model MailboxMessage {
+  id              String   @id @default(uuid())
+  unitId          String
+  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  propertyId      String
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  subject         String
+  body            String
+  status          String   @default("pending") // "pending" | "read" | "resolved"
+  createdAt       DateTime @default(now())
+}
+
+model UnitAlert {
+  id              String   @id @default(uuid())
+  unitId          String
+  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  propertyId      String
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  type            String   @default("alert") // "release" | "message" | "alert" | "package"
+  title           String
+  description     String?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model InternalConnection {
+  id              String   @id @default(uuid())
+  propertyId      String
+  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  senderUnitId    String
+  senderUnit      Unit     @relation("SenderConnection", fields: [senderUnitId], references: [id], onDelete: Cascade)
+  receiverUnitId  String
+  receiverUnit    Unit     @relation("ReceiverConnection", fields: [receiverUnitId], references: [id], onDelete: Cascade)
+  status          String   @default("pending") // "pending" | "connected" | "blocked"
+  createdAt       DateTime @default(now())
+  messages        InternalMessage[]
+}
+
+model InternalMessage {
+  id              String   @id @default(uuid())
+  connectionId    String
+  connection      InternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  senderUnitId    String
+  body            String
   createdAt       DateTime @default(now())
 }
