@@ -115,47 +115,55 @@ export default function PlateProductionPanel() {
             width: '210mm', minHeight: '297mm', background: '#FFF', 
             margin: '0 auto 32px', padding: '10mm', 
             boxShadow: '0 10px 30px rgba(0,0,0,0.1)', border: '1px solid #E2E8F0',
-            display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '10mm',
-            position: 'relative'
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '10mm'
           }}>
             {pagePlates.map(plate => (
               <div key={plate.code} style={{ 
-                border: '1px dashed #CBD5E1', borderRadius: '24px', padding: '0', 
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                textAlign: 'center', position: 'relative', overflow: 'hidden'
+                position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column'
               }}>
-                
-                <div style={{ position: 'absolute', top: 12, right: 12, fontSize: '10px', color: '#CBD5E1', fontWeight: 800, letterSpacing: '1px' }}>
-                  {plate.code}
+                {/* Indicador de corte com a numeração fora da área útil */}
+                <div style={{ position: 'absolute', top: '-15px', left: 0, width: '100%', textAlign: 'center', fontSize: '10px', color: '#94A3B8', fontWeight: 700, letterSpacing: '1px' }}>
+                  CORTE AQUI ✂️ --- {plate.code} --- ✂️
                 </div>
 
-                <div style={{ padding: '30px 20px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                {/* Área real da placa (aquela que será recortada) */}
+                <div style={{ 
+                  flex: 1, border: '1px solid #102E4A', background: '#F8F9FA', 
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  padding: '20px', fontFamily: 'Montserrat, sans-serif'
+                }}>
                   
                   {/* LOGO AREA */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
-                    <Logo size={48} hideText={true} />
-                    <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#10526B', marginTop: '12px', letterSpacing: '-0.5px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
+                    <Logo size={80} hideText={true} />
+                    <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#31697E', marginTop: '10px', letterSpacing: '-0.5px', textTransform: 'none' }}>
                       Campainha-Digital
                     </h2>
                   </div>
 
                   {/* ICONS AND QR */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px', marginBottom: '32px' }}>
-                    <div style={{ color: '#10526B' }}>
-                      <Smartphone size={100} strokeWidth={1.5} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '30px', width: '100%' }}>
+                    {/* Telefone */}
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                      <svg width="100" height="180" viewBox="0 0 24 40" fill="#102E4A" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="2" width="20" height="36" rx="4" fill="#102E4A"/>
+                        <rect x="4" y="6" width="16" height="24" fill="#FFFFFF"/>
+                        <circle cx="12" cy="34" r="2" fill="#FFFFFF"/>
+                      </svg>
                     </div>
                     
-                    <div style={{ position: 'relative' }}>
-                      <img src={plate.qr} alt={plate.code} style={{ width: '150px', height: '150px' }} />
-                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: '#FFF', padding: '6px', borderRadius: '8px' }}>
-                        <Bell size={24} color="#10526B" fill="#10526B" />
+                    {/* QR Code */}
+                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', position: 'relative' }}>
+                      <img src={plate.qr} alt={plate.code} style={{ width: '160px', height: '160px', mixBlendMode: 'multiply' }} />
+                      <div style={{ position: 'absolute', top: '50%', left: '80px', transform: 'translate(-50%, -50%)', background: '#FFF', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Bell size={30} color="#102E4A" fill="#102E4A" />
                       </div>
                     </div>
                   </div>
 
                   {/* BOTTOM TEXT */}
-                  <div style={{ textAlign: 'center' }}>
-                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#10526B', lineHeight: 1.3 }}>
+                  <div style={{ textAlign: 'center', width: '100%' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#102E4A', lineHeight: 1.4, margin: 0 }}>
                       ESCANEIE AQUI COM<br/>O SEU TELEFONE E<br/>FALE COM O MORADOR
                     </h3>
                   </div>
