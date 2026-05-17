@@ -216,12 +216,12 @@ export default function ResidentDashboard() {
       } catch {}
     };
 
-    const fetchUserProfile = async () => {
+    const fetchUserProfile = async (activeToken) => {
       try {
-        const token = localStorage.getItem('cd_token');
-        if (!token) return;
+        const tokenToUse = activeToken || localStorage.getItem('cd_token');
+        if (!tokenToUse) return;
         const res = await fetch(`${API}/api/user/settings`, {
-          headers: { 'Authorization': token }
+          headers: { 'Authorization': tokenToUse }
         });
         if (res.ok) {
           const data = await res.json();
@@ -232,8 +232,33 @@ export default function ResidentDashboard() {
       } catch {}
     };
 
+    // Auto-healer: se o usuário já estiver logado mas não tiver o token de segurança na sessão
+    const healSession = async () => {
+      const token = localStorage.getItem('cd_token');
+      if (savedCode && !token) {
+        try {
+          const res = await fetch(`${API}/api/resident/login-by-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessCode: savedCode.trim().toUpperCase() })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.token) {
+              localStorage.setItem('cd_token', data.token);
+              localStorage.setItem('cd_user_id', data.userId || data.token);
+              fetchUserProfile(data.token);
+            }
+          }
+        } catch (e) {
+          console.error('[Session Healer] Erro:', e);
+        }
+      }
+    };
+
     fetchMessages();
     fetchUserProfile();
+    healSession();
 
     // Verifica se é iOS e se está instalado na tela inicial (necessário para Push no iOS)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
