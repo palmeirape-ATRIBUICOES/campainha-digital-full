@@ -266,7 +266,7 @@ export default function VisitorCall() {
   const handleCall = async (unit) => {
     setStatus('calling');
     setCallingUnit(unit);
-    setCountdown(30);
+    setCountdown(120);
 
     const photo = await getMediaAndPhoto();
 
@@ -418,7 +418,7 @@ export default function VisitorCall() {
 
           <div style={{ display: 'inline-block', padding: '12px 24px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid var(--border-subtle)', marginBottom: '32px' }}>
             <span style={{ fontSize: '32px', fontWeight: 800, color: 'var(--primary)', fontFamily: 'monospace' }}>
-              00:{countdown.toString().padStart(2, '0')}
+              {`${Math.floor(countdown / 60).toString().padStart(2, '0')}:${(countdown % 60).toString().padStart(2, '0')}`}
             </span>
           </div>
 
