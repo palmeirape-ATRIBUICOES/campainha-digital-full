@@ -225,8 +225,10 @@ export default function AuthPage() {
 
         // Salvar chaves locais dependendo do perfil para persistência premium
         if (data.user.isSuperAdmin) {
+          localStorage.setItem('cd_is_super_admin', 'true');
           navigate('/master-admin');
         } else if (data.user.isAdmin) {
+          localStorage.removeItem('cd_is_super_admin');
           localStorage.setItem('cd_admin_email', data.user.email || identifier || '');
           localStorage.setItem('cd_admin_role', 'client');
           localStorage.setItem('cd_admin_propertyId', data.user.propertyId || '');
@@ -235,10 +237,12 @@ export default function AuthPage() {
           localStorage.setItem('cd_admin_name', data.user.name || '');
           navigate('/admin');
         } else if (data.user.isDoorman) {
+          localStorage.removeItem('cd_is_super_admin');
           localStorage.setItem('cd_doorman_propertyId', data.user.propertyId || '');
           localStorage.setItem('cd_doorman_propertyName', data.user.propertyName || '');
           navigate('/portaria');
         } else if (data.user.isResident) {
+          localStorage.removeItem('cd_is_super_admin');
           localStorage.setItem('residentUnitId', data.user.unitId || '');
           localStorage.setItem('residentName', data.user.name || 'Morador');
           localStorage.setItem('residentPropertyName', data.user.propertyName || '');
@@ -248,6 +252,7 @@ export default function AuthPage() {
           localStorage.setItem('cd_is_condo_resident', data.user.isCondoResident ? 'true' : 'false');
           navigate(`/morador/${data.user.unitId || data.user.id}`);
         } else {
+          localStorage.removeItem('cd_is_super_admin');
           // Fallback padrão
           navigate(`/morador/${data.user.id}`);
         }
