@@ -526,7 +526,8 @@ export default function AdminPanel() {
           { key: 'broadcast',  label: '📢 Comunicados', desc: 'Envie avisos gerais para todos os moradores de uma vez.' },
           { key: 'history',    label: '📋 Histórico', desc: 'Lista de visitas completas com foto e data/hora.' }
         ].filter(tab => {
-          const isIndividual = properties.some(p => p.type === 'individual');
+          const currentProp = properties.find(p => p.id === selectedProperty);
+          const isIndividual = currentProp ? currentProp.type === 'individual' : false;
           if (isIndividual && ['units', 'people', 'broadcast', 'mailbox', 'control_panel'].includes(tab.key)) return false;
           return true;
         }).map(tab => (
