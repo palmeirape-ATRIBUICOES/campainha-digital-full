@@ -859,7 +859,11 @@ export default function AdminPanel() {
           <button onClick={() => {
             setIsDemoMode(false);
             setProperties([]);
-            setOnboardingStep('type');
+            setSelectedProperty(null);
+            setMailboxMessages([]);
+            setActiveAlerts([]);
+            setOnboardingStep(null);
+            fetchProperties();
           }} style={{ background: '#FFF', color: '#6D28D9', border: 'none', padding: '8px 16px', borderRadius: '100px', fontWeight: 750, fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', transition: 'all 0.2s' }}>
             Sair da Demonstração
           </button>
@@ -904,8 +908,7 @@ export default function AdminPanel() {
               {!properties.some(p => p.type === 'individual' && p.id !== 'demo-vila-id') && (
                 <HoverHelp text="Cadastre uma nova propriedade de campainha virtual">
                   <button className="btn-primary" onClick={() => {
-                    if (properties.filter(p => p.id !== 'demo-vila-id').length >= 1) { setShowPaywall(true); }
-                    else { setOnboardingStep('type'); }
+                    setOnboardingStep('type');
                   }} style={{ padding: '12px 24px' }}>
                     <Plus size={20} /> Nova Propriedade
                   </button>
@@ -1019,6 +1022,66 @@ export default function AdminPanel() {
                     </HoverHelp>
                   </div>
                 ))}
+
+                {/* Vila Teste (Demonstração) Card - Sempre disponível ao lado se não estiver em modo demo */}
+                {!isDemoMode && (
+                  <div 
+                    onClick={() => {
+                      if (window.confirm('Deseja abrir o Modo Demonstração para ver a Vila Teste funcionando na prática?')) {
+                        startDemoMode();
+                      }
+                    }}
+                    className="premium-card hover-premium" 
+                    style={{ 
+                      padding: '24px', 
+                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.04) 0%, rgba(109, 40, 217, 0.04) 100%)',
+                      border: '2px dashed rgba(139, 92, 246, 0.4)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: '260px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {/* Badge de Demonstração */}
+                    <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#8B5CF6', color: '#FFF', fontSize: '9px', fontWeight: 800, padding: '3px 8px', borderRadius: '100px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      Demonstração
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <TreePine size={22} color="#8B5CF6" />
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Vila Teste</h3>
+                          <span style={{ fontSize: '12px', color: '#8B5CF6', fontWeight: 700 }}>Condomínio das Palmeiras</span>
+                        </div>
+                      </div>
+
+                      <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+                        Uma vila interativa simulada com 2 blocos e 40 apartamentos. Ideal para testar chamadas em tempo real, liberar acessos e ver como o painel funciona.
+                      </p>
+                    </div>
+
+                    <div style={{ 
+                      background: 'rgba(139, 92, 246, 0.08)', 
+                      padding: '12px', 
+                      borderRadius: '12px', 
+                      textAlign: 'center',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      color: '#8B5CF6',
+                      border: '1px solid rgba(139, 92, 246, 0.15)',
+                      transition: 'all 0.2s'
+                    }} className="btn-demo-action">
+                      ⚡ ABRIR MODO DEMONSTRAÇÃO
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -1556,6 +1619,39 @@ export default function AdminPanel() {
                                     {alertBadge}
                                   </span>
                                 )}
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (socketRef.current) {
+                                      socketRef.current.emit('doorman_call', {
+                                        unitId: u.id,
+                                        propertyId: u.propertyId,
+                                        callerName: 'Portaria'
+                                      });
+                                      alert('📞 Interfonando para a unidade...');
+                                    }
+                                  }}
+                                  style={{
+                                    marginTop: '12px',
+                                    background: 'var(--bg-deep)',
+                                    color: 'var(--primary)',
+                                    border: '1px solid var(--border-subtle)',
+                                    borderRadius: '8px',
+                                    padding: '6px 12px',
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.2s',
+                                    width: '100%',
+                                    justifyContent: 'center'
+                                  }}
+                                >
+                                  📞 Ligar
+                                </button>
                               </div>
                             </HoverHelp>
                           );
@@ -2103,34 +2199,44 @@ export default function AdminPanel() {
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {selectedMessage.type === 'release' && (
+                  <div style={{ display: 'flex', gap: '10px' }}>
                     <button
                       onClick={() => {
-                        alert('[eWelink/Sonoff] Comando de liberação de portão disparado!');
+                        if (selectedMessage.type === 'release') alert('[eWelink/Sonoff] Comando de liberação de portão disparado!');
                         resolveAlert(selectedMessage.id);
                         setSelectedMessage(null);
                       }}
-                      style={{ width: '100%', background: '#10B981', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ flex: 1, background: '#10B981', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
                     >
-                      🔑 AUTORIZAR E ABRIR PORTÃO
+                      {selectedMessage.type === 'package' ? '📦 CIENTE / ENCOMENDA' : '🔑 AUTORIZAR E ABRIR'}
                     </button>
-                  )}
-                  
+
+                    <button
+                      onClick={() => {
+                        // Emits a call to the resident
+                        socketRef.current?.emit('doorman_call', {
+                          unitId: selectedMessage.unitId,
+                          propertyId: properties[0]?.id,
+                          callerName: 'Portaria'
+                        });
+                        resolveAlert(selectedMessage.id);
+                        setSelectedMessage(null);
+                        alert('📞 Chamada iniciada para o morador!');
+                      }}
+                      style={{ flex: 1, background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
+                    >
+                      📞 LIGAR PRO MORADOR
+                    </button>
+                  </div>
+
                   <button
                     onClick={() => {
                       resolveAlert(selectedMessage.id);
                       setSelectedMessage(null);
                     }}
-                    style={{ width: '100%', background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    ✅ MARCAR COMO RESOLVIDO
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedMessage(null)}
                     style={{ width: '100%', background: '#F1F5F9', color: 'var(--text-muted)', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
                   >
-                    Fechar
+                    Fechar / Descartar
                   </button>
                 </div>
               </div>

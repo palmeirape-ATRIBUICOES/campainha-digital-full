@@ -18,6 +18,7 @@ export default function PorteiroDashboard() {
   const [residentMsg, setResidentMsg] = useState(null); // Mensagem recebida do morador
   const [incomingCall, setIncomingCall] = useState(null); // Chamada recebida do morador
   const [preAuthorized, setPreAuthorized] = useState({}); // { unitId: true }
+  const [onlineStatus, setOnlineStatus] = useState({}); // { unitId: 'online' | 'offline' }
   
   // Acesso via código de visitante
   const [validatedCode, setValidatedCode] = useState(null);
@@ -59,7 +60,19 @@ export default function PorteiroDashboard() {
         }
         const res = await fetch(url);
         const data = await res.json();
-        setProperties(Array.isArray(data) ? data : [data]);
+        const propsData = Array.isArray(data) ? data : [data];
+        setProperties(propsData);
+
+        // Fetch online status initially
+        const statusMap = {};
+        for (const p of propsData) {
+          try {
+            const stRes = await fetch(`${API}/api/properties/${p.id}/online-status`);
+            const stData = await stRes.json();
+            Object.keys(stData).forEach(k => statusMap[k] = stData[k]);
+          } catch (e) {}
+        }
+        setOnlineStatus(statusMap);
       } catch (err) {
         console.error('Failed to fetch data', err);
       } finally {
@@ -67,6 +80,20 @@ export default function PorteiroDashboard() {
       }
     };
     fetchData();
+
+    // Poll online status every 5 seconds
+    const statusInterval = setInterval(async () => {
+      setProperties(prevProps => {
+        prevProps.forEach(async p => {
+          try {
+            const stRes = await fetch(`${API}/api/properties/${p.id}/online-status`);
+            const stData = await stRes.json();
+            setOnlineStatus(prev => ({ ...prev, ...stData }));
+          } catch (e) {}
+        });
+        return prevProps;
+      });
+    }, 5000);
 
     const s = io(API, { transports: ['websocket', 'polling'] });
     socketRef.current = s;
@@ -116,7 +143,10 @@ export default function PorteiroDashboard() {
       }
     });
 
-    return () => s.disconnect();
+    return () => {
+      s.disconnect();
+      clearInterval(statusInterval);
+    };
   }, [navigate, properties]);
 
   const handleValidateCode = async (e) => {
@@ -329,14 +359,23 @@ export default function PorteiroDashboard() {
           {filteredUnits.map(unit => (
             <div key={`${unit.propertyId}-${unit.id}`} style={{ background: '#FFF', padding: '24px', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase', marginBottom: '8px' }}>{unit.propertyName}</div>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {unit.propertyName}
+                  <span style={{ 
+                    display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', 
+                    background: onlineStatus[unit.id] === 'online' ? '#10B981' : '#94A3B8',
+                    boxShadow: onlineStatus[unit.id] === 'online' ? '0 0 8px rgba(16,185,129,0.6)' : 'none'
+                  }} title={onlineStatus[unit.id] === 'online' ? 'Morador Online' : 'Offline'} />
+                </div>
                 {preAuthorized[unit.id] && (
                   <div className="blink" style={{ background: '#10B981', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <CheckCircle2 size={12}/> ACESSO LIBERADO
                   </div>
                 )}
               </div>
-              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 6px' }}>{unit.name}</h3>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {unit.name}
+              </h3>
               {(unit.block || unit.street || unit.number) && (
                 <p style={{ fontSize: '12px', color: '#64748B', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Building2 size={13}/> {unit.block && `Bloco ${unit.block}`} {unit.street && `${unit.street}`} {unit.number && `Nº ${unit.number}`}

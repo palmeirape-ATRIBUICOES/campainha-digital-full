@@ -726,12 +726,14 @@ app.post('/api/payment/upgrade-preference', authenticate, async (req, res) => {
 app.post('/api/resident/login-by-code', async (req, res) => {
   const { accessCode } = req.body;
   try {
-    // Busca usuário pelo clientCode (Código Único) ou plateCode (Placa)
-    const user = await prisma.user.findFirst({
+    const cleanCode = (accessCode || '').trim().toUpperCase();
+
+    // 1. Busca usuário pelo clientCode (Código Único) ou plateCode (Placa) - case-insensitive
+    let user = await prisma.user.findFirst({
       where: {
         OR: [
-          { clientCode: accessCode },
-          { plateCode: accessCode }
+          { clientCode: { equals: cleanCode, mode: 'insensitive' } },
+          { plateCode: { equals: cleanCode, mode: 'insensitive' } }
         ]
       },
       include: {
@@ -739,6 +741,27 @@ app.post('/api/resident/login-by-code', async (req, res) => {
         units: { include: { property: true } }
       }
     });
+
+    // 2. Se não encontrar o usuário diretamente, verifica se o código inserido é o Código Geral da Unidade (inviteCode) - case-insensitive
+    if (!user) {
+      const unitByInvite = await prisma.unit.findFirst({
+        where: { inviteCode: { equals: cleanCode, mode: 'insensitive' } },
+        include: {
+          property: true,
+          residents: {
+            include: {
+              propertiesManaged: true,
+              units: { include: { property: true } }
+            }
+          }
+        }
+      });
+
+      if (unitByInvite && unitByInvite.residents.length > 0) {
+        // Loga como o primeiro morador cadastrado nessa unidade
+        user = unitByInvite.residents[0];
+      }
+    }
 
     if (!user) return res.status(401).json({ error: 'Código inválido.' });
 
@@ -1186,9 +1209,14 @@ app.get('/api/properties/:id', async (req, res) => {
     }
 
     if (!property) {
-      // 3. Verificar se idParam (ou code) é um clientCode ou plateCode
+      // 3. Verificar se idParam (ou code) é um clientCode ou plateCode (case-insensitive)
       const user = await prisma.user.findFirst({
-        where: { OR: [{ clientCode: code }, { plateCode: code }] },
+        where: {
+          OR: [
+            { clientCode: { equals: code, mode: 'insensitive' } },
+            { plateCode: { equals: code, mode: 'insensitive' } }
+          ]
+        },
         include: {
           propertiesManaged: { include: { units: { select: { id: true, name: true } } } },
           units: { include: { property: { include: { units: { select: { id: true, name: true } } } } } }
@@ -1938,9 +1966,13 @@ app.get('/api/properties/:propertyId/online-status', async (req, res) => {
     
     const statusMap = {};
     units.forEach(u => {
+      let unitOnline = false;
       u.residents.forEach(r => {
-        statusMap[r.id] = activeSockets.has(r.id) ? 'online' : 'offline';
+        const isOnline = activeSockets.has(r.id);
+        statusMap[r.id] = isOnline ? 'online' : 'offline';
+        if (isOnline) unitOnline = true;
       });
+      statusMap[u.id] = unitOnline ? 'online' : 'offline';
     });
     res.json(statusMap);
   } catch (err) {
@@ -2092,7 +2124,7 @@ io.on('connection', (socket) => {
     console.log(`[WS] Usuário ${userId} registrado no socket ${socket.id}`);
   });
 
-  socket.on('initiate_call', async ({ unitId, propertyId, photoBase64, callerName }) => {
+  const handleIncomingCall = async ({ unitId, propertyId, photoBase64, callerName }) => {
     // Busca os moradores da unidade
     const unit = await prisma.unit.findUnique({
       where: { id: unitId },
@@ -2167,7 +2199,10 @@ io.on('connection', (socket) => {
     } catch (e) {
       console.error('Error initiating call:', e);
     }
-  });
+  };
+
+  socket.on('initiate_call', handleIncomingCall);
+  socket.on('doorman_call', handleIncomingCall);
 
   // Outros eventos WebRTC...
   socket.on('answer_call', ({ visitorSocketId, mode, unitId }) => {

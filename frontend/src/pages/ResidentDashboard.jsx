@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag, BellOff, BellRing } from 'lucide-react';
+import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag, BellOff, BellRing, Users } from 'lucide-react';
 import { HistoryPanel, SettingsPanel, DEFAULT_CATEGORIES } from './ResidentPanels';
 import Logo from '../components/Logo';
 import MessagesPanel from '../components/resident/MessagesPanel';
@@ -123,6 +123,7 @@ export default function ResidentDashboard() {
   const [neighborSearching, setNeighborSearching] = useState(false);
   const [neighborError, setNeighborError] = useState('');
   const [propertyId, setPropertyId] = useState(() => localStorage.getItem('residentPropertyId'));
+  const [propertyName, setPropertyName] = useState(() => localStorage.getItem('residentPropertyName') || '');
   const [broadcastMessages, setBroadcastMessages] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -130,6 +131,7 @@ export default function ResidentDashboard() {
   const [userContact, setUserContact] = useState('');
   const [trialEndsAt, setTrialEndsAt] = useState(null);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [visitorOrPackageName, setVisitorOrPackageName] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [planPrice, setPlanPrice] = useState('39.90');
 
@@ -289,6 +291,10 @@ export default function ResidentDashboard() {
           if (data.propertyId) {
             setPropertyId(data.propertyId);
             localStorage.setItem('residentPropertyId', data.propertyId);
+          }
+          if (data.propertyName) {
+            setPropertyName(data.propertyName);
+            localStorage.setItem('residentPropertyName', data.propertyName);
           }
           setUserContact(data.email || data.phone || data.clientCode || data.plateCode || '');
         }
@@ -596,7 +602,9 @@ export default function ResidentDashboard() {
     }
   };
 
-  const dispatchAlert = async (type, title, description) => {
+  const dispatchAlert = async (type, title, baseDescription) => {
+    if (!savedUnitId) return;
+    const finalDescription = visitorOrPackageName.trim() ? `${baseDescription} (Nome: ${visitorOrPackageName})` : baseDescription;
     setDispatchAlertLoading(true);
     try {
       const propId = propertyId || localStorage.getItem('residentPropertyId');
@@ -604,14 +612,15 @@ export default function ResidentDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          unitId: id,
+          unitId: savedUnitId,
           type,
           title,
-          description
+          description: finalDescription
         })
       });
       if (res.ok) {
-        alert(`Alerta do tipo "${title}" enviado com sucesso! O painel do administrador já está piscando.`);
+        setVisitorOrPackageName(''); // clear input on success
+        alert('Notificação enviada com sucesso para a portaria/zelador!');
       } else {
         alert('Erro ao despachar alerta.');
       }
@@ -731,11 +740,12 @@ export default function ResidentDashboard() {
     </>
   );
 
-  const trialEndsDate = trialEndsAt ? new Date(trialEndsAt) : null;
-  const isTrialExpired = trialEndsDate ? trialEndsDate < new Date() : false;
-  const isTrialExpiringSoon = trialEndsDate ? (trialEndsDate - new Date()) < (3 * 24 * 60 * 60 * 1000) && !isTrialExpired : false;
-  const formattedExpiryDate = trialEndsDate ? trialEndsDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
-  const daysRemaining = trialEndsDate ? Math.ceil((trialEndsDate - new Date()) / (24 * 60 * 60 * 1000)) : 0;
+  // Condominium contract-based approach: subscription/trials completely bypassed (always active, no payment prompt)
+  const trialEndsDate = null;
+  const isTrialExpired = false;
+  const isTrialExpiringSoon = false;
+  const formattedExpiryDate = '';
+  const daysRemaining = 0;
 
   if (!savedUnitId && !token) {
     return null;
@@ -1003,7 +1013,25 @@ export default function ResidentDashboard() {
                   </button>
 
                   {/* Grid for alert dispatchers */}
-                  <p style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', marginBottom: '8px' }}>Notificar Portaria / Zelador na Grade Visual:</p>
+                  <p style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', marginBottom: '4px' }}>Notificar Portaria / Zelador na Grade Visual:</p>
+                  
+                  <input
+                    type="text"
+                    placeholder="Nome do Visitante / Entregador (Opcional)"
+                    value={visitorOrPackageName}
+                    onChange={e => setVisitorOrPackageName(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '10px',
+                      fontSize: '12px',
+                      outline: 'none',
+                      marginBottom: '8px',
+                      background: '#F8FAFC'
+                    }}
+                  />
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                     <button
                       onClick={() => dispatchAlert('release', '🔑 Solicitação de Liberação', 'Morador solicita liberação de visitante na portaria.')}
