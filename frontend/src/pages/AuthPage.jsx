@@ -593,18 +593,18 @@ export default function AuthPage() {
 
                 {/* Condomínio Option */}
                 <div 
-                  onClick={() => { setResidenceType('condo'); setSignUpStep(3); }}
+                  onClick={() => { setSignUpStep('condo-warning'); }}
                   style={{
                     padding: '24px',
                     borderRadius: '20px',
-                    border: residenceType === 'condo' ? '2.5px solid #10B981' : '1px solid #E2E8F0',
-                    background: residenceType === 'condo' ? '#ECFDF5' : '#FFF',
+                    border: '1px solid #E2E8F0',
+                    background: '#FFF',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '20px',
                     transition: 'all 0.25s',
-                    boxShadow: residenceType === 'condo' ? '0 8px 24px rgba(16,185,129,0.08)' : '0 2px 8px rgba(0,0,0,0.02)'
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                   }}
                   className="hover-scale"
                 >
@@ -612,7 +612,7 @@ export default function AuthPage() {
                     width: '64px', 
                     height: '64px', 
                     borderRadius: '18px', 
-                    background: residenceType === 'condo' ? 'rgba(16,185,129,0.1)' : '#F8FAFC', 
+                    background: '#F8FAFC', 
                     color: '#10B981', 
                     display: 'flex', 
                     alignItems: 'center', 
@@ -633,6 +633,49 @@ export default function AuthPage() {
                   style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '12px' }}
                 >
                   ← Voltar para dados cadastrais
+                </button>
+              </div>
+            )}
+
+            {view === 'register' && signUpStep === 'condo-warning' && (
+              <div className="fade-in" style={{ textAlign: 'center', padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ 
+                  display: 'inline-flex', 
+                  padding: '20px', 
+                  background: 'rgba(59,130,246,0.06)', 
+                  borderRadius: '24px', 
+                  border: '1px solid var(--border-subtle)', 
+                  marginBottom: '20px',
+                  color: 'var(--primary)'
+                }}>
+                  <Building2 size={48} />
+                </div>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '12px' }}>Acesso por Código Único</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1.6, marginBottom: '24px', maxWidth: '320px' }}>
+                  Moradores de condomínios fechados ou vilas **não precisam criar uma conta administrativa**! 
+                  <br/><br/>
+                  O cadastro da sua residência é feito diretamente pelo administrador ou síndico do seu condomínio. Peça a ele o seu **Código de Acesso Único**.
+                </p>
+                
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setView('login');
+                    setLoginType('code');
+                    setSignUpStep(1);
+                  }} 
+                  className="btn-primary" 
+                  style={{ width: '100%', padding: '16px', borderRadius: '14px', fontWeight: 700 }}
+                >
+                  Entrar com Código Único
+                </button>
+                
+                <button 
+                  type="button" 
+                  onClick={() => setSignUpStep(2)} 
+                  style={{ display: 'block', margin: '20px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}
+                >
+                  ← Voltar para Opções
                 </button>
               </div>
             )}
