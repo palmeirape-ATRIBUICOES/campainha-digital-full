@@ -496,6 +496,13 @@ export default function ResidentDashboard() {
       localStreamRef.current = stream;
       if (withCamera && localVideoRef.current) { localVideoRef.current.srcObject = stream; localVideoRef.current.play().catch(() => {}); }
     } catch (e) { console.warn('[Media]', e); }
+    
+    // Se a chamada for da Portaria (que não tem WebRTC configurado na web), não espere a oferta WebRTC.
+    if (call?.callerName === 'Portaria') {
+      alert('Conectado à Portaria (Modo Áudio Simples).');
+      return;
+    }
+
     // Primeiro notifica o visitante que a chamada foi atendida
     socketRef.current.emit('answer_call', { visitorSocketId: call.visitorSocketId, mode: 'active', unitId: id });
     // Depois sinaliza que a mídia local está pronta e pode criar a offer
@@ -1099,6 +1106,30 @@ export default function ResidentDashboard() {
                   >
                     <span>⚠️</span>
                     <span>Solicitar Assistência / Suporte Urgente</span>
+                  </button>
+
+                  <button
+                    onClick={() => dispatchAlert('alert', '📞 Chamada de Voz da Unidade', 'Morador está solicitando que a portaria interfone para ele.')}
+                    disabled={dispatchAlertLoading}
+                    style={{
+                      width: '100%',
+                      background: '#EFF6FF',
+                      border: '1px solid #DBEAFE',
+                      color: '#1D4ED8',
+                      padding: '10px',
+                      borderRadius: '10px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      marginTop: '8px'
+                    }}
+                  >
+                    <span>📞</span>
+                    <span>Interfonar para Portaria</span>
                   </button>
                 </div>
               )}
