@@ -248,7 +248,7 @@ export default function ResidentLogin() {
                       style={{ width: '100%', background: '#F8FAFC', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', color: 'var(--primary)', fontSize: '24px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '8px', textAlign: 'center', transition: 'all 0.2s', outline: 'none' }}
                       value={accessCode}
                       onChange={e => setAccessCode(e.target.value.toUpperCase())}
-                      maxLength={8}
+                      maxLength={50}
                       autoFocus
                       required
                     />
