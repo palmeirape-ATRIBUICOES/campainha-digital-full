@@ -463,9 +463,9 @@ export default function MasterAdminDashboard() {
 
       {/* QR CODE MODAL */}
       {qrModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', backdropFilter: 'blur(8px)' }}
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', display: 'grid', placeItems: 'center', overflowY: 'auto', zIndex: 1000, padding: '40px 24px', backdropFilter: 'blur(8px)' }}
           onClick={e => { if (e.target === e.currentTarget) setQrModal(null); }}>
-          <div style={{ background: '#FFF', borderRadius: '28px', padding: '40px', width: '100%', maxWidth: '520px', boxShadow: '0 40px 100px rgba(0,0,0,0.2)', position: 'relative' }}>
+          <div style={{ background: '#FFF', borderRadius: '28px', padding: '40px', width: '100%', maxWidth: '520px', boxShadow: '0 40px 100px rgba(0,0,0,0.2)', position: 'relative', margin: 'auto' }}>
 
             <button onClick={() => setQrModal(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <X size={18} color="#64748B" />
@@ -575,9 +575,9 @@ export default function MasterAdminDashboard() {
 
       {/* EDIT USER MODAL */}
       {editModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', backdropFilter: 'blur(8px)' }}
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', display: 'grid', placeItems: 'center', overflowY: 'auto', zIndex: 1000, padding: '40px 24px', backdropFilter: 'blur(8px)' }}
           onClick={e => { if (e.target === e.currentTarget) setEditModal(null); }}>
-          <div style={{ background: '#FFF', borderRadius: '28px', padding: '40px', width: '100%', maxWidth: '500px', boxShadow: '0 40px 100px rgba(0,0,0,0.2)', position: 'relative' }}>
+          <div style={{ background: '#FFF', borderRadius: '28px', padding: '40px', width: '100%', maxWidth: '500px', boxShadow: '0 40px 100px rgba(0,0,0,0.2)', position: 'relative', margin: 'auto' }}>
 
             <button onClick={() => setEditModal(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <X size={18} color="#64748B" />
