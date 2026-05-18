@@ -613,8 +613,19 @@ export default function AdminPanel() {
               </button>
             </div>
           )}
-          <button onClick={() => setOnboardingStep('scan')} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '16px', marginTop: '24px' }}>
-            Prosseguir para Ativação <ChevronRight size={20} />
+          <button
+            onClick={() => {
+              if (propertyType === 'individual') {
+                setOnboardingStep('scan');
+              } else {
+                const generatedId = 'VILA-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+                handleSubmit(generatedId);
+              }
+            }}
+            className="btn-primary"
+            style={{ width: '100%', padding: '16px', fontSize: '16px', marginTop: '24px' }}
+          >
+            {propertyType === 'individual' ? 'Prosseguir para Ativação' : 'Confirmar e Ativar Vila'} <ChevronRight size={20} />
           </button>
         </div>
         <button onClick={() => setOnboardingStep('type')} style={{ display: 'block', margin: '16px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px' }}>← Voltar</button>
@@ -711,12 +722,12 @@ export default function AdminPanel() {
                 <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Gerencie placas e unidades</p>
               </div>
               {!properties.some(p => p.type === 'individual') && (
-                <HoverHelp text="Cadastre uma nova placa física de campainha virtual">
+                <HoverHelp text="Cadastre uma nova propriedade de campainha virtual">
                   <button className="btn-primary" onClick={() => {
                     if (properties.length >= 1) { setShowPaywall(true); }
-                    else { setOnboardingStep('scan'); }
+                    else { setOnboardingStep('type'); }
                   }} style={{ padding: '12px 24px' }}>
-                    <Plus size={20} /> Nova Placa
+                    <Plus size={20} /> Nova Propriedade
                   </button>
                 </HoverHelp>
               )}
