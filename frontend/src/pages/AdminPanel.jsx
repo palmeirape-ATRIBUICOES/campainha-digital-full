@@ -130,7 +130,10 @@ export default function AdminPanel() {
   };
 
   // ─── Suporte a Modo Noturno (Dark Mode) ───
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('cd_dark_mode') === 'true');
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('cd_dark_mode');
+    return saved === null ? true : saved === 'true';
+  });
 
   useEffect(() => {
     if (darkMode) {
@@ -163,7 +166,7 @@ export default function AdminPanel() {
       if (!res.ok) {
         console.error('Failed to fetch properties:', res.status);
         setProperties([]);
-        setOnboardingStep('type');
+        startDemoMode(); // Fallback para demonstração automática em caso de erro ou sem rede
         return;
       }
       
@@ -173,7 +176,7 @@ export default function AdminPanel() {
       if (!Array.isArray(data)) {
         console.error('Invalid properties response:', data);
         setProperties([]);
-        setOnboardingStep('type');
+        startDemoMode();
         return;
       }
       
@@ -182,16 +185,8 @@ export default function AdminPanel() {
       // Auto-seleciona propriedade salva no login ou a primeira disponível
       const savedPropertyId = localStorage.getItem('cd_admin_propertyId');
       if (data.length === 0) {
-        const savedType = localStorage.getItem('cd_property_type');
-        if (savedType) {
-          const mappedType = savedType === 'house' ? 'individual' : savedType;
-          setPropertyType(mappedType);
-          setPropertyName(mappedType === 'individual' ? 'Minha Casa' : '');
-          setUnitsList([{ name: '' }]);
-          setOnboardingStep(mappedType === 'individual' ? 'scan' : 'config');
-        } else {
-          setOnboardingStep('type');
-        }
+        // Se a conta de admin não possui propriedades reais, pré-carrega automaticamente a Vila de Demonstração!
+        startDemoMode();
       } else {
         const toSelect = savedPropertyId && data.find(p => p.id === savedPropertyId)
           ? savedPropertyId
