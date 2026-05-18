@@ -1163,6 +1163,139 @@ export default function AdminPanel() {
               </div>
             </div>
 
+            {/* PAINEL DE ALERTAS URGENTES (AÇÃO RÁPIDA) */}
+            {activeAlerts.length > 0 && (
+              <div style={{ marginBottom: '32px', animation: 'fadeIn 0.3s' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', color: '#EF4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1.5s infinite', boxShadow: '0 0 8px #EF4444' }} />
+                  ⚠️ Notificações & Chamados de Ação Rápida
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {activeAlerts.map(alert => {
+                    const unit = properties.flatMap(p => p.units).find(u => u.id === alert.unitId);
+                    let blockVal = unit ? unit.block : null;
+                    if (unit && !blockVal && unit.name) {
+                      const match = unit.name.match(/^(?:B|Bloco\s*)(\d+|[A-Z]+)/i);
+                      if (match) blockVal = match[1];
+                    }
+                    const blockKey = blockVal ? `Bloco ${blockVal}` : (unit?.street ? `Rua ${unit.street}` : '');
+                    
+                    return (
+                      <div
+                        key={alert.id}
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.06), rgba(245, 158, 11, 0.06))',
+                          border: '2px solid rgba(239, 68, 68, 0.2)',
+                          borderRadius: '16px',
+                          padding: '16px 20px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '16px',
+                          boxShadow: '0 8px 30px rgba(239, 68, 68, 0.05)',
+                          animation: 'pulse-border 2s infinite'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                          <div style={{
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '12px',
+                            background: alert.type === 'package' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '22px'
+                          }}>
+                            {alert.type === 'package' ? '📦' : '🔑'}
+                          </div>
+                          <div>
+                            <h4 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
+                              {blockKey ? `[${blockKey}] ` : ''}Unidade {unit ? unit.name : 'Morador'} - {alert.title}
+                            </h4>
+                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                              {alert.description || 'Aguardando liberação ou atendimento na portaria.'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {alert.type === 'release' && (
+                            <button
+                              onClick={() => {
+                                alert('[eWelink/Sonoff] Comando de liberação de portão disparado!');
+                                resolveAlert(alert.id);
+                              }}
+                              style={{
+                                background: '#10B981',
+                                color: '#FFF',
+                                border: 'none',
+                                padding: '10px 16px',
+                                borderRadius: '10px',
+                                fontSize: '12px',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                              }}
+                            >
+                              🔑 Autorizar & Abrir Portão
+                            </button>
+                          )}
+                          
+                          <button
+                            onClick={() => {
+                              if (unit) {
+                                setSimulatedUnit(unit);
+                                setSimCallTarget('resident');
+                                setSimCallState('ringing');
+                                alert(`[Interfone] Iniciando chamada de voz para o ${unit.name}...`);
+                              } else {
+                                alert('Erro ao identificar unidade para ligação.');
+                              }
+                            }}
+                            style={{
+                              background: '#3B82F6',
+                              color: '#FFF',
+                              border: 'none',
+                              padding: '10px 16px',
+                              borderRadius: '10px',
+                              fontSize: '12px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            📞 Ligar para Morador
+                          </button>
+                          
+                          <button
+                            onClick={() => resolveAlert(alert.id)}
+                            style={{
+                              background: 'var(--bg-deep)',
+                              border: '1px solid var(--border-subtle)',
+                              color: 'var(--text-main)',
+                              padding: '10px 16px',
+                              borderRadius: '10px',
+                              fontSize: '12px',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✅ Dar OK / Resolvido
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Agrupamento e Renderização de Unidades por Subdivisão (Bloco/Rua) */}
             {(() => {
               const currentProperty = properties.find(p => p.id === selectedProperty);
@@ -1326,99 +1459,108 @@ export default function AdminPanel() {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
-                      {filteredUnits.map(u => {
-                        const unitAlerts = activeAlerts.filter(a => a.unitId === u.id);
-                        const hasAlert = unitAlerts.length > 0;
-                        const mainAlert = unitAlerts[0];
-                        
-                        let cardClass = '';
-                        let alertBadge = null;
+                      {(() => {
+                        const sortedUnits = [...filteredUnits].sort((a, b) => {
+                          const aHasAlert = activeAlerts.some(al => al.unitId === a.id);
+                          const bHasAlert = activeAlerts.some(al => al.unitId === b.id);
+                          if (aHasAlert && !bHasAlert) return -1;
+                          if (!aHasAlert && bHasAlert) return 1;
+                          return 0;
+                        });
+                        return sortedUnits.map(u => {
+                          const unitAlerts = activeAlerts.filter(a => a.unitId === u.id);
+                          const hasAlert = unitAlerts.length > 0;
+                          const mainAlert = unitAlerts[0];
+                          
+                          let cardClass = '';
+                          let alertBadge = null;
 
-                        if (hasAlert) {
-                          if (mainAlert.type === 'package') {
-                            cardClass = 'pulse-alert-yellow';
-                            alertBadge = '📦 ENCOMENDA';
-                          } else if (mainAlert.type === 'release') {
-                            cardClass = 'pulse-alert-green';
-                            alertBadge = '🔑 LIBERAÇÃO';
-                          } else {
-                            cardClass = 'pulse-alert-green';
-                            alertBadge = '⚠️ ALERTA!';
+                          if (hasAlert) {
+                            if (mainAlert.type === 'package') {
+                              cardClass = 'pulse-alert-yellow';
+                              alertBadge = '📦 ENCOMENDA';
+                            } else if (mainAlert.type === 'release') {
+                              cardClass = 'pulse-alert-green';
+                              alertBadge = '🔑 LIBERAÇÃO';
+                            } else {
+                              cardClass = 'pulse-alert-green';
+                              alertBadge = '⚠️ ALERTA!';
+                            }
                           }
-                        }
 
-                        const unitResidents = u.residents || [];
-                        let onlineResidentsCount = unitResidents.filter(r => onlineStatus[r.id] === 'online').length;
-                        let isOnline = onlineResidentsCount > 0;
+                          const unitResidents = u.residents || [];
+                          let onlineResidentsCount = unitResidents.filter(r => onlineStatus[r.id] === 'online').length;
+                          let isOnline = onlineResidentsCount > 0;
 
-                        if (isDemoMode) {
-                          isOnline = true;
-                          onlineResidentsCount = 1;
-                        }
+                          if (isDemoMode) {
+                            isOnline = true;
+                            onlineResidentsCount = 1;
+                          }
 
-                        return (
-                          <HoverHelp key={u.id} text={hasAlert ? `${mainAlert.title}: ${mainAlert.description || ''} (Clique para simular ou resolver)` : `Status: ${isOnline ? 'Online' : 'Offline'} (${onlineResidentsCount} moradores online)`}>
-                            <div
-                              onClick={() => {
-                                if (isDemoMode && hasAlert) {
-                                  setSelectedMessage(mainAlert);
-                                } else if (isDemoMode) {
-                                  setSimulatedUnit(u);
-                                } else if (hasAlert) {
-                                  setSelectedMessage(mainAlert);
-                                }
-                              }}
-                              style={{
-                                background: 'var(--bg-surface)',
-                                border: '1px solid var(--border-subtle)',
-                                borderRadius: '12px',
-                                padding: '16px 12px',
-                                textAlign: 'center',
-                                cursor: (hasAlert || isDemoMode) ? 'pointer' : 'default',
-                                position: 'relative',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                minHeight: '100px',
-                                transition: 'all 0.2s',
-                                boxShadow: hasAlert ? 'none' : '0 2px 6px rgba(0,0,0,0.01)'
-                              }}
-                              className={cardClass}
-                            >
-                              <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>{u.name}</span>
-                              {u.number && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Nº {u.number}</span>}
-                              
-                              {isOnline ? (
-                                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
-                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981', display: 'inline-block' }} />
-                                  {onlineResidentsCount} online
-                                </span>
-                              ) : (
-                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
-                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#94A3B8', display: 'inline-block' }} />
-                                  offline
-                                </span>
-                              )}
-                              
-                              {alertBadge && (
-                                <span style={{
-                                  marginTop: '8px',
-                                  fontSize: '9px',
-                                  fontWeight: 800,
-                                  background: mainAlert.type === 'package' ? '#F59E0B' : '#10B981',
-                                  color: '#FFF',
-                                  padding: '2px 6px',
-                                  borderRadius: '100px',
-                                  letterSpacing: '0.5px'
-                                }}>
-                                  {alertBadge}
-                                </span>
-                              )}
-                            </div>
-                          </HoverHelp>
-                        );
-                      })}
+                          return (
+                            <HoverHelp key={u.id} text={hasAlert ? `${mainAlert.title}: ${mainAlert.description || ''} (Clique para simular ou resolver)` : `Status: ${isOnline ? 'Online' : 'Offline'} (${onlineResidentsCount} moradores online)`}>
+                              <div
+                                onClick={() => {
+                                  if (isDemoMode && hasAlert) {
+                                    setSelectedMessage(mainAlert);
+                                  } else if (isDemoMode) {
+                                    setSimulatedUnit(u);
+                                  } else if (hasAlert) {
+                                    setSelectedMessage(mainAlert);
+                                  }
+                                }}
+                                style={{
+                                  background: 'var(--bg-surface)',
+                                  border: '1px solid var(--border-subtle)',
+                                  borderRadius: '12px',
+                                  padding: '16px 12px',
+                                  textAlign: 'center',
+                                  cursor: (hasAlert || isDemoMode) ? 'pointer' : 'default',
+                                  position: 'relative',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  minHeight: '100px',
+                                  transition: 'all 0.2s',
+                                  boxShadow: hasAlert ? 'none' : '0 2px 6px rgba(0,0,0,0.01)'
+                                }}
+                                className={cardClass}
+                              >
+                                <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>{u.name}</span>
+                                {u.number && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Nº {u.number}</span>}
+                                
+                                {isOnline ? (
+                                  <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981', display: 'inline-block' }} />
+                                    {onlineResidentsCount} online
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#94A3B8', display: 'inline-block' }} />
+                                    offline
+                                  </span>
+                                )}
+                                
+                                {alertBadge && (
+                                  <span style={{
+                                    marginTop: '8px',
+                                    fontSize: '9px',
+                                    fontWeight: 800,
+                                    background: mainAlert.type === 'package' ? '#F59E0B' : '#10B981',
+                                    color: '#FFF',
+                                    padding: '2px 6px',
+                                    borderRadius: '100px',
+                                    letterSpacing: '0.5px'
+                                  }}>
+                                    {alertBadge}
+                                  </span>
+                                )}
+                              </div>
+                            </HoverHelp>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 );
