@@ -90,43 +90,141 @@ export default function AdminPanel() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [simulatedUnit, setSimulatedUnit] = useState(null);
+  const [broadcastCount, setBroadcastCount] = useState(0);
+  const [simSubject, setSimSubject] = useState('');
+  const [simBody, setSimBody] = useState('');
+  const [simVisitorName, setSimVisitorName] = useState('');
+  const [simType, setSimType] = useState('release');
+  const [simGeneratedCode, setSimGeneratedCode] = useState('');
+  const [simCallState, setSimCallState] = useState('idle');
+  const [simCallTarget, setSimCallTarget] = useState('portaria');
+  const [simSelectedNeighbor, setSimSelectedNeighbor] = useState('');
   const videoRef = useRef(null);
   const navigate = useNavigate();
 
   const startDemoMode = () => {
     setIsDemoMode(true);
+
+    const demoUnits = [];
+    // Gera 20 unidades por Bloco (Blocos 1 e 2)
+    const floors = [1, 2, 3, 4];
+    const aptos = [1, 2, 3, 4, 5];
+
+    // Bloco 1
+    floors.forEach(f => {
+      aptos.forEach(a => {
+        const aptoNumber = `${f}0${a}`;
+        demoUnits.push({
+          id: `demo-u-b1-${aptoNumber}`,
+          name: `Apto ${aptoNumber}`,
+          block: '1',
+          number: aptoNumber,
+          accessCode: `${aptoNumber}-101`,
+          residents: [{ id: `demo-r-b1-${aptoNumber}`, name: `Morador ${aptoNumber}` }]
+        });
+      });
+    });
+
+    // Bloco 2
+    floors.forEach(f => {
+      aptos.forEach(a => {
+        const aptoNumber = `${f}0${a}`;
+        demoUnits.push({
+          id: `demo-u-b2-${aptoNumber}`,
+          name: `Apto ${aptoNumber}`,
+          block: '2',
+          number: aptoNumber,
+          accessCode: `${aptoNumber}-202`,
+          residents: [{ id: `demo-r-b2-${aptoNumber}`, name: `Morador ${aptoNumber}` }]
+        });
+      });
+    });
+
     setProperties([
       {
         id: 'demo-vila-id',
-        name: 'Vila Solar das Palmeiras (Demonstração)',
+        name: 'Condomínio Residencial das Palmeiras (Demonstração)',
         type: 'collective',
-        subdomain: 'solar-demonstracao',
-        clientAddress: 'Rua das Flores, 123',
+        subdomain: 'palmeiras-demo',
+        clientAddress: 'Av. Principal, 500 - Bloco 1 e 2',
         plan: 'ANNUAL_PREMIUM',
         nextPaymentAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-        units: [
-          { id: 'demo-u1', name: 'Casa 101', block: 'A', street: 'Rua Principal', number: '101' },
-          { id: 'demo-u2', name: 'Casa 102', block: 'A', street: 'Rua Principal', number: '102' },
-          { id: 'demo-u3', name: 'Casa 103', block: 'B', street: 'Rua Principal', number: '103' },
-          { id: 'demo-u4', name: 'Casa 104', block: 'B', street: 'Rua Principal', number: '104' }
-        ]
+        units: demoUnits
       }
     ]);
+
     setSelectedProperty('demo-vila-id');
-    setOnlineStatus({
-      'demo-resident-1': 'online',
-      'demo-resident-2': 'offline'
+
+    // Mapeia TODOS como online
+    const demoOnlineStatus = {};
+    demoUnits.forEach(u => {
+      u.residents.forEach(r => {
+        demoOnlineStatus[r.id] = 'online';
+      });
     });
-    // Simula mensagens de caixa postal demo
+    setOnlineStatus(demoOnlineStatus);
+
+    // Mensagens de caixa postal de teste
     setMailboxMessages([
-      { id: 'demo-msg1', senderName: 'Zezinho (Casa 101)', message: 'Olá síndico, solicito autorização para a entrada do pintor amanhã às 8h.', createdAt: new Date() }
+      {
+        id: 'demo-msg1',
+        senderName: 'Morador Apto 102 Bloco 1',
+        subject: '📦 Aviso de Encomenda Pendente',
+        body: 'Prezado síndico, solicito autorização para a entrada do pintor amanhã às 8h no Apto 102 Bloco 1.',
+        createdAt: new Date(Date.now() - 3600000),
+        status: 'pending',
+        unit: { name: 'Apto 102 Bloco 1' }
+      },
+      {
+        id: 'demo-msg2',
+        senderName: 'Morador Apto 304 Bloco 2',
+        subject: '🔧 Solicitação de Reparo na Garagem',
+        body: 'Há um pequeno vazamento de água próximo à vaga 15 do Bloco 2. Favor verificar.',
+        createdAt: new Date(Date.now() - 3600000 * 5),
+        status: 'resolved',
+        unit: { name: 'Apto 304 Bloco 2' }
+      }
     ]);
-    // Simula alertas ativos demo
+
+    // Alertas ativos iniciais (Liberações Autorizadas verdes e entregadores laranja)
     setActiveAlerts([
-      { id: 'demo-alert1', type: 'release', title: '🔑 Solicitação de Liberação', message: 'Morador da Casa 101 solicita liberação de visitante.', timestamp: new Date() }
+      {
+        id: 'demo-alert1',
+        unitId: 'demo-u-b1-101',
+        type: 'release',
+        title: '🔑 Liberação de Visitante Autorizada',
+        description: 'Morador liberou a entrada do visitante: Roberto de Souza (RG: 12.345.678-9).',
+        timestamp: new Date()
+      },
+      {
+        id: 'demo-alert2',
+        unitId: 'demo-u-b2-302',
+        type: 'release',
+        title: '🔑 Liberação de Visitante Autorizada',
+        description: 'Morador liberou a entrada da visitante: Ana Beatriz (CPF: 123.456.789-00).',
+        timestamp: new Date()
+      },
+      {
+        id: 'demo-alert3',
+        unitId: 'demo-u-b1-204',
+        type: 'package',
+        title: '📦 Liberação de Entregador Autorizada',
+        description: 'Morador autorizou a subida do entregador do Mercado Livre para entrega de pacote.',
+        timestamp: new Date()
+      },
+      {
+        id: 'demo-alert4',
+        unitId: 'demo-u-b2-405',
+        type: 'package',
+        title: '📦 Liberação de Entregador Autorizada',
+        description: 'Morador autorizou a subida do entregador do IFood para entrega direta na porta.',
+        timestamp: new Date()
+      }
     ]);
+
     setOnboardingStep(null);
-    setActiveTab('control_panel'); // Abre o painel de controle interativo para impressionar!
+    setActiveTab('control_panel');
   };
 
   // ─── Suporte a Modo Noturno (Dark Mode) ───
@@ -301,6 +399,14 @@ export default function AdminPanel() {
       fetchOnlineStatus(selectedProperty);
     }
   }, [activeTab, selectedProperty]);
+
+  useEffect(() => {
+    const handleDemoBroadcast = (e) => {
+      setBroadcastCount(prev => prev + 1);
+    };
+    window.addEventListener('demo-broadcast-sent', handleDemoBroadcast);
+    return () => window.removeEventListener('demo-broadcast-sent', handleDemoBroadcast);
+  }, []);
 
   // Polling automático para alertas de segurança e solicitações de portão na Grade Visual
   useEffect(() => {
@@ -931,15 +1037,17 @@ export default function AdminPanel() {
                         let isOnline = onlineResidentsCount > 0;
 
                         if (isDemoMode) {
-                          if (u.id === 'demo-u1') { isOnline = true; onlineResidentsCount = 1; }
-                          if (u.id === 'demo-u3') { isOnline = true; onlineResidentsCount = 2; }
+                          isOnline = true;
+                          onlineResidentsCount = 1;
                         }
 
                         return (
-                          <HoverHelp key={u.id} text={hasAlert ? `${mainAlert.title}: ${mainAlert.description || ''} (Clique para resolver)` : `Status: ${isOnline ? 'Online' : 'Offline'} (${onlineResidentsCount} moradores online)`}>
+                          <HoverHelp key={u.id} text={hasAlert ? `${mainAlert.title}: ${mainAlert.description || ''} (Clique para simular ou resolver)` : `Status: ${isOnline ? 'Online' : 'Offline'} (${onlineResidentsCount} moradores online)`}>
                             <div
                               onClick={() => {
-                                if (hasAlert) {
+                                if (isDemoMode) {
+                                  setSimulatedUnit(u);
+                                } else if (hasAlert) {
                                   setSelectedMessage(mainAlert);
                                 }
                               }}
@@ -949,7 +1057,7 @@ export default function AdminPanel() {
                                 borderRadius: '12px',
                                 padding: '16px 12px',
                                 textAlign: 'center',
-                                cursor: hasAlert ? 'pointer' : 'default',
+                                cursor: (hasAlert || isDemoMode) ? 'pointer' : 'default',
                                 position: 'relative',
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -1158,6 +1266,302 @@ export default function AdminPanel() {
           </>
         )}
       </main>
+
+      {/* SMARTPHONE APP SIMULATOR OVERLAY */}
+      {simulatedUnit && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
+          <div style={{ background: '#090D16', width: '375px', height: '760px', borderRadius: '44px', border: '12px solid #1E293B', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6), inset 0 0 12px rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden', color: '#E2E8F0' }}>
+            
+            {/* iPhone Dynamic Island */}
+            <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '110px', height: '26px', background: '#000', borderRadius: '0 0 16px 16px', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#111', marginRight: '6px' }} />
+              <div style={{ width: '40px', height: '4px', borderRadius: '100px', background: '#111' }} />
+            </div>
+
+            {/* Status Bar */}
+            <div style={{ height: '44px', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', fontWeight: 600, color: '#FFF', zIndex: 90, position: 'relative' }}>
+              <span>9:41</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '10px' }}>5G</span>
+                <span style={{ width: '16px', height: '8px', border: '1px solid #FFF', borderRadius: '2px', display: 'inline-block', position: 'relative' }}>
+                  <span style={{ position: 'absolute', top: 0, left: 0, bottom: 0, right: '2px', background: '#FFF' }} />
+                </span>
+              </div>
+            </div>
+
+            {/* Smartphone Screen Content */}
+            <div style={{ flex: 1, padding: '16px 20px 24px', display: 'flex', flexDirection: 'column', overflowY: 'auto', background: 'radial-gradient(circle at top, #1E1B4B 0%, #090D16 100%)', position: 'relative' }}>
+              
+              {/* App Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg,#3B82F6,#2563EB)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Logo size={18} />
+                  </div>
+                  <div>
+                    <h5 style={{ fontSize: '13px', fontWeight: 800, margin: 0, letterSpacing: '-0.3px', color: '#FFF' }}>Campainha Digital</h5>
+                    <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block', boxShadow: '0 0 6px #10B981' }} /> Morador Online
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => { setSimulatedUnit(null); setSimCallState('idle'); }} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: '#FFF', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Welcome Morador Badge */}
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '12px 14px', marginBottom: '20px', textAlign: 'center' }}>
+                <span style={{ fontSize: '11px', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>Dispositivo Ativo</span>
+                <h4 style={{ fontSize: '17px', fontWeight: 800, color: '#FFF', margin: '4px 0 0' }}>{simulatedUnit.name} (Bloco {simulatedUnit.block})</h4>
+                <p style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 700, margin: '6px 0 0' }}>🔑 Código: {simulatedUnit.accessCode}</p>
+              </div>
+
+              {/* Annoucement Notification Indicator */}
+              {broadcastCount > 0 && (
+                <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#FCA5A5', borderRadius: '12px', padding: '10px 12px', marginBottom: '16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', animation: 'pulse 2s infinite' }}>
+                  <span>📢</span>
+                  <span><strong>{broadcastCount} Novo Comunicado Coletivo</strong> recebido!</span>
+                </div>
+              )}
+
+              {/* CALL SIMULATOR (INTERCOM) */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '20px', padding: '16px', marginBottom: '20px' }}>
+                <h5 style={{ fontSize: '12px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', margin: '0 0 12px' }}>📞 Interfone Integrado</h5>
+                
+                {simCallState === 'idle' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <button onClick={() => {
+                      setSimCallState('calling');
+                      setSimCallTarget('portaria');
+                      try {
+                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/1657/1657-84.wav');
+                        audio.volume = 0.3;
+                        audio.play().catch(() => {});
+                      } catch {}
+                      setTimeout(() => {
+                        setSimCallState('talking');
+                      }, 2550);
+                    }} style={{ width: '100%', background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}>
+                      Ligar para a Portaria
+                    </button>
+
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                      <select value={simSelectedNeighbor} onChange={e => setSimSelectedNeighbor(e.target.value)} className="input-glass" style={{ padding: '8px 10px', fontSize: '12px', flex: 1, background: 'rgba(0,0,0,0.3)', color: '#FFF' }}>
+                        <option value="">-- Selecionar Vizinho --</option>
+                        {properties[0]?.units.filter(un => un.id !== simulatedUnit.id).map(un => (
+                          <option key={un.id} value={un.name + ' Bloco ' + un.block}>{un.name} Bloco {un.block}</option>
+                        ))}
+                      </select>
+                      <button onClick={() => {
+                        if (!simSelectedNeighbor) return alert('Selecione um vizinho.');
+                        setSimCallState('calling');
+                        setSimCallTarget(simSelectedNeighbor);
+                        try {
+                          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/1657/1657-84.wav');
+                          audio.volume = 0.3;
+                          audio.play().catch(() => {});
+                        } catch {}
+                        setTimeout(() => {
+                          setSimCallState('talking');
+                        }, 2550);
+                      }} style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '0 12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}>
+                        Interfonar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                    <span style={{ fontSize: '24px', animation: 'bounce 1s infinite', display: 'inline-block' }}>📞</span>
+                    <h5 style={{ fontSize: '14px', color: '#FFF', margin: '8px 0 4px', fontWeight: 700 }}>
+                      {simCallState === 'calling' ? `Chamando ${simCallTarget === 'portaria' ? 'Portaria' : simCallTarget}...` : `Conversa Ativa com ${simCallTarget === 'portaria' ? 'Portaria' : simCallTarget}`}
+                    </h5>
+                    
+                    {simCallState === 'talking' && (
+                      <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '10px', margin: '12px 0', fontSize: '12px', color: 'var(--primary)', fontStyle: 'italic', borderLeft: '3px solid var(--primary)', textAlign: 'left' }}>
+                        {simCallTarget === 'portaria' 
+                          ? '"[Porteiro]: Portaria Palmeiras, boa noite! Em que posso ajudar?"'
+                          : `"[Morador do ${simCallTarget}]: Olá! Vizinho? Quem está interfonando?"`
+                        }
+                      </div>
+                    )}
+
+                    <button onClick={() => setSimCallState('idle')} style={{ background: '#EF4444', color: '#FFF', border: 'none', padding: '8px 20px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', marginTop: '8px' }}>
+                      ❌ Desligar Chamada
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* ENVIAR MENSAGEM AO SINDICO (CAIXA POSTAL) */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '20px', padding: '16px', marginBottom: '20px' }}>
+                <h5 style={{ fontSize: '12px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', margin: '0 0 12px' }}>💬 Mensagens ao Síndico</h5>
+                <input type="text" value={simSubject} onChange={e => setSimSubject(e.target.value)} placeholder="Assunto (Ex: Vazamento de água)" className="input-glass" style={{ background: 'rgba(0,0,0,0.3)', color: '#FFF', padding: '8px 12px', fontSize: '12px', marginBottom: '8px', border: '1px solid rgba(255,255,255,0.08)' }} />
+                <textarea value={simBody} onChange={e => setSimBody(e.target.value)} placeholder="Digite sua solicitação ou reclamação..." className="input-glass" style={{ background: 'rgba(0,0,0,0.3)', color: '#FFF', padding: '8px 12px', fontSize: '12px', minHeight: '60px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.08)' }} />
+                <button onClick={() => {
+                  if (!simBody.trim()) return alert('Digite a mensagem.');
+                  const newMailboxMsg = {
+                    id: 'sim-msg-' + Date.now(),
+                    senderName: `Morador Apto ${simulatedUnit.number} Bloco ${simulatedUnit.block}`,
+                    subject: simSubject || 'Solicitação de Morador',
+                    body: simBody,
+                    createdAt: new Date(),
+                    status: 'pending',
+                    unit: { name: `Apto ${simulatedUnit.number} Bloco ${simulatedUnit.block}` }
+                  };
+                  setMailboxMessages(prev => [newMailboxMsg, ...prev]);
+                  try {
+                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav');
+                    audio.volume = 0.3;
+                    audio.play().catch(() => {});
+                  } catch {}
+                  setSimSubject('');
+                  setSimBody('');
+                  alert('✅ Sua mensagem foi enviada para a Caixa Postal do Síndico!');
+                }} style={{ width: '100%', background: '#F59E0B', color: '#FFF', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}>
+                  Enviar para Caixa Postal
+                </button>
+              </div>
+
+              {/* AUTORIZAR VISITANTE (GERAR CODIGO) */}
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '20px', padding: '16px' }}>
+                <h5 style={{ fontSize: '12px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', margin: '0 0 12px' }}>🔑 Autorizar Visitante / Entregador</h5>
+                <input type="text" value={simVisitorName} onChange={e => setSimVisitorName(e.target.value)} placeholder="Nome do Visitante (Ex: IFood / Pintor)" className="input-glass" style={{ background: 'rgba(0,0,0,0.3)', color: '#FFF', padding: '8px 12px', fontSize: '12px', marginBottom: '8px', border: '1px solid rgba(255,255,255,0.08)' }} />
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                  <button onClick={() => setSimType('release')} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: 'none', background: simType === 'release' ? '#10B981' : 'rgba(255,255,255,0.05)', color: '#FFF', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+                    🔑 Visitante
+                  </button>
+                  <button onClick={() => setSimType('package')} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: 'none', background: simType === 'package' ? '#F59E0B' : 'rgba(255,255,255,0.05)', color: '#FFF', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+                    📦 Entregador
+                  </button>
+                </div>
+                
+                <button onClick={() => {
+                  const code = Math.floor(100000 + Math.random() * 900000).toString();
+                  setSimGeneratedCode(code);
+                  try {
+                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav');
+                    audio.volume = 0.3;
+                    audio.play().catch(() => {});
+                  } catch {}
+                }} style={{ width: '100%', background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '10px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}>
+                  Gerar Código Temporário
+                </button>
+
+                {simGeneratedCode && (
+                  <div style={{ marginTop: '16px', background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '12px', border: '1px dashed rgba(255,255,255,0.1)', textAlign: 'center' }}>
+                    <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 700, display: 'block', marginBottom: '4px' }}>CÓDIGO DE VISITA GERADO</span>
+                    <strong style={{ fontSize: '20px', color: '#FFF', letterSpacing: '3px', fontFamily: 'monospace' }}>
+                      {simGeneratedCode.substring(0,3)}-{simGeneratedCode.substring(3,6)}
+                    </strong>
+                    
+                    <button onClick={() => {
+                      const newAlert = {
+                        id: 'sim-alert-' + Date.now(),
+                        unitId: simulatedUnit.id,
+                        type: simType,
+                        title: simType === 'package' ? '📦 Liberação de Entregador Autorizada' : '🔑 Liberação de Visitante Autorizada',
+                        description: `Morador gerou o código ${simGeneratedCode} para o visitante: ${simVisitorName || 'Visitante Avulso'}.`,
+                        timestamp: new Date()
+                      };
+                      setActiveAlerts(prev => [newAlert, ...prev]);
+                      try {
+                        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2017/2017-84.wav');
+                        audio.volume = 0.5;
+                        audio.play().catch(() => {});
+                      } catch {}
+                      setSimGeneratedCode('');
+                      setSimVisitorName('');
+                      setSimulatedUnit(null);
+                      alert('🚨 BING-BONG! O Visitante chegou na portaria e o alerta de liberação está piscando no painel!');
+                    }} style={{ width: '100%', marginTop: '12px', background: '#10B981', color: '#FFF', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      ⚡ Simular Chegada na Portaria
+                    </button>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Smartphone Home Bar */}
+            <div style={{ height: '34px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#090D16', zIndex: 100 }}>
+              <div style={{ width: '134px', height: '5px', borderRadius: '100px', background: '#FFF', opacity: 0.8 }} />
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Alerta Ativo */}
+      {selectedMessage && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: '#FFF', borderRadius: '24px', maxWidth: '440px', width: '100%', padding: '32px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', border: '1px solid var(--border-subtle)', position: 'relative' }}>
+            <button onClick={() => setSelectedMessage(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: selectedMessage.type === 'package' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {selectedMessage.type === 'package' ? <Zap size={24} color="#F59E0B" /> : <ShieldCheck size={24} color="#10B981" />}
+              </div>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>{selectedMessage.title}</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Unidade {selectedMessage.unit?.name || 'Morador'}</p>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '24px' }}>
+              {selectedMessage.description || 'Nenhuma descrição adicional.'}
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {selectedMessage.type === 'release' && (
+                <button
+                  onClick={() => {
+                    alert('[eWelink/Sonoff] Comando de liberação de portão disparado!');
+                    resolveAlert(selectedMessage.id);
+                    setSelectedMessage(null);
+                  }}
+                  style={{ width: '100%', background: '#10B981', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  🔑 AUTORIZAR E ABRIR PORTÃO
+                </button>
+              )}
+              
+              <button
+                onClick={() => {
+                  resolveAlert(selectedMessage.id);
+                  setSelectedMessage(null);
+                }}
+                style={{ width: '100%', background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                ✅ MARCAR COMO RESOLVIDO
+              </button>
+              
+              {isDemoMode && (
+                <button
+                  onClick={() => {
+                    const unitObj = properties[0]?.units.find(un => un.id === selectedMessage.unitId);
+                    if (unitObj) {
+                      setSimulatedUnit(unitObj);
+                      setSelectedMessage(null);
+                    }
+                  }}
+                  style={{ width: '100%', background: 'rgba(59,130,246,0.1)', color: 'var(--primary)', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  📱 SIMULAR APP DO MORADOR
+                </button>
+              )}
+
+              <button
+                onClick={() => setSelectedMessage(null)}
+                style={{ width: '100%', background: '#F1F5F9', color: 'var(--text-muted)', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

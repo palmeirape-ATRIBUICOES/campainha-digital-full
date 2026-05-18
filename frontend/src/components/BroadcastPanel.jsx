@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, MessageSquare, AlertTriangle, Clock, CheckCheck, Users } from 'lucide-react';
 
 import { API } from '../config';
@@ -18,6 +18,10 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
   const [loading, setLoading] = useState(true);
 
   const loadMessages = async () => {
+    if (propertyId === 'demo-vila-id') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const r = await fetch(`${API}/api/properties/${propertyId}/messages`);
@@ -26,11 +30,54 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
     setLoading(false);
   };
 
-  useEffect(() => { if (propertyId) loadMessages(); }, [propertyId]);
+  useEffect(() => {
+    if (propertyId === 'demo-vila-id') {
+      setMessages([
+        {
+          id: 'demo-bcast-initial',
+          title: '🚨 Manutenção dos Portões',
+          body: 'Prezados moradores, os portões de acesso do Bloco 1 passarão por manutenção preventiva nesta quarta-feira das 9h às 11h.',
+          priority: 'urgent',
+          createdAt: new Date(Date.now() - 3600000 * 2),
+          readBy: ['demo-r-b1-101', 'demo-r-b2-302', 'demo-r-b1-204']
+        }
+      ]);
+      setLoading(false);
+    } else if (propertyId) {
+      loadMessages();
+    }
+  }, [propertyId]);
 
   const sendMessage = async () => {
     if (!body.trim()) return;
     setSending(true);
+
+    if (propertyId === 'demo-vila-id') {
+      try {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav');
+        audio.volume = 0.4;
+        audio.play().catch(() => {});
+      } catch {}
+
+      const newMsg = {
+        id: 'demo-bcast-' + Date.now(),
+        title: title || 'Aviso do Condomínio',
+        body,
+        priority,
+        createdAt: new Date(),
+        readBy: ['demo-r-b1-101', 'demo-r-b2-302', 'demo-r-b1-204', 'demo-r-b2-405']
+      };
+      setMessages(prev => [newMsg, ...prev]);
+
+      const event = new CustomEvent('demo-broadcast-sent', { detail: newMsg });
+      window.dispatchEvent(event);
+
+      setTitle(''); setBody(''); setPriority('normal');
+      setSent(true); setTimeout(() => setSent(false), 3000);
+      setSending(false);
+      return;
+    }
+
     try {
       const r = await fetch(`${API}/api/properties/${propertyId}/broadcast`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
