@@ -198,6 +198,7 @@ export default function AdminPanel() {
   };
 
   const fetchVisitors = async (propertyId) => {
+    if (isDemoMode) return;
     setLoadingVisitors(true);
     const adminEmail = localStorage.getItem('cd_admin_email');
     try {
@@ -212,6 +213,7 @@ export default function AdminPanel() {
   };
 
   const fetchMailbox = async (propertyId) => {
+    if (isDemoMode) return;
     setLoadingMailbox(true);
     try {
       const res = await fetch(`${API}/api/properties/${propertyId}/mailbox`);
@@ -227,6 +229,7 @@ export default function AdminPanel() {
   };
 
   const fetchAlerts = async (propertyId) => {
+    if (isDemoMode) return;
     try {
       const res = await fetch(`${API}/api/properties/${propertyId}/alerts`);
       if (res.ok) {
@@ -239,6 +242,7 @@ export default function AdminPanel() {
   };
 
   const fetchOnlineStatus = async (propertyId) => {
+    if (isDemoMode) return;
     try {
       const res = await fetch(`${API}/api/properties/${propertyId}/online-status`);
       if (res.ok) {
@@ -251,6 +255,10 @@ export default function AdminPanel() {
   };
 
   const resolveAlert = async (alertId) => {
+    if (isDemoMode) {
+      setActiveAlerts(prev => prev.filter(a => a.id !== alertId));
+      return;
+    }
     if (!selectedProperty) return;
     try {
       const res = await fetch(`${API}/api/properties/${selectedProperty}/alerts/${alertId}`, {
@@ -265,6 +273,10 @@ export default function AdminPanel() {
   };
 
   const resolveMailboxMessage = async (msgId, currentStatus) => {
+    if (isDemoMode) {
+      setMailboxMessages(prev => prev.map(m => m.id === msgId ? { ...m, status: currentStatus === 'pending' ? 'resolved' : 'pending' } : m));
+      return;
+    }
     if (!selectedProperty) return;
     const newStatus = currentStatus === 'pending' ? 'resolved' : 'pending';
     try {
