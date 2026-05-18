@@ -101,6 +101,98 @@ export default function AdminPanel() {
   const [simCallTarget, setSimCallTarget] = useState('portaria');
   const [simSelectedNeighbor, setSimSelectedNeighbor] = useState('');
   const [doormanCallState, setDoormanCallState] = useState('idle');
+  const [iaDescription, setIaDescription] = useState('');
+  const [iaMessage, setIaMessage] = useState('');
+
+  const handleIAGenerate = () => {
+    if (!iaDescription.trim()) {
+      setIaMessage('⚠️ Por favor, digite uma descrição para a IA estruturar.');
+      return;
+    }
+
+    const t = iaDescription.toLowerCase();
+    
+    // 1. Blocks & Floors & Apts
+    const blockMatch = t.match(/(\d+)\s*bloco/);
+    const floorMatch = t.match(/(\d+)\s*(andar|pavimento|piso)/);
+    const aptMatch = t.match(/(\d+)\s*(apartamento|apto|unidade)/);
+
+    if (blockMatch && floorMatch && aptMatch) {
+      const blocksCount = parseInt(blockMatch[1], 10);
+      const floorsCount = parseInt(floorMatch[1], 10);
+      const aptsPerFloor = parseInt(aptMatch[1], 10);
+      
+      if (blocksCount > 0 && floorsCount > 0 && aptsPerFloor > 0) {
+        const generated = [];
+        for (let b = 1; b <= blocksCount; b++) {
+          for (let f = 1; f <= floorsCount; f++) {
+            for (let a = 1; a <= aptsPerFloor; a++) {
+              const aptNum = `${f}${String(a).padStart(2, '0')}`;
+              generated.push({ name: `B${b}-${aptNum}` });
+            }
+          }
+        }
+        setUnitsList(generated);
+        setPropertyType('condo');
+        setIaMessage(`✨ IA: Gerado com sucesso ${blocksCount} bloco(s) com ${floorsCount} andares e ${aptsPerFloor} apartamentos por andar (Total: ${generated.length} apartamentos).`);
+        return;
+      }
+    }
+
+    // 2. Just Floors & Apts
+    if (floorMatch && aptMatch) {
+      const floorsCount = parseInt(floorMatch[1], 10);
+      const aptsPerFloor = parseInt(aptMatch[1], 10);
+      if (floorsCount > 0 && aptsPerFloor > 0) {
+        const generated = [];
+        for (let f = 1; f <= floorsCount; f++) {
+          for (let a = 1; a <= aptsPerFloor; a++) {
+            const aptNum = `${f}${String(a).padStart(2, '0')}`;
+            generated.push({ name: `Apto ${f}0${a}` });
+          }
+        }
+        setUnitsList(generated);
+        setPropertyType('condo');
+        setIaMessage(`✨ IA: Gerado com sucesso ${floorsCount} andares e ${aptsPerFloor} apartamentos por andar (Total: ${generated.length} apartamentos).`);
+        return;
+      }
+    }
+
+    // 3. Houses count
+    const houseMatch = t.match(/(\d+)\s*(casa|residencia|lote|unidade)/);
+    if (houseMatch) {
+      const count = parseInt(houseMatch[1], 10);
+      if (count > 0) {
+        const generated = [];
+        for (let i = 1; i <= count; i++) {
+          generated.push({ name: `Casa ${i}` });
+        }
+        setUnitsList(generated);
+        setPropertyType('village');
+        setIaMessage(`✨ IA: Gerado com sucesso ${count} casas estruturadas para o condomínio/vila.`);
+        return;
+      }
+    }
+
+    // 4. Generic number count (e.g. "120")
+    const genericMatch = t.match(/(\d+)/);
+    if (genericMatch) {
+      const count = parseInt(genericMatch[1], 10);
+      if (count > 0) {
+        const generated = [];
+        const label = propertyType === 'village' ? 'Casa' : 'Apto';
+        for (let i = 1; i <= count; i++) {
+          generated.push({ name: `${label} ${i}` });
+        }
+        setUnitsList(generated);
+        setIaMessage(`✨ IA: Gerado com sucesso ${count} unidades.`);
+        return;
+      }
+    }
+
+    setIaMessage('⚠️ Não conseguimos entender o formato. Tente usar números claros, ex: "6 blocos, 10 andares, 12 apartamentos" ou "150 casas".');
+  };
+
   const videoRef = useRef(null);
   const navigate = useNavigate();
 
@@ -595,11 +687,72 @@ export default function AdminPanel() {
             <input type="text" className="input-glass" placeholder="Ex: Residencial Solar" value={propertyName} onChange={e => setPropertyName(e.target.value)} style={{ width: '100%' }} />
           </div>
           {propertyType !== 'individual' && (
-            <div>
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '18px' }}>🔮</span>
+                <strong style={{ fontSize: '14px', color: 'var(--primary)' }}>Gerador Inteligente por IA</strong>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', lineHeight: 1.4 }}>
+                Descreva sua vila ou condomínio (ex: <em>"são 6 blocos, cada bloco tem 10 andares, cada andar tem 12 apartamentos"</em> ou <em>"temos 150 casas"</em>).
+              </p>
+              <textarea
+                placeholder="Ex: São 6 blocos, cada bloco tem 10 andares, cada andar tem 12 apartamentos..."
+                value={iaDescription}
+                onChange={e => setIaDescription(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '75px',
+                  borderRadius: '12px',
+                  background: 'var(--bg-deep)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-main)',
+                  padding: '12px',
+                  fontSize: '13px',
+                  outline: 'none',
+                  resize: 'none',
+                  marginBottom: '10px',
+                  fontFamily: 'inherit',
+                  lineHeight: '1.4'
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleIAGenerate}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, var(--primary) 0%, #10B981 100%)',
+                  color: '#FFF',
+                  border: 'none',
+                  fontWeight: 800,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 10px rgba(59, 130, 246, 0.15)'
+                }}
+              >
+                ✨ Gerar Estrutura Instantaneamente
+              </button>
+              {iaMessage && (
+                <div style={{ marginTop: '10px', padding: '12px', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '10px', border: '1px solid rgba(16, 185, 129, 0.2)', fontSize: '12px', color: '#10B981', fontWeight: 700 }}>
+                  {iaMessage}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '10px' }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ou edite individualmente</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border-subtle)' }} />
+              </div>
+
               <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 600 }}>
-                {propertyType === 'village' ? 'Casas da vila' : 'Apartamentos'}
+                {propertyType === 'village' ? 'Casas da vila' : 'Apartamentos'} ({unitsList.length} gerado{unitsList.length !== 1 ? 's' : ''})
               </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '200px', overflowY: 'auto', marginBottom: '12px' }}>
                 {unitsList.map((u, i) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <span style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'var(--bg-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800, color: 'var(--primary)', flexShrink: 0 }}>{i + 1}</span>
@@ -608,8 +761,8 @@ export default function AdminPanel() {
                   </div>
                 ))}
               </div>
-              <button onClick={addUnit} style={{ marginTop: '12px', width: '100%', background: 'transparent', border: '1px dashed var(--primary)', color: 'var(--primary)', padding: '12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <Plus size={16} /> Adicionar {propertyType === 'village' ? 'Casa' : 'Apartamento'} ({unitsList.length} adicionado{unitsList.length !== 1 ? 's' : ''})
+              <button onClick={addUnit} style={{ width: '100%', background: 'transparent', border: '1px dashed var(--primary)', color: 'var(--primary)', padding: '12px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <Plus size={16} /> Adicionar {propertyType === 'village' ? 'Casa' : 'Apartamento'}
               </button>
             </div>
           )}
@@ -721,10 +874,10 @@ export default function AdminPanel() {
                 <h2 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px' }}>Minhas Propriedades</h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Gerencie placas e unidades</p>
               </div>
-              {!properties.some(p => p.type === 'individual') && (
+              {!properties.some(p => p.type === 'individual' && p.id !== 'demo-vila-id') && (
                 <HoverHelp text="Cadastre uma nova propriedade de campainha virtual">
                   <button className="btn-primary" onClick={() => {
-                    if (properties.length >= 1) { setShowPaywall(true); }
+                    if (properties.filter(p => p.id !== 'demo-vila-id').length >= 1) { setShowPaywall(true); }
                     else { setOnboardingStep('type'); }
                   }} style={{ padding: '12px 24px' }}>
                     <Plus size={20} /> Nova Propriedade
