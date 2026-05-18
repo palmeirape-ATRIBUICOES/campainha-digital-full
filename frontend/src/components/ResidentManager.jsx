@@ -15,6 +15,45 @@ export default function ResidentManager({ propertyId, property, adminEmail, onRe
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [newResidentNames, setNewResidentNames] = useState({});
+
+  const handleAddResident = async (unitId) => {
+    const name = newResidentNames[unitId] || '';
+    if (!name.trim()) return;
+
+    try {
+      const res = await fetch(`${API}/api/properties/${propertyId}/units/${unitId}/residents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() })
+      });
+      if (res.ok) {
+        setNewResidentNames(prev => ({ ...prev, [unitId]: '' }));
+        if (onRefresh) onRefresh();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Erro ao adicionar morador.');
+      }
+    } catch (err) {
+      alert('Erro de conexão com o servidor.');
+    }
+  };
+
+  const handleDeleteResident = async (unitId, residentId) => {
+    if (!window.confirm('Remover este morador? O acesso dele será bloqueado permanentemente.')) return;
+    try {
+      const res = await fetch(`${API}/api/properties/${propertyId}/units/${unitId}/residents/${residentId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        if (onRefresh) onRefresh();
+      } else {
+        alert('Erro ao remover morador.');
+      }
+    } catch (err) {
+      alert('Erro de conexão com o servidor.');
+    }
+  };
 
   // Residents are derived from property units
   const units = property?.units || [];
@@ -76,47 +115,80 @@ export default function ResidentManager({ propertyId, property, adminEmail, onRe
       {tab === 'residents' && (
         <div>
           <p style={{ fontSize:'12px', color:'#64748B', marginBottom:'16px' }}>Cada unidade tem um código de acesso. Compartilhe com o morador para ele acessar a campainha.</p>
-          <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
             {units.map(u => {
-              const showPass = !!visiblePasswords[u.id];
+              const residentsList = u.residents || [];
               return (
-                <div key={u.id} style={{ background:'#FFF', border:'1px solid #E2E8F0', borderRadius:'12px', padding:'14px' }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div key={u.id} style={{ background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', borderRadius:'16px', padding:'20px', boxShadow:'0 4px 12px rgba(0,0,0,0.01)' }}>
+                  {/* Cabeçalho da Unidade */}
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid var(--border-subtle)', paddingBottom:'12px', marginBottom:'14px' }}>
                     <div>
-                      <span style={{ fontWeight:700, fontSize:'14px' }}>{u.name}</span>
-                      {(u.block || u.street) && <span style={{ fontSize:'11px', color:'#64748B', marginLeft:'8px' }}>{u.block && `Bloco ${u.block}`} {u.street && `Rua ${u.street}`} {u.number && `Nº ${u.number}`}</span>}
-                      
-                      {/* Mostrar Moradores Vinculados com E-mail e Senha */}
-                      {u.residents && u.residents.length > 0 && (
-                        <div style={{ marginTop:'8px', padding:'8px 10px', background:'#F8FAFC', borderRadius:'8px', border:'1px solid #EDF2F7' }}>
-                          <span style={{ fontSize:'10px', fontWeight:800, color:'#A0AEC0', display:'block', marginBottom:'4px' }}>MORADORES CADASTRADOS</span>
-                          {u.residents.map(res => (
-                            <div key={res.id} style={{ display:'flex', flexDirection:'column', gap:'2px', marginBottom:'4px', borderBottom:'1px dashed #EDF2F7', paddingBottom:'4px' }}>
-                              <span style={{ fontSize:'12px', fontWeight:600, color:'#4A5568' }}>{res.name} ({res.email || 'Celular/Outro'})</span>
-                              <div style={{ display:'flex', alignItems:'center', gap:'8px', marginTop:'2px' }}>
-                                <span style={{ fontSize:'11px', color:'#718096' }}>Senha:</span>
-                                <input 
-                                  type={showPass ? "text" : "password"} 
-                                  value={res.password || ''} 
-                                  readOnly 
-                                  style={{ border:'none', background:'transparent', fontSize:'12px', fontWeight:700, color:'#2D3748', fontFamily:'monospace', outline:'none', width:'150px' }}
-                                />
-                                <button 
-                                  onClick={() => setVisiblePasswords(prev => ({ ...prev, [u.id]: !showPass }))} 
-                                  style={{ background:'none', border:'none', color:'#3182CE', fontSize:'10px', fontWeight:800, cursor:'pointer', padding:0 }}
-                                >
-                                  {showPass ? "👁️ Ocultar" : "👁️ Revelar"}
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                      <span style={{ fontWeight:800, fontSize:'16px', color:'var(--text-main)' }}>{u.name}</span>
+                      {(u.block || u.street) && (
+                        <span style={{ fontSize:'12px', color:'var(--text-muted)', marginLeft:'8px', background:'var(--bg-deep)', padding:'3px 8px', borderRadius:'6px', fontWeight:600 }}>
+                          {u.block && `Bloco ${u.block}`} {u.street && `Rua ${u.street}`} {u.number && `Nº ${u.number}`}
+                        </span>
                       )}
                     </div>
-                    <div style={{ display:'flex', gap:'6px', alignItems:'center' }}>
-                      <code style={{ fontSize:'13px', fontWeight:800, color:'#3B82F6', letterSpacing:'1px' }}>{u.accessCode}</code>
+                    <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+                      <span style={{ fontSize:'11px', color:'var(--text-muted)', fontWeight:600 }}>Código Geral da Unidade:</span>
+                      <code style={{ fontSize:'13px', fontWeight:800, color:'var(--primary)', letterSpacing:'1px', background:'rgba(59,130,246,0.08)', padding:'3px 8px', borderRadius:'6px' }}>{u.accessCode}</code>
                       <CopyBtn text={u.accessCode || ''}/>
-                      <button onClick={() => regenerateCode(u.id)} title="Regenerar código (bloqueia acesso atual)" style={{ background:'rgba(245,158,11,0.1)', border:'none', color:'#F59E0B', padding:'6px', borderRadius:'6px', cursor:'pointer' }}><RefreshCw size={12}/></button>
+                    </div>
+                  </div>
+
+                  {/* Lista de Moradores da Unidade */}
+                  <div style={{ marginBottom:'16px' }}>
+                    <span style={{ fontSize:'11px', fontWeight:800, color:'var(--text-muted)', display:'block', marginBottom:'8px', letterSpacing:'0.5px' }}>👥 MORADORES CADASTRADOS</span>
+                    {residentsList.length === 0 ? (
+                      <p style={{ fontSize:'12px', color:'var(--text-muted)', fontStyle:'italic', padding:'8px 0' }}>Nenhum morador individual cadastrado nesta unidade. Use o formulário abaixo para adicionar.</p>
+                    ) : (
+                      <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+                        {residentsList.map(res => (
+                          <div key={res.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'var(--bg-deep)', padding:'10px 14px', borderRadius:'10px', border:'1px solid var(--border-subtle)' }}>
+                            <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
+                              <span style={{ fontSize:'13px', fontWeight:700, color:'var(--text-main)' }}>{res.name}</span>
+                              <span style={{ fontSize:'11px', color:'var(--text-muted)' }}>{res.email || 'Cadastrado via Código Único'}</span>
+                            </div>
+                            <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+                              <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end' }}>
+                                <span style={{ fontSize:'9px', fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase' }}>Código Único do Morador</span>
+                                <code style={{ fontSize:'12px', fontWeight:800, color:'#10B981', background:'rgba(16,185,129,0.08)', padding:'2px 6px', borderRadius:'4px', letterSpacing:'1px' }}>{res.clientCode || '---'}</code>
+                              </div>
+                              <CopyBtn text={res.clientCode || ''}/>
+                              <button
+                                onClick={() => handleDeleteResident(u.id, res.id)}
+                                title="Remover Morador"
+                                style={{ background:'rgba(239,68,68,0.1)', border:'none', color:'#EF4444', padding:'6px', borderRadius:'6px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}
+                              >
+                                <Trash2 size={14}/>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Formulário para Adicionar Novo Morador */}
+                  <div style={{ background:'var(--bg-deep)', padding:'12px 16px', borderRadius:'12px', border:'1px solid var(--border-subtle)' }}>
+                    <span style={{ fontSize:'11px', fontWeight:700, color:'var(--text-muted)', display:'block', marginBottom:'8px' }}>➕ CADASTRAR NOVO MORADOR NESTA UNIDADE</span>
+                    <div style={{ display:'flex', gap:'8px' }}>
+                      <input
+                        type="text"
+                        placeholder="Nome do morador (ex: Maria Mãe)"
+                        className="input-glass"
+                        value={newResidentNames[u.id] || ''}
+                        onChange={e => setNewResidentNames(prev => ({ ...prev, [u.id]: e.target.value }))}
+                        style={{ flex:1, padding:'8px 12px', fontSize:'13px', borderRadius:'8px' }}
+                      />
+                      <button
+                        onClick={() => handleAddResident(u.id)}
+                        className="btn-primary"
+                        style={{ padding:'8px 16px', fontSize:'13px', borderRadius:'8px', fontWeight:700 }}
+                      >
+                        Cadastrar
+                      </button>
                     </div>
                   </div>
                 </div>

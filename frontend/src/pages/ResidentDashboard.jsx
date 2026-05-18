@@ -9,6 +9,7 @@ import IntercomPanel from '../components/resident/IntercomPanel';
 import ServicesPanel from '../components/resident/ServicesPanel';
 import PaymentModal from '../components/PaymentModal';
 import VisitorCodesPanel from '../components/resident/VisitorCodesPanel';
+import ResidentsPanel from '../components/resident/ResidentsPanel';
 
 import { API } from '../config';
 const DEFAULT_ICE = {
@@ -692,6 +693,10 @@ export default function ResidentDashboard() {
             <KeyRound size={20} color={tab === 'visitor-codes' ? '#0369A1' : '#64748B'} /> Códigos de Visitante
           </button>
 
+          <button onClick={() => { setTab('residents'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'residents' ? '#F0F9FF' : 'transparent', color: tab === 'residents' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
+            <Users size={20} color={tab === 'residents' ? '#0369A1' : '#64748B'} /> Moradores & Acessos
+          </button>
+
           <div style={{ height: '1px', background: '#F1F5F9', margin: '8px 0' }} />
           
           <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', marginBottom: '8px' }}>CONTA</p>
@@ -1331,6 +1336,11 @@ export default function ResidentDashboard() {
       )}
 
       {tab === 'history' && <HistoryPanel unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
+      {tab === 'residents' && (
+        <div style={{ padding: '20px' }}>
+          <ResidentsPanel unitId={savedUnitId || id} propertyId={propertyId} />
+        </div>
+      )}
       {tab === 'settings' && <SettingsPanel unitName={unitName} setUnitName={setUnitName} onSave={saveSettings} unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
 
       <HamburgerMenu />

@@ -1403,6 +1403,98 @@ app.delete('/api/properties/:propertyId/units/:unitId', async (req, res) => {
   }
 });
 
+// Buscar moradores cadastrados em uma unidade
+app.get('/api/units/:unitId/residents', async (req, res) => {
+  try {
+    const unit = await prisma.unit.findUnique({
+      where: { id: req.params.unitId },
+      include: { residents: true }
+    });
+    if (!unit) return res.status(404).json({ error: 'Unidade não encontrada.' });
+    res.json(unit.residents);
+  } catch (err) {
+    console.error('Get unit residents error:', err);
+    res.status(500).json({ error: 'Erro ao buscar moradores da unidade.' });
+  }
+});
+
+// Criar um morador específico sob uma unidade (Pelo Admin/Porteiro)
+app.post('/api/properties/:propertyId/units/:unitId/residents', async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Nome do morador é obrigatório.' });
+
+  try {
+    const unit = await prisma.unit.findUnique({ where: { id: req.params.unitId } });
+    if (!unit) return res.status(404).json({ error: 'Unidade não encontrada.' });
+
+    // Gera um código único amigável e legível: ex: 101-MARIA-X9A
+    const cleanUnit = unit.name.replace(/\s+/g, '').toUpperCase();
+    const cleanName = name.trim().split(' ')[0].toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const rand = Math.random().toString(36).substring(2, 5).toUpperCase();
+    const generatedCode = `${cleanUnit}-${cleanName}-${rand}`;
+
+    // Cria a conta do morador vinculada à unidade
+    const user = await prisma.user.create({
+      data: {
+        name,
+        password: Math.random().toString(36).substring(2, 8).toUpperCase(), // Senha gerada aleatória por compatibilidade
+        clientCode: generatedCode,
+        isResident: true,
+        isCondoResident: true,
+        units: { connect: { id: req.params.unitId } }
+      }
+    });
+
+    res.status(201).json(user);
+  } catch (err) {
+    console.error('Create resident error:', err);
+    res.status(500).json({ error: 'Erro ao cadastrar morador no sistema.' });
+  }
+});
+
+// Criar um morador (dependente) diretamente pelo morador da unidade
+app.post('/api/units/:unitId/residents', async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Nome do morador é obrigatório.' });
+
+  try {
+    const unit = await prisma.unit.findUnique({ where: { id: req.params.unitId } });
+    if (!unit) return res.status(404).json({ error: 'Unidade não encontrada.' });
+
+    const cleanUnit = unit.name.replace(/\s+/g, '').toUpperCase();
+    const cleanName = name.trim().split(' ')[0].toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const rand = Math.random().toString(36).substring(2, 5).toUpperCase();
+    const generatedCode = `${cleanUnit}-${cleanName}-${rand}`;
+
+    const user = await prisma.user.create({
+      data: {
+        name,
+        password: Math.random().toString(36).substring(2, 8).toUpperCase(),
+        clientCode: generatedCode,
+        isResident: true,
+        isCondoResident: true,
+        units: { connect: { id: req.params.unitId } }
+      }
+    });
+
+    res.status(201).json(user);
+  } catch (err) {
+    console.error('Create dependent resident error:', err);
+    res.status(500).json({ error: 'Erro ao cadastrar morador.' });
+  }
+});
+
+// Remover um morador específico de uma unidade
+app.delete('/api/properties/:propertyId/units/:unitId/residents/:residentId', async (req, res) => {
+  try {
+    await prisma.user.delete({ where: { id: req.params.residentId } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete resident error:', err);
+    res.status(500).json({ error: 'Erro ao remover morador do sistema.' });
+  }
+});
+
 // Buscar visitantes de uma propriedade (Histórico do Painel)
 app.get('/api/visitors/property/:propertyId', async (req, res) => {
   try {
