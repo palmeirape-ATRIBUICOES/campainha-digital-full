@@ -164,6 +164,11 @@ export default function VisitorCall() {
     try {
       const res  = await fetch(`${API}/api/properties/${id}`);
       const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Propriedade não encontrada.');
+        setStatus('error');
+        return;
+      }
       setProperty(data);
     } catch (err) {
       console.error('[Fetch] Erro ao buscar propriedade:', err);

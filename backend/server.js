@@ -1066,6 +1066,32 @@ app.get('/api/properties/:id', async (req, res) => {
     });
 
     if (!property) {
+      // 1. Verificar se idParam é um ID de Unidade
+      const unit = await prisma.unit.findUnique({
+        where: { id: idParam },
+        include: { property: { include: { units: { select: { id: true, name: true } } } } }
+      });
+      if (unit && unit.property) {
+        property = unit.property;
+      }
+    }
+
+    if (!property) {
+      // 2. Verificar se idParam é um ID de Usuário (para retrocompatibilidade)
+      const userById = await prisma.user.findUnique({
+        where: { id: idParam },
+        include: {
+          propertiesManaged: { include: { units: { select: { id: true, name: true } } } },
+          units: { include: { property: { include: { units: { select: { id: true, name: true } } } } } }
+        }
+      });
+      if (userById) {
+        property = userById.propertiesManaged?.[0] || userById.units?.[0]?.property;
+      }
+    }
+
+    if (!property) {
+      // 3. Verificar se idParam (ou code) é um clientCode ou plateCode
       const user = await prisma.user.findFirst({
         where: { OR: [{ clientCode: code }, { plateCode: code }] },
         include: {
