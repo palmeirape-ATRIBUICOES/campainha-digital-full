@@ -886,6 +886,28 @@ app.get('/api/master/users', authenticate, async (req, res) => {
   res.json(users);
 });
 
+// Listar todas as propriedades para o Super Admin
+app.get('/api/master/properties', authenticate, async (req, res) => {
+  if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+  try {
+    const properties = await prisma.property.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        admin: true,
+        doorman: true,
+        units: {
+          include: {
+            residents: true
+          }
+        }
+      }
+    });
+    res.json(properties);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar propriedades.' });
+  }
+});
+
 // Ativar/Desativar módulos de um usuário
 app.post('/api/master/users/:id/modules', authenticate, async (req, res) => {
   if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });

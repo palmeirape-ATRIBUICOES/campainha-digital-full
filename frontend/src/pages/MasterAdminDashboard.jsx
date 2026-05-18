@@ -19,6 +19,33 @@ export default function MasterAdminDashboard() {
   const [editModal, setEditModal] = useState(null); // null or user to edit
   const navigate = useNavigate();
 
+  // Estados para o painel de propriedades
+  const [properties, setProperties] = useState([]);
+  const [loadingProperties, setLoadingProperties] = useState(false);
+  const [subTab, setSubTab] = useState('houses'); // 'houses' | 'condos'
+
+  const fetchProperties = async () => {
+    setLoadingProperties(true);
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/master/properties`, { headers: { 'Authorization': token } });
+      if (res.ok) {
+        const data = await res.json();
+        setProperties(data);
+      }
+    } catch (err) {
+      console.error('[Properties] Erro ao buscar:', err);
+    } finally {
+      setLoadingProperties(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'properties') {
+      fetchProperties();
+    }
+  }, [activeTab]);
+
   // Configurações globais de sistema
   const [planPrice, setPlanPrice] = useState('39.90');
   const [savingSettings, setSavingSettings] = useState(false);
@@ -450,13 +477,224 @@ export default function MasterAdminDashboard() {
           </div>
         )}
 
-        {activeTab === 'production' && (
-          <PlateProductionPanel />
+        {activeTab === 'properties' && (
+          <div>
+            {/* SUB-TABS NAVIGATION */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '28px', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
+              <button
+                onClick={() => setSubTab('houses')}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  background: subTab === 'houses' ? 'linear-gradient(135deg,#3B82F6,#2563EB)' : 'transparent',
+                  color: subTab === 'houses' ? '#FFF' : '#64748B',
+                  border: 'none',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: subTab === 'houses' ? '0 4px 12px rgba(59, 130, 246, 0.2)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🏡 Casas Isoladas
+              </button>
+              <button
+                onClick={() => setSubTab('condos')}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  background: subTab === 'condos' ? 'linear-gradient(135deg,#3B82F6,#2563EB)' : 'transparent',
+                  color: subTab === 'condos' ? '#FFF' : '#64748B',
+                  border: 'none',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: subTab === 'condos' ? '0 4px 12px rgba(59, 130, 246, 0.2)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🏢 Condomínios & Vilas
+              </button>
+            </div>
+
+            {loadingProperties ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>Carregando propriedades...</div>
+            ) : subTab === 'houses' ? (
+              /* CASAS ISOLADAS GROUPED BY BAIRRO */
+              <div>
+                {(() => {
+                  const houses = properties.filter(p => p.type === 'house' || !p.type);
+                  if (houses.length === 0) {
+                    return <div style={{ background: '#FFF', borderRadius: '16px', padding: '32px', textAlign: 'center', color: '#94A3B8', border: '1px solid #E2E8F0' }}>Nenhuma casa cadastrada no sistema.</div>;
+                  }
+
+                  // Agrupa por Bairro
+                  const groupedHouses = {};
+                  houses.forEach(h => {
+                    let bairro = 'Geral / Outros';
+                    if (h.clientAddress) {
+                      const parts = h.clientAddress.split(',');
+                      if (parts.length > 1) {
+                        bairro = parts[1].trim();
+                      } else {
+                        bairro = h.clientAddress.trim();
+                      }
+                    }
+                    if (!groupedHouses[bairro]) groupedHouses[bairro] = [];
+                    groupedHouses[bairro].push(h);
+                  });
+
+                  return Object.keys(groupedHouses).map(bairro => (
+                    <div key={bairro} style={{ marginBottom: '36px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                        📍 Bairro: <span style={{ color: '#2563EB' }}>{bairro}</span>
+                        <span style={{ fontSize: '12px', background: '#E2E8F0', padding: '3px 8px', borderRadius: '20px', color: '#475569', fontWeight: 700 }}>
+                          {groupedHouses[bairro].length} {groupedHouses[bairro].length === 1 ? 'casa' : 'casas'}
+                        </span>
+                      </h3>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                        {groupedHouses[bairro].map(house => (
+                          <div key={house.id} style={{ background: '#FFF', borderRadius: '16px', padding: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: 0 }}>{house.name || house.clientName || 'Proprietário'}</h4>
+                                <span style={{ fontSize: '10px', background: house.plan === 'PREMIUM' ? 'rgba(245,158,11,0.1)' : 'rgba(59,130,246,0.1)', color: house.plan === 'PREMIUM' ? '#D97706' : '#2563EB', fontWeight: 800, padding: '3px 8px', borderRadius: '20px' }}>
+                                  {house.plan}
+                                </span>
+                              </div>
+                              <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0' }}>{house.clientAddress || 'Sem endereço.'}</p>
+                            </div>
+
+                            <div style={{ background: '#F8FAFC', borderRadius: '10px', padding: '10px 12px', fontSize: '12px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <div><strong>👤 Contato:</strong> {house.clientPhone || '—'}</div>
+                              {house.admin && <div><strong>🔑 Código Único:</strong> <code style={{ fontFamily: 'monospace', fontWeight: 800, color: '#2563EB' }}>{house.admin.clientCode || 'Sem código'}</code></div>}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                              <button
+                                onClick={() => navigate(`/chamada/${house.id}`)}
+                                style={{ flex: 1, padding: '8px', fontSize: '12px', fontWeight: 700, borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFF', color: '#475569', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                              >
+                                🔔 Testar Placa
+                              </button>
+                              
+                              <button
+                                onClick={async () => {
+                                  // Abre modal do QR
+                                  if (house.admin) {
+                                    openQrModal(house.admin, 'option2');
+                                  } else {
+                                    alert('Esta casa ainda não possui administrador associado.');
+                                  }
+                                }}
+                                style={{ flex: 1, padding: '8px', fontSize: '12px', fontWeight: 700, borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                              >
+                                <QrCode size={13} /> Ver QR Code
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            ) : (
+              /* CONDOMINIOS / VILAS GROUPED BY VILA NAME */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {(() => {
+                  const condos = properties.filter(p => p.type === 'village' || p.type === 'condo');
+                  if (condos.length === 0) {
+                    return <div style={{ background: '#FFF', borderRadius: '16px', padding: '32px', textAlign: 'center', color: '#94A3B8', border: '1px solid #E2E8F0' }}>Nenhum condomínio ou vila cadastrado no sistema.</div>;
+                  }
+
+                  return condos.map(condo => {
+                    const unitsList = condo.units || [];
+                    const adminObj = condo.admin;
+                    const doormanObj = condo.doorman;
+
+                    return (
+                      <div key={condo.id} style={{ background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 4px 10px rgba(0,0,0,0.01)' }}>
+                        {/* CONDO HEADER */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px', marginBottom: '20px' }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: 0 }}>🏢 {condo.name}</h3>
+                              <span style={{ fontSize: '11px', background: 'rgba(16,185,129,0.1)', color: '#047857', fontWeight: 800, padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase' }}>
+                                Vila Ativa
+                              </span>
+                            </div>
+                            {condo.subdomain && (
+                              <p style={{ fontSize: '13px', color: '#3B82F6', fontWeight: 700, margin: '4px 0 0' }}>
+                                🔗 Subdomínio: {condo.subdomain}.campainhadigital.com.br
+                              </p>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <div style={{ background: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', border: '1px solid #E2E8F0' }}>
+                              <span style={{ color: '#64748B' }}>Plano:</span> <strong style={{ color: '#0F172A' }}>{condo.plan}</strong>
+                            </div>
+                            <div style={{ background: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', border: '1px solid #E2E8F0' }}>
+                              <span style={{ color: '#64748B' }}>Zelador/Porteiro:</span> <strong style={{ color: '#0F172A' }}>{doormanObj?.name || 'Não atribuído'}</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* UNITS LIST */}
+                        <div>
+                          <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
+                            🏡 Casas / Apartamentos Cadastrados ({unitsList.length})
+                          </h4>
+
+                          {unitsList.length === 0 ? (
+                            <p style={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic', margin: 0 }}>Nenhuma unidade adicionada a este condomínio.</p>
+                          ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+                              {unitsList.map(unit => {
+                                const residentNames = unit.residents?.map(r => r.name).join(', ') || 'Nenhum morador';
+                                return (
+                                  <div key={unit.id} style={{ background: '#F8FAFC', borderRadius: '12px', padding: '12px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '13px' }}>
+                                        Unidade {unit.name} {unit.block ? `(Bloco ${unit.block})` : ''}
+                                      </span>
+                                      <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 700 }}>#{unit.inviteCode || ''}</span>
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={residentNames}>
+                                      👥 {residentNames}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            )}
+          </div>
         )}
 
-        {activeTab !== 'users' && activeTab !== 'settings' && activeTab !== 'production' && (
+        {activeTab === 'promos' && (
           <div style={{ background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '60px', textAlign: 'center' }}>
-            <p style={{ color: '#94A3B8', fontSize: '16px' }}>Seção em construção.</p>
+            <p style={{ color: '#94A3B8', fontSize: '16px' }}>Módulo de promoções e cupons em construção.</p>
+          </div>
+        )}
+
+        {activeTab === 'logs' && (
+          <div style={{ background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '60px', textAlign: 'center' }}>
+            <p style={{ color: '#94A3B8', fontSize: '16px' }}>Logs de atividades do sistema em construção.</p>
           </div>
         )}
       </main>
