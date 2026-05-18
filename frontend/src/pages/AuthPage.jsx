@@ -34,6 +34,7 @@ export default function AuthPage() {
   const modeFromUrl = getModeParam();
   const plateFromUrl = getPlateParam();
 
+  const [checkingPlate, setCheckingPlate] = useState(!!plateFromUrl);
   const [name, setName] = useState('');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -86,9 +87,12 @@ export default function AuthPage() {
           const res = await fetch(`${API}/api/properties/${plateFromUrl}`);
           if (res.ok) {
             navigate(`/chamada/${plateFromUrl}`);
+          } else {
+            setCheckingPlate(false);
           }
         } catch (err) {
           console.error('[PlateCheck] Erro ao verificar status da placa:', err);
+          setCheckingPlate(false);
         }
       };
       checkPlate();
@@ -341,6 +345,37 @@ export default function AuthPage() {
     } catch { alert('Erro ao redefinir senha.'); }
     finally { setLoading(false); }
   };
+
+  if (checkingPlate) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#F8FAFC', fontFamily: 'Montserrat, sans-serif', position: 'relative', overflow: 'hidden' }}>
+        {/* Aurora Background Decor */}
+        <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }}></div>
+        <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: '60vw', height: '60vw', background: 'radial-gradient(circle, rgba(16,185,129,0.04) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }}></div>
+
+        <div className="glass-panel fade-in" style={{ width: '100%', maxWidth: '400px', padding: '40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+          <Logo size={100} />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginTop: '10px' }}>
+            <div className="spinner" style={{ width: '36px', height: '36px', border: '4px solid #E2E8F0', borderTop: '4px solid #3B82F6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0, letterSpacing: '-0.5px' }}>
+              Conectando...
+            </h2>
+            <p style={{ fontSize: '14px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
+              Localizando os dados do morador para iniciar a chamada.
+            </p>
+          </div>
+        </div>
+        <style>
+          {`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}
+        </style>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#F8FAFC', position: 'relative', overflow: 'hidden' }}>
