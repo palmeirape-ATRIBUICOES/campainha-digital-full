@@ -164,7 +164,7 @@ body {
 
 /* Premium Cards */
 .premium-card {
-  background: #FFFFFF;
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 24px;
   padding: 32px;

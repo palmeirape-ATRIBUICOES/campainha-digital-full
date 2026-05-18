@@ -752,8 +752,8 @@ export default function AdminPanel() {
                     </div>
 
                     {p.type !== 'individual' && (
-                      <div style={{ marginBottom: '16px', background: '#F8FAFC', padding: '12px 14px', borderRadius: '14px', border: '1px solid var(--border-subtle)' }}>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      <div style={{ marginBottom: '16px', background: 'var(--bg-deep)', padding: '12px 14px', borderRadius: '14px', border: '1px solid var(--border-subtle)' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
                           🔗 Subdomínio da Vila
                         </label>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -782,7 +782,7 @@ export default function AdminPanel() {
                                 alert('Erro de conexão com o servidor.');
                               }
                             }}
-                            style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '13px', outline: 'none', background: '#FFF', fontWeight: 600, color: '#1E293B' }}
+                            style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-subtle)', fontSize: '13px', outline: 'none', background: 'var(--bg-surface)', fontWeight: 600, color: 'var(--text-main)' }}
                           />
                         </div>
                         {p.subdomain ? (
@@ -790,14 +790,14 @@ export default function AdminPanel() {
                             ✓ Acesso: {p.subdomain}.campainha.digital
                           </span>
                         ) : (
-                          <span style={{ display: 'block', fontSize: '10px', color: '#94A3B8', marginTop: '4px', fontWeight: 500 }}>
+                          <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px', fontWeight: 500 }}>
                             Toque fora do campo para salvar. Permite acessar sem precisar digitar código.
                           </span>
                         )}
                       </div>
                     )}
 
-                    <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '16px', display: 'flex', justifyContent: 'center', marginBottom: '20px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ background: 'var(--bg-deep)', padding: '16px', borderRadius: '16px', display: 'flex', justifyContent: 'center', marginBottom: '20px', border: '1px solid var(--border-subtle)' }}>
                       <img src={p.qrCodeUrl} alt="QR" style={{ width: '140px', height: 'auto' }} />
                     </div>
 
