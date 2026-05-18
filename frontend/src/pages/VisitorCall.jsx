@@ -8,28 +8,31 @@ import Logo from '../components/Logo';
 import { API } from '../config';
 
 
-// Configuração ICE com STUN públicos do Google (funcionam em qualquer rede)
-const ICE_CONFIG = {
+// ICE config is fetched dynamically from the backend to allow
+// secure TURN credentials rotation without frontend deploys.
+const DEFAULT_ICE_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
-    // TURN público (fallback para NAT restritivo)
-    {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    }
   ],
   iceCandidatePoolSize: 10
 };
+
+let _cachedIceConfig = null;
+async function fetchIceConfig() {
+  if (_cachedIceConfig) return _cachedIceConfig;
+  try {
+    const res = await fetch(`${API}/api/ice-servers`);
+    if (res.ok) {
+      const data = await res.json();
+      _cachedIceConfig = { iceServers: data.iceServers, iceCandidatePoolSize: 10 };
+      return _cachedIceConfig;
+    }
+  } catch (e) {
+    console.warn('[ICE] Failed to fetch ICE servers from backend, using defaults:', e);
+  }
+  return DEFAULT_ICE_CONFIG;
+}
 
 export default function VisitorCall() {
   const { id } = useParams(); // propertyId
@@ -210,7 +213,9 @@ export default function VisitorCall() {
   const startWebRTC = useCallback(async (residentSocketId, mode) => {
     if (!localStreamRef.current) return;
 
-    const pc = new RTCPeerConnection(ICE_CONFIG);
+    const iceConfig = await fetchIceConfig();
+    console.log('[ICE] Using', iceConfig.iceServers.length, 'ICE servers');
+    const pc = new RTCPeerConnection(iceConfig);
     pcRef.current = pc;
 
     // Adiciona tracks locais à conexão

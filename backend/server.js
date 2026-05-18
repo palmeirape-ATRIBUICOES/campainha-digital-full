@@ -60,6 +60,67 @@ app.get('/api/ping', async (req, res) => {
   }
 });
 
+// ─── ICE Servers (TURN credentials) ────────────────────────────────────────────
+// Returns a fresh set of STUN+TURN servers.
+// Uses the Metered.ca free-tier API or falls back to multiple public STUNs + 
+// Twilio-style time-limited HMAC credentials if TURN_SECRET is configured.
+app.get('/api/ice-servers', (req, res) => {
+  const TURN_SECRET = process.env.TURN_SECRET;
+  const TURN_HOST   = process.env.TURN_HOST;   // e.g. "global.turn.twilio.com"
+  const TURN_USER   = process.env.TURN_USER;   // Twilio Account SID or username
+
+  let iceServers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+  ];
+
+  if (TURN_SECRET && TURN_HOST && TURN_USER) {
+    // Twilio / coturn-style HMAC time-limited credentials
+    const ttl = 86400; // 24h
+    const timestamp = Math.floor(Date.now() / 1000) + ttl;
+    const username = `${timestamp}:${TURN_USER}`;
+    const credential = crypto.createHmac('sha1', TURN_SECRET).update(username).digest('base64');
+    iceServers.push(
+      { urls: `turn:${TURN_HOST}:3478?transport=udp`, username, credential },
+      { urls: `turn:${TURN_HOST}:3478?transport=tcp`, username, credential },
+      { urls: `turns:${TURN_HOST}:5349?transport=tcp`, username, credential }
+    );
+  } else {
+    // Fallback: Metered.ca free TURN (more reliable than openrelay)
+    const METERED_API_KEY = process.env.METERED_API_KEY;
+    const METERED_APP = process.env.METERED_APP || 'campainha';
+    if (METERED_API_KEY) {
+      // Metered returns credentials via API — we cache them in memory for 1h
+      const now = Date.now();
+      if (!app._meteredCache || now - app._meteredCache.ts > 3600000) {
+        fetch(`https://${METERED_APP}.metered.live/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`)
+          .then(r => r.json())
+          .then(servers => {
+            app._meteredCache = { ts: now, servers };
+          })
+          .catch(() => {});
+      }
+      if (app._meteredCache && app._meteredCache.servers) {
+        iceServers = [...iceServers, ...app._meteredCache.servers];
+      }
+    }
+    // Always add fallback public TURN servers (UDP + TCP + TLS)
+    iceServers.push(
+      { urls: 'turn:relay1.expressturn.com:3478', username: 'efJCKBFJ9BOE8KXWM1', credential: 'ixbvR6FkW1IA3Zu0' },
+      { urls: 'turns:relay1.expressturn.com:5349', username: 'efJCKBFJ9BOE8KXWM1', credential: 'ixbvR6FkW1IA3Zu0' },
+      { urls: 'turn:a.relay.metered.ca:80', username: 'e9b0a4a59ffa6516efb33c42', credential: 'VJMqfWlVT/MV7p0C' },
+      { urls: 'turn:a.relay.metered.ca:80?transport=tcp', username: 'e9b0a4a59ffa6516efb33c42', credential: 'VJMqfWlVT/MV7p0C' },
+      { urls: 'turn:a.relay.metered.ca:443', username: 'e9b0a4a59ffa6516efb33c42', credential: 'VJMqfWlVT/MV7p0C' },
+      { urls: 'turns:a.relay.metered.ca:443?transport=tcp', username: 'e9b0a4a59ffa6516efb33c42', credential: 'VJMqfWlVT/MV7p0C' }
+    );
+  }
+
+  res.json({ iceServers });
+});
+
 // ─── Middlewares ─────────────────────────────────────────────────────────────
 const authenticate = async (req, res, next) => {
   const token = req.headers.authorization;

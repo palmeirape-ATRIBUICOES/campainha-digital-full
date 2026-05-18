@@ -10,14 +10,27 @@ import ServicesPanel from '../components/resident/ServicesPanel';
 import PaymentModal from '../components/PaymentModal';
 
 import { API } from '../config';
-const ICE = {
+const DEFAULT_ICE = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
   ]
 };
+let _cachedIce = null;
+async function fetchIceConfig() {
+  if (_cachedIce) return _cachedIce;
+  try {
+    const res = await fetch(`${API}/api/ice-servers`);
+    if (res.ok) {
+      const data = await res.json();
+      _cachedIce = { iceServers: data.iceServers };
+      return _cachedIce;
+    }
+  } catch (e) {
+    console.warn('[ICE] Fallback to default config:', e);
+  }
+  return DEFAULT_ICE;
+}
 
 // ─── Som real de campainha via Web Audio API ──────────────────────────────────
 // Gera o padrão "ding-dong" sem depender de arquivo externo
@@ -448,7 +461,9 @@ export default function ResidentDashboard() {
   };
 
   const handleOffer = useCallback(async (senderSocketId, offer) => {
-    const pc = new RTCPeerConnection(ICE);
+    const iceConfig = await fetchIceConfig();
+    console.log('[ICE] Resident using', iceConfig.iceServers.length, 'ICE servers');
+    const pc = new RTCPeerConnection(iceConfig);
     pcRef.current = pc;
     if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => pc.addTrack(t, localStreamRef.current));
     pc.ontrack = (e) => { if (remoteVideoRef.current && e.streams[0]) { remoteVideoRef.current.srcObject = e.streams[0]; remoteVideoRef.current.play().catch(() => {}); } };
