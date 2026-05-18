@@ -103,6 +103,33 @@ export default function AdminPanel() {
   const [doormanCallState, setDoormanCallState] = useState('idle');
   const [iaDescription, setIaDescription] = useState('');
   const [iaMessage, setIaMessage] = useState('');
+  const [activeControlBlock, setActiveControlBlock] = useState(null);
+  const [lastBlockAlertCount, setLastBlockAlertCount] = useState(0);
+
+  useEffect(() => {
+    if (!activeControlBlock || !selectedProperty) {
+      if (lastBlockAlertCount !== 0) setLastBlockAlertCount(0);
+      return;
+    }
+
+    const currentProperty = properties.find(p => p.id === selectedProperty);
+    if (!currentProperty) return;
+
+    const blockUnits = currentProperty.units.filter(u => {
+      const blockKey = u.block ? `Bloco ${u.block}` : (u.street ? `Rua ${u.street}` : 'Geral');
+      return blockKey === activeControlBlock;
+    });
+
+    const currentAlertCount = activeAlerts.filter(a => blockUnits.some(u => u.id === a.unitId)).length;
+
+    if (currentAlertCount === 0 && lastBlockAlertCount > 0) {
+      // Auto-return!
+      setActiveControlBlock(null);
+      setLastBlockAlertCount(0);
+    } else if (currentAlertCount !== lastBlockAlertCount) {
+      setLastBlockAlertCount(currentAlertCount);
+    }
+  }, [activeAlerts, activeControlBlock, selectedProperty, properties, lastBlockAlertCount]);
 
   const handleIAGenerate = () => {
     if (!iaDescription.trim()) {
@@ -1159,7 +1186,96 @@ export default function AdminPanel() {
                 );
               }
 
-              return blockKeys.map(blockKey => {
+              // SE HOUVER MAIS DE UM BLOCO E NENHUM BLOCO SELECIONADO, MOSTRA A TELA DOS 6 BLOCOS
+              if (blockKeys.length > 1 && activeControlBlock === null) {
+                return (
+                  <div style={{ marginTop: '16px' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '20px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🏢 Distribuição por Blocos
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                      {blockKeys.map(blockKey => {
+                        const blockUnits = grouped[blockKey];
+                        const blockAlerts = activeAlerts.filter(a => blockUnits.some(u => u.id === a.unitId));
+                        const hasAlert = blockAlerts.length > 0;
+                        const onlineCount = blockUnits.filter(u => isDemoMode || (u.residents && u.residents.some(r => onlineStatus[r.id] === 'online'))).length;
+
+                        return (
+                          <div
+                            key={blockKey}
+                            onClick={() => {
+                              setActiveControlBlock(blockKey);
+                              setLastBlockAlertCount(blockAlerts.length);
+                            }}
+                            style={{
+                              background: 'var(--bg-surface)',
+                              border: hasAlert ? '2px solid rgba(245, 158, 11, 0.6)' : '1px solid var(--border-subtle)',
+                              borderRadius: '20px',
+                              padding: '24px',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              position: 'relative',
+                              boxShadow: hasAlert ? '0 0 20px rgba(245, 158, 11, 0.15)' : 'none',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '12px'
+                            }}
+                            className={hasAlert ? 'pulse-border-alert' : 'hover-premium'}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)' }}>🏢 {blockKey}</span>
+                              {hasAlert && (
+                                <span style={{
+                                  background: '#EF4444',
+                                  color: '#FFF',
+                                  fontSize: '10px',
+                                  fontWeight: 800,
+                                  padding: '4px 10px',
+                                  borderRadius: '100px',
+                                  boxShadow: '0 0 12px rgba(239, 68, 68, 0.4)',
+                                  animation: 'pulse 2s infinite'
+                                }}>
+                                  🚨 ALERTA ({blockAlerts.length})
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                              📊 {blockUnits.length} unidades cadastradas
+                            </div>
+                            
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                              <span style={{ fontSize: '11px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '4px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                                🟢 {onlineCount} Online
+                              </span>
+                              <span style={{ fontSize: '11px', background: 'var(--bg-deep)', color: 'var(--text-muted)', padding: '4px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                                🔴 {blockUnits.length - onlineCount} Offline
+                              </span>
+                            </div>
+                            
+                            <div style={{
+                              marginTop: '12px',
+                              fontSize: '12px',
+                              fontWeight: 800,
+                              color: hasAlert ? '#F59E0B' : 'var(--primary)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              justifyContent: 'flex-end'
+                            }}>
+                              {hasAlert ? '⚠️ Resolver Alertas' : 'Entrar no Bloco'} →
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+
+              // CASO ESTEJA EXIBINDO UM BLOCO FOCADO
+              const visibleBlocks = activeControlBlock ? [activeControlBlock] : blockKeys;
+
+              return visibleBlocks.map(blockKey => {
                 const unitsInBlock = grouped[blockKey];
                 
                 // Filtra se a busca pedir apenas alertas ativos
@@ -1171,9 +1287,35 @@ export default function AdminPanel() {
 
                 return (
                   <div key={blockKey} style={{ marginBottom: '32px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', borderBottom: '2px solid var(--border-subtle)', paddingBottom: '8px', color: 'var(--text-main)' }}>
-                      🏢 {blockKey} <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>({filteredUnits.length} unidade{filteredUnits.length !== 1 ? 's' : ''})</span>
-                    </h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '2px solid var(--border-subtle)', paddingBottom: '12px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                        🏢 {blockKey} <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>({filteredUnits.length} unidade{filteredUnits.length !== 1 ? 's' : ''})</span>
+                      </h3>
+                      {activeControlBlock && (
+                        <button
+                          onClick={() => {
+                            setActiveControlBlock(null);
+                          }}
+                          style={{
+                            background: 'var(--bg-surface)',
+                            border: '1px solid var(--border-subtle)',
+                            color: 'var(--text-main)',
+                            padding: '8px 16px',
+                            borderRadius: '10px',
+                            fontWeight: 700,
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s'
+                          }}
+                          className="hover-premium"
+                        >
+                          ← Voltar para todos os Blocos
+                        </button>
+                      )}
+                    </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
                       {filteredUnits.map(u => {
