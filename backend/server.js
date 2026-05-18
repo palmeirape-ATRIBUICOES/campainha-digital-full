@@ -64,7 +64,7 @@ app.get('/api/ping', async (req, res) => {
 // Returns a fresh set of STUN+TURN servers.
 // Uses the Metered.ca free-tier API or falls back to multiple public STUNs + 
 // Twilio-style time-limited HMAC credentials if TURN_SECRET is configured.
-app.get('/api/ice-servers', (req, res) => {
+app.get('/api/ice-servers', async (req, res) => {
   const TURN_SECRET = process.env.TURN_SECRET;
   const TURN_HOST   = process.env.TURN_HOST;   // e.g. "global.turn.twilio.com"
   const TURN_USER   = process.env.TURN_USER;   // Twilio Account SID or username
@@ -96,12 +96,18 @@ app.get('/api/ice-servers', (req, res) => {
       // Metered returns credentials via API — we cache them in memory for 1h
       const now = Date.now();
       if (!app._meteredCache || now - app._meteredCache.ts > 3600000) {
-        fetch(`https://${METERED_APP}.metered.live/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`)
-          .then(r => r.json())
-          .then(servers => {
+        try {
+          const r = await fetch(`https://${METERED_APP}.metered.live/api/v1/turn/credentials?apiKey=${METERED_API_KEY}`);
+          if (r.ok) {
+            const servers = await r.json();
             app._meteredCache = { ts: now, servers };
-          })
-          .catch(() => {});
+            console.log('[Metered] TURN servers successfully cached:', servers.length);
+          } else {
+            console.error('[Metered] Error response from API:', await r.text());
+          }
+        } catch (err) {
+          console.error('[Metered] Error fetching TURN credentials:', err.message);
+        }
       }
       if (app._meteredCache && app._meteredCache.servers) {
         iceServers = [...iceServers, ...app._meteredCache.servers];
