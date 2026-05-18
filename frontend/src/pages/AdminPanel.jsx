@@ -1171,7 +1171,15 @@ export default function AdminPanel() {
               // Agrupa unidades
               const grouped = {};
               currentProperty.units.forEach(u => {
-                const blockKey = u.block ? `Bloco ${u.block}` : (u.street ? `Rua ${u.street}` : 'Geral');
+                let blockVal = u.block;
+                if (!blockVal && u.name) {
+                  // Try to extract block from formats like "B1-1001", "Bloco 2 - 102", "B3"
+                  const match = u.name.match(/^(?:B|Bloco\s*)(\d+|[A-Z]+)/i);
+                  if (match) {
+                    blockVal = match[1];
+                  }
+                }
+                const blockKey = blockVal ? `Bloco ${blockVal}` : (u.street ? `Rua ${u.street}` : 'Geral');
                 if (!grouped[blockKey]) grouped[blockKey] = [];
                 grouped[blockKey].push(u);
               });
@@ -1361,7 +1369,7 @@ export default function AdminPanel() {
                                 }
                               }}
                               style={{
-                                background: '#FFF',
+                                background: 'var(--bg-surface)',
                                 border: '1px solid var(--border-subtle)',
                                 borderRadius: '12px',
                                 padding: '16px 12px',
