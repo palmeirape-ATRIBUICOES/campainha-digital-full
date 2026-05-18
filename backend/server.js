@@ -1722,11 +1722,26 @@ app.get('/api/qrcode', async (req, res) => {
 
 // Escanear placa: ao cadastrar ou logar, o usuário escaneia a placa para vinculá-la à sua conta
 app.post('/api/auth/scan-plate', async (req, res) => {
-  const { plateCode, userId } = req.body;
+  let { plateCode, userId } = req.body;
   if (!plateCode || !userId) return res.status(400).json({ error: 'Dados incompletos.' });
 
+  // Limpa o código da placa caso seja uma URL inteira
+  let cleanedPlateCode = plateCode.trim();
+  if (cleanedPlateCode.includes('plate=')) {
+    try {
+      const match = cleanedPlateCode.match(/[?&]plate=([^&]+)/);
+      if (match && match[1]) {
+        cleanedPlateCode = decodeURIComponent(match[1]).trim();
+      }
+    } catch (e) {}
+  }
+  if (cleanedPlateCode.includes('/')) {
+    cleanedPlateCode = cleanedPlateCode.substring(cleanedPlateCode.lastIndexOf('/') + 1);
+  }
+  cleanedPlateCode = cleanedPlateCode.toUpperCase();
+
   // Verifica se a placa já pertence a outro usuário
-  const plateOwner = await prisma.user.findFirst({ where: { plateCode } });
+  const plateOwner = await prisma.user.findFirst({ where: { plateCode: cleanedPlateCode } });
   
   if (plateOwner && plateOwner.id !== userId) {
     return res.status(400).json({ error: 'Esta placa física já está vinculada a outra conta.' });
@@ -1735,7 +1750,7 @@ app.post('/api/auth/scan-plate', async (req, res) => {
   // Vincula a placa ao usuário atual (mantendo seu clientCode intacto)
   const updated = await prisma.user.update({
     where: { id: userId },
-    data: { plateCode }
+    data: { plateCode: cleanedPlateCode }
   });
   
   res.json({ success: true, plateCode: updated.plateCode, message: 'Placa vinculada com sucesso!' });
