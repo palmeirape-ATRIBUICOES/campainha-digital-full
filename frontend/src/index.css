@@ -15,6 +15,19 @@
   --transition-fast: all 0.3s ease;
 }
 
+/* Modo Noturno (Dark Mode) - Suporte a classe .dark-theme ou atributo data-theme */
+body.dark-theme, :root[data-theme="dark"] {
+  --bg-deep: #0F172A;
+  --bg-surface: #1E293B;
+  --bg-surface-elevated: #334155;
+  --primary: #3B82F6;
+  --primary-glow: rgba(59, 130, 246, 0.35);
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --border-subtle: #334155;
+  --border-highlight: #475569;
+}
+
 * {
   margin: 0;
   padding: 0;

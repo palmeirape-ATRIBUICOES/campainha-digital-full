@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, Send, Zap } from 'lucide-react';
+import { Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, Send, Zap, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import UnitManager from '../components/UnitManager';
@@ -83,13 +83,64 @@ export default function AdminPanel() {
   const [mailboxMessages, setMailboxMessages] = useState([]);
   const [loadingMailbox, setLoadingMailbox]   = useState(false);
   const [activeAlerts, setActiveAlerts]       = useState([]);
+  const [onlineStatus, setOnlineStatus]       = useState({});
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [replyText, setReplyText]             = useState('');
   const [alertTypeFilter, setAlertTypeFilter] = useState('all');
   const [showPaywall, setShowPaywall] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const videoRef = useRef(null);
   const navigate = useNavigate();
+
+  const startDemoMode = () => {
+    setIsDemoMode(true);
+    setProperties([
+      {
+        id: 'demo-vila-id',
+        name: 'Vila Solar das Palmeiras (Demonstração)',
+        type: 'collective',
+        subdomain: 'solar-demonstracao',
+        clientAddress: 'Rua das Flores, 123',
+        plan: 'ANNUAL_PREMIUM',
+        nextPaymentAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        units: [
+          { id: 'demo-u1', name: 'Casa 101', block: 'A', street: 'Rua Principal', number: '101' },
+          { id: 'demo-u2', name: 'Casa 102', block: 'A', street: 'Rua Principal', number: '102' },
+          { id: 'demo-u3', name: 'Casa 103', block: 'B', street: 'Rua Principal', number: '103' },
+          { id: 'demo-u4', name: 'Casa 104', block: 'B', street: 'Rua Principal', number: '104' }
+        ]
+      }
+    ]);
+    setSelectedProperty('demo-vila-id');
+    setOnlineStatus({
+      'demo-resident-1': 'online',
+      'demo-resident-2': 'offline'
+    });
+    // Simula mensagens de caixa postal demo
+    setMailboxMessages([
+      { id: 'demo-msg1', senderName: 'Zezinho (Casa 101)', message: 'Olá síndico, solicito autorização para a entrada do pintor amanhã às 8h.', createdAt: new Date() }
+    ]);
+    // Simula alertas ativos demo
+    setActiveAlerts([
+      { id: 'demo-alert1', type: 'release', title: '🔑 Solicitação de Liberação', message: 'Morador da Casa 101 solicita liberação de visitante.', timestamp: new Date() }
+    ]);
+    setOnboardingStep(null);
+    setActiveTab('control_panel'); // Abre o painel de controle interativo para impressionar!
+  };
+
+  // ─── Suporte a Modo Noturno (Dark Mode) ───
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('cd_dark_mode') === 'true');
+
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-theme');
+      localStorage.setItem('cd_dark_mode', 'true');
+    } else {
+      document.body.classList.remove('dark-theme');
+      localStorage.setItem('cd_dark_mode', 'false');
+    }
+  }, [darkMode]);
 
   useEffect(() => {
     // Auth guard: redirect if not logged in
@@ -192,6 +243,18 @@ export default function AdminPanel() {
     }
   };
 
+  const fetchOnlineStatus = async (propertyId) => {
+    try {
+      const res = await fetch(`${API}/api/properties/${propertyId}/online-status`);
+      if (res.ok) {
+        const data = await res.json();
+        setOnlineStatus(data);
+      }
+    } catch (e) {
+      console.error('Online status fetch failed:', e);
+    }
+  };
+
   const resolveAlert = async (alertId) => {
     if (!selectedProperty) return;
     try {
@@ -226,7 +289,10 @@ export default function AdminPanel() {
   useEffect(() => {
     if (activeTab === 'history' && selectedProperty) fetchVisitors(selectedProperty);
     if (activeTab === 'mailbox' && selectedProperty) fetchMailbox(selectedProperty);
-    if (activeTab === 'control_panel' && selectedProperty) fetchAlerts(selectedProperty);
+    if (activeTab === 'control_panel' && selectedProperty) {
+      fetchAlerts(selectedProperty);
+      fetchOnlineStatus(selectedProperty);
+    }
   }, [activeTab, selectedProperty]);
 
   // Polling automático para alertas de segurança e solicitações de portão na Grade Visual
@@ -236,10 +302,12 @@ export default function AdminPanel() {
     // Roda a cada 4 segundos se a aba ativa for o painel de controle
     const interval = setInterval(() => {
       fetchAlerts(selectedProperty);
+      fetchOnlineStatus(selectedProperty);
     }, 4000);
 
     // Roda uma vez imediatamente
     fetchAlerts(selectedProperty);
+    fetchOnlineStatus(selectedProperty);
 
     return () => clearInterval(interval);
   }, [selectedProperty, activeTab]);
@@ -383,6 +451,12 @@ export default function AdminPanel() {
             </button>
           ))}
         </div>
+        <div style={{ margin: '20px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>OU</div>
+
+        <button onClick={startDemoMode} style={{ width: '100%', padding: '16px', borderRadius: '16px', border: '1px dashed var(--primary)', background: 'rgba(59,130,246,0.05)', color: 'var(--primary)', fontWeight: 700, fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'var(--transition-fast)' }}>
+          <Zap size={18} /> 🏠 Explorar Vila de Demonstração (Guia)
+        </button>
+
         <button onClick={() => setOnboardingStep('scan')} style={{ display: 'block', margin: '24px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px' }}>← Voltar</button>
       </div>
     </div>
@@ -447,19 +521,45 @@ export default function AdminPanel() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Logo size={32} />
         </div>
-        <button onClick={() => {
-          [
-            'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
-            'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
-            'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
-            'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
-            'cd_admin_name', 'cd_admin_password', 'cd_property_type'
-          ].forEach(k => localStorage.removeItem(k));
-          navigate('/');
-        }} style={{ color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
-          <LogOut size={18} /> Sair
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          {/* Botão de Modo Noturno */}
+          <button onClick={() => setDarkMode(!darkMode)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 12px', borderRadius: '100px', transition: 'all 0.2s' }}>
+            {darkMode ? <><Sun size={16} color="#F59E0B" /> Modo Claro</> : <><Moon size={16} color="#3B82F6" /> Modo Noturno</>}
+          </button>
+
+          <button onClick={() => {
+            [
+              'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+              'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+              'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+              'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+              'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+            ].forEach(k => localStorage.removeItem(k));
+            document.body.classList.remove('dark-theme');
+            navigate('/');
+          }} style={{ color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+            <LogOut size={18} /> Sair
+          </button>
+        </div>
       </header>
+
+      {isDemoMode && (
+        <div style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)', color: '#FFF', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Zap size={20} color="#FFD700" style={{ animation: 'float 3s infinite' }} />
+            <div style={{ fontSize: '14px', fontWeight: 600 }}>
+              ✨ <strong>Modo de Demonstração Ativo!</strong> Explore as abas acima para aprender a gerenciar sua vila/condomínio. Veja as dicas marcadas com 💡.
+            </div>
+          </div>
+          <button onClick={() => {
+            setIsDemoMode(false);
+            setProperties([]);
+            setOnboardingStep('type');
+          }} style={{ background: '#FFF', color: '#6D28D9', border: 'none', padding: '8px 16px', borderRadius: '100px', fontWeight: 750, fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', transition: 'all 0.2s' }}>
+            Sair da Demonstração
+          </button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', padding: '0 24px', gap: '0', overflowX: 'auto' }}>
@@ -525,6 +625,52 @@ export default function AdminPanel() {
                         <button onClick={() => deleteProperty(p.id)} style={{ background: 'rgba(239,68,68,0.1)', border: 'none', color: '#EF4444', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}><Trash2 size={18} /></button>
                       )}
                     </div>
+
+                    {p.type !== 'individual' && (
+                      <div style={{ marginBottom: '16px', background: '#F8FAFC', padding: '12px 14px', borderRadius: '14px', border: '1px solid var(--border-subtle)' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', marginBottom: '6px' }}>
+                          🔗 Subdomínio da Vila
+                        </label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input 
+                            type="text" 
+                            placeholder="ex: residencial-solar" 
+                            defaultValue={p.subdomain || ''} 
+                            onBlur={async (e) => {
+                              const val = e.target.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+                              e.target.value = val;
+                              if (val === (p.subdomain || '')) return;
+                              try {
+                                const res = await fetch(`${API}/api/properties/${p.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ name: p.name, subdomain: val })
+                                });
+                                if (res.ok) {
+                                  alert('Subdomínio da vila atualizado com sucesso!');
+                                  fetchProperties();
+                                } else {
+                                  const err = await res.json();
+                                  alert(err.error || 'Erro ao atualizar subdomínio.');
+                                }
+                              } catch {
+                                alert('Erro de conexão com o servidor.');
+                              }
+                            }}
+                            style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '13px', outline: 'none', background: '#FFF', fontWeight: 600, color: '#1E293B' }}
+                          />
+                        </div>
+                        {p.subdomain ? (
+                          <span style={{ display: 'block', fontSize: '11px', color: '#10B981', marginTop: '6px', fontWeight: 700 }}>
+                            ✓ Acesso: {p.subdomain}.campainha.digital
+                          </span>
+                        ) : (
+                          <span style={{ display: 'block', fontSize: '10px', color: '#94A3B8', marginTop: '4px', fontWeight: 500 }}>
+                            Toque fora do campo para salvar. Permite acessar sem precisar digitar código.
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '16px', display: 'flex', justifyContent: 'center', marginBottom: '20px', border: '1px solid var(--border-subtle)' }}>
                       <img src={p.qrCodeUrl} alt="QR" style={{ width: '140px', height: 'auto' }} />
@@ -773,8 +919,17 @@ export default function AdminPanel() {
                           }
                         }
 
+                        const unitResidents = u.residents || [];
+                        let onlineResidentsCount = unitResidents.filter(r => onlineStatus[r.id] === 'online').length;
+                        let isOnline = onlineResidentsCount > 0;
+
+                        if (isDemoMode) {
+                          if (u.id === 'demo-u1') { isOnline = true; onlineResidentsCount = 1; }
+                          if (u.id === 'demo-u3') { isOnline = true; onlineResidentsCount = 2; }
+                        }
+
                         return (
-                          <HoverHelp key={u.id} text={hasAlert ? `${mainAlert.title}: ${mainAlert.description || ''} (Clique para resolver)` : `Status normal da unidade ${u.name}`}>
+                          <HoverHelp key={u.id} text={hasAlert ? `${mainAlert.title}: ${mainAlert.description || ''} (Clique para resolver)` : `Status: ${isOnline ? 'Online' : 'Offline'} (${onlineResidentsCount} moradores online)`}>
                             <div
                               onClick={() => {
                                 if (hasAlert) {
@@ -802,6 +957,18 @@ export default function AdminPanel() {
                               <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>{u.name}</span>
                               {u.number && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Nº {u.number}</span>}
                               
+                              {isOnline ? (
+                                <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981', display: 'inline-block' }} />
+                                  {onlineResidentsCount} online
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#94A3B8', display: 'inline-block' }} />
+                                  offline
+                                </span>
+                              )}
+                              
                               {alertBadge && (
                                 <span style={{
                                   marginTop: '8px',
@@ -825,6 +992,54 @@ export default function AdminPanel() {
                 );
               });
             })()}
+
+            {isDemoMode && (
+              <div style={{ marginTop: '40px', background: 'var(--bg-surface-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '24px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <h4 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                  💡 Guia Prático do Painel de Controle (Para Novos Clientes)
+                </h4>
+                <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
+                  Esse painel permite que você enxergue e controle em tempo real todas as atividades da sua vila ou condomínio. Veja abaixo o que cada elemento faz:
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginTop: '8px' }}>
+                  <div style={{ padding: '16px', background: 'rgba(59,130,246,0.05)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
+                    <h5 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 8px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', display: 'inline-block', boxShadow: '0 0 8px #10B981' }} /> Led Verde (Morador Online)
+                    </h5>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+                      Indica que o morador está com o aplicativo aberto ou em segundo plano no celular, pronto para receber chamadas de voz e vídeo instantâneas.
+                    </p>
+                  </div>
+                  
+                  <div style={{ padding: '16px', background: 'rgba(59,130,246,0.05)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
+                    <h5 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 8px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#94A3B8', display: 'inline-block' }} /> Led Cinza (Morador Offline)
+                    </h5>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+                      Indica que o morador está offline. Se um visitante tocar na campainha, o sistema envia automaticamente uma Notificação Push para chamar seu aparelho.
+                    </p>
+                  </div>
+
+                  <div style={{ padding: '16px', background: 'rgba(59,130,246,0.05)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
+                    <h5 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 8px', color: '#F59E0B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      📦 Alerta de Encomenda (Pulsante)
+                    </h5>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+                      Quando uma encomenda chega na portaria, o porteiro ativa o alerta e o morador recebe uma notificação. O card fica pulsando em amarelo até ser resolvido!
+                    </p>
+                  </div>
+
+                  <div style={{ padding: '16px', background: 'rgba(59,130,246,0.05)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
+                    <h5 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 8px', color: '#10B981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      🔓 Integração com Portões (Sonoff)
+                    </h5>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+                      Integração total com relés Sonoff/eWelink. O administrador ou o porteiro podem abrir o portão social ou de veículos com apenas 1 clique no painel!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Modal de Alerta Ativo */}
             {selectedMessage && (

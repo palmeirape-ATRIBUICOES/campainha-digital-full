@@ -77,6 +77,7 @@ model Property {
   clientAddress   String?
   companyName     String?
   plan            String    @default("BASIC")
+  subdomain       String?   @unique
   
   createdAt       DateTime  @default(now())
   nextPaymentAt   DateTime
@@ -104,6 +105,7 @@ model Unit {
   alerts              UnitAlert[]
   sentConnections     InternalConnection[] @relation("SenderConnection")
   receivedConnections InternalConnection[] @relation("ReceiverConnection")
+  visitorCodes        VisitorCode[]
 }
 
 model Visitor {
@@ -179,4 +181,14 @@ model SystemSetting {
   id    String @id @default(uuid())
   key   String @unique
   value String
+}
+
+model VisitorCode {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  unitId      String
+  unit        Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  visitorName String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
 }

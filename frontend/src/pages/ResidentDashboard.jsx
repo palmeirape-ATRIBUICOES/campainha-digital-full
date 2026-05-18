@@ -8,6 +8,7 @@ import MessagesPanel from '../components/resident/MessagesPanel';
 import IntercomPanel from '../components/resident/IntercomPanel';
 import ServicesPanel from '../components/resident/ServicesPanel';
 import PaymentModal from '../components/PaymentModal';
+import VisitorCodesPanel from '../components/resident/VisitorCodesPanel';
 
 import { API } from '../config';
 const DEFAULT_ICE = {
@@ -687,6 +688,10 @@ export default function ResidentDashboard() {
             <ShoppingBag size={20} color={tab === 'services' ? '#0369A1' : '#64748B'} /> Parceiros da Região
           </button>
 
+          <button onClick={() => { setTab('visitor-codes'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'visitor-codes' ? '#F0F9FF' : 'transparent', color: tab === 'visitor-codes' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
+            <KeyRound size={20} color={tab === 'visitor-codes' ? '#0369A1' : '#64748B'} /> Códigos de Visitante
+          </button>
+
           <div style={{ height: '1px', background: '#F1F5F9', margin: '8px 0' }} />
           
           <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', marginBottom: '8px' }}>CONTA</p>
@@ -1316,6 +1321,12 @@ export default function ResidentDashboard() {
       {tab === 'services' && (
         <div style={{ padding: '20px' }}>
           <ServicesPanel/>
+        </div>
+      )}
+
+      {tab === 'visitor-codes' && (
+        <div style={{ padding: '20px' }}>
+          <VisitorCodesPanel unitId={id} propertyName={propertyName} />
         </div>
       )}
 

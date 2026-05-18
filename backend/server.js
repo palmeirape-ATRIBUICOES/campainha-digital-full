@@ -1059,7 +1059,7 @@ app.put('/api/user/settings', authenticate, async (req, res) => {
 
 // Registro de Propriedade (Não obrigatório QR Code na hora)
 app.post('/api/properties', async (req, res) => {
-  const { name, type, id, clientName, units, adminEmail } = req.body;
+  const { name, type, id, clientName, units, adminEmail, subdomain } = req.body;
   
   try {
     const finalId = id || uuidv4();
@@ -1089,6 +1089,7 @@ app.post('/api/properties', async (req, res) => {
         type: type === 'individual' ? 'individual' : 'collective',
         clientName: clientName || '',
         adminId,
+        subdomain: subdomain ? subdomain.toLowerCase().trim() : null,
         nextPaymentAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 dias de teste
       }
     });
@@ -1125,35 +1126,40 @@ app.get('/api/properties/:id', async (req, res) => {
     let code = idParam;
     if (idParam.startsWith('CAMPAINHA:')) code = idParam.split(':')[1];
 
-    let property = await prisma.property.findUnique({
-      where: { id: idParam },
-      include: {
-        units: { select: { id: true, name: true } }
-      }
-    });
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idParam);
+    let property = null;
 
-    if (!property) {
-      // 1. Verificar se idParam é um ID de Unidade
-      const unit = await prisma.unit.findUnique({
-        where: { id: idParam },
-        include: { property: { include: { units: { select: { id: true, name: true } } } } }
-      });
-      if (unit && unit.property) {
-        property = unit.property;
-      }
-    }
-
-    if (!property) {
-      // 2. Verificar se idParam é um ID de Usuário (para retrocompatibilidade)
-      const userById = await prisma.user.findUnique({
+    if (isValidUUID) {
+      property = await prisma.property.findUnique({
         where: { id: idParam },
         include: {
-          propertiesManaged: { include: { units: { select: { id: true, name: true } } } },
-          units: { include: { property: { include: { units: { select: { id: true, name: true } } } } } }
+          units: { select: { id: true, name: true } }
         }
       });
-      if (userById) {
-        property = userById.propertiesManaged?.[0] || userById.units?.[0]?.property;
+
+      if (!property) {
+        // 1. Verificar se idParam é um ID de Unidade
+        const unit = await prisma.unit.findUnique({
+          where: { id: idParam },
+          include: { property: { include: { units: { select: { id: true, name: true } } } } }
+        });
+        if (unit && unit.property) {
+          property = unit.property;
+        }
+      }
+
+      if (!property) {
+        // 2. Verificar se idParam é um ID de Usuário (para retrocompatibilidade)
+        const userById = await prisma.user.findUnique({
+          where: { id: idParam },
+          include: {
+            propertiesManaged: { include: { units: { select: { id: true, name: true } } } },
+            units: { include: { property: { include: { units: { select: { id: true, name: true } } } } } }
+          }
+        });
+        if (userById) {
+          property = userById.propertiesManaged?.[0] || userById.units?.[0]?.property;
+        }
       }
     }
 
@@ -1168,6 +1174,19 @@ app.get('/api/properties/:id', async (req, res) => {
       });
       if (user) {
         property = user.propertiesManaged?.[0] || user.units?.[0]?.property;
+      }
+    }
+
+    if (!property) {
+      // 4. Verificar se idParam é um subdomínio cadastrado
+      const propertyBySub = await prisma.property.findFirst({
+        where: { subdomain: idParam.toLowerCase().trim() },
+        include: {
+          units: { select: { id: true, name: true } }
+        }
+      });
+      if (propertyBySub) {
+        property = propertyBySub;
       }
     }
 
@@ -1756,14 +1775,205 @@ app.post('/api/auth/scan-plate', async (req, res) => {
   res.json({ success: true, plateCode: updated.plateCode, message: 'Placa vinculada com sucesso!' });
 });
 
+// ─── COMUNICAÇÃO DE VILAS, SUBDOMÍNIOS E CÓDIGOS DE VISITANTE ─────────────────
 
+// Buscar dados de uma Propriedade por Subdomínio
+app.get('/api/properties/subdomain/:subdomain', async (req, res) => {
+  try {
+    const { subdomain } = req.params;
+    const property = await prisma.property.findFirst({
+      where: { subdomain: subdomain.toLowerCase().trim() },
+      include: {
+        units: { select: { id: true, name: true, block: true, street: true, number: true } }
+      }
+    });
+    if (!property) return res.status(404).json({ error: 'Propriedade não encontrada por subdomínio' });
+    res.json(property);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar propriedade por subdomínio' });
+  }
+});
+
+// Atualizar propriedade (subdomínio, nome, etc.)
+app.put('/api/properties/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, subdomain } = req.body;
+  try {
+    const updated = await prisma.property.update({
+      where: { id },
+      data: {
+        name,
+        subdomain: subdomain ? subdomain.toLowerCase().trim() : null
+      }
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error('Update property error:', err);
+    res.status(500).json({ error: 'Erro ao atualizar propriedade. Talvez o subdomínio já esteja em uso.' });
+  }
+});
+
+// Listar status online dos moradores para o painel administrador da vila
+app.get('/api/properties/:propertyId/online-status', async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const units = await prisma.unit.findMany({
+      where: { propertyId },
+      include: { residents: true }
+    });
+    
+    const statusMap = {};
+    units.forEach(u => {
+      u.residents.forEach(r => {
+        statusMap[r.id] = activeSockets.has(r.id) ? 'online' : 'offline';
+      });
+    });
+    res.json(statusMap);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar status online' });
+  }
+});
+
+// Listar códigos de visitantes da unidade
+app.get('/api/units/:unitId/visitor-codes', async (req, res) => {
+  try {
+    const { unitId } = req.params;
+    const codes = await prisma.visitorCode.findMany({
+      where: { unitId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(codes);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao carregar códigos de visitantes' });
+  }
+});
+
+// Criar código de visitante para a unidade (6 dígitos único)
+app.post('/api/units/:unitId/visitor-codes', async (req, res) => {
+  try {
+    const { unitId } = req.params;
+    const { visitorName, daysValid } = req.body;
+    if (!visitorName) return res.status(400).json({ error: 'Nome do visitante é obrigatório.' });
+    
+    let code = '';
+    let exists = true;
+    while (exists) {
+      code = Math.floor(100000 + Math.random() * 900000).toString();
+      const check = await prisma.visitorCode.findUnique({ where: { code } });
+      if (!check) exists = false;
+    }
+
+    const expiresAt = new Date(Date.now() + (daysValid || 1) * 24 * 60 * 60 * 1000);
+    
+    const newCode = await prisma.visitorCode.create({
+      data: {
+        code,
+        unitId,
+        visitorName,
+        expiresAt
+      }
+    });
+    res.status(201).json(newCode);
+  } catch (err) {
+    console.error('Create visitor code error:', err);
+    res.status(500).json({ error: 'Erro ao criar código de visitante' });
+  }
+});
+
+// Deletar/cancelar código de visitante
+app.delete('/api/units/:unitId/visitor-codes/:codeId', async (req, res) => {
+  try {
+    const { codeId } = req.params;
+    await prisma.visitorCode.delete({ where: { id: codeId } });
+    res.json({ success: true, message: 'Código cancelado com sucesso.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao cancelar código de visitante' });
+  }
+});
+
+// Validar código de visitante na Portaria / Porteiro / Totem
+app.post('/api/properties/:propertyId/validate-visitor-code', async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: 'Código é obrigatório.' });
+    
+    const visitorCode = await prisma.visitorCode.findUnique({
+      where: { code },
+      include: { unit: { include: { property: true } } }
+    });
+
+    if (!visitorCode || visitorCode.unit.propertyId !== propertyId) {
+      return res.status(404).json({ error: 'Código inválido ou não pertence a esta vila/condomínio.' });
+    }
+
+    if (new Date() > new Date(visitorCode.expiresAt)) {
+      return res.status(400).json({ error: 'Este código já expirou.' });
+    }
+
+    // Registra no histórico de visitantes
+    const visit = await prisma.visitor.create({
+      data: {
+        unitId: visitorCode.unitId,
+        propertyId: propertyId,
+        callerName: `Pre-aut: ${visitorCode.visitorName} (Cód. ${code})`
+      }
+    });
+
+    // Notifica o doorman/porteiro via socket
+    io.emit('incoming_visitor_code', {
+      propertyId,
+      visitorName: visitorCode.visitorName,
+      unitName: visitorCode.unit.name,
+      code: code,
+      timestamp: new Date()
+    });
+
+    // Notifica os moradores da unidade via socket e push
+    io.to(`user_${visitorCode.unitId}`).emit('visitor_arrived', {
+      visitorName: visitorCode.visitorName,
+      timestamp: new Date()
+    });
+
+    // Envia Push Notification para o morador
+    const unit = await prisma.unit.findUnique({
+      where: { id: visitorCode.unitId },
+      include: { residents: true }
+    });
+    if (unit) {
+      unit.residents.forEach(resident => {
+        sendPushToUser(resident.id, {
+          title: '🔑 Visitante Chegou!',
+          body: `${visitorCode.visitorName} chegou na portaria com código de acesso ativo!`,
+          tag: 'visitor-arrived',
+          vibrate: [300, 100, 300]
+        });
+      });
+    }
+
+    res.json({
+      success: true,
+      visitorName: visitorCode.visitorName,
+      unitName: visitorCode.unit.name,
+      message: 'Código de visitante válido! Porteiro notificado para liberação.'
+    });
+  } catch (err) {
+    console.error('Validate code error:', err);
+    res.status(500).json({ error: 'Erro ao validar código de visitante' });
+  }
+});
 
 // ─── Socket.io Logic ─────────────────────────────────────────────────────────
+
+const activeSockets = new Map();
+
 
 io.on('connection', (socket) => {
   console.log('[WS] conectado:', socket.id);
 
   socket.on('register_user', ({ userId }) => {
+    socket.userId = userId;
+    activeSockets.set(userId, socket.id);
     socket.join(`user_${userId}`);
     console.log(`[WS] Usuário ${userId} registrado no socket ${socket.id}`);
   });
@@ -1878,6 +2088,13 @@ io.on('connection', (socket) => {
   socket.on('authorize_entry', ({ visitorId }) => {
     // visitorId neste contexto contém o visitorSocketId para notificar a tela
     io.to(visitorId).emit('entry_authorized');
+  });
+
+  socket.on('disconnect', () => {
+    console.log('[WS] desconectado:', socket.id);
+    if (socket.userId) {
+      activeSockets.delete(socket.userId);
+    }
   });
 });
 
