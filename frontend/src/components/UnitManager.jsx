@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit3, Save, X, Building2, MapPin, Hash, Copy, Check, MessageCircle } from 'lucide-react';
 
 import { API } from '../config';
@@ -79,15 +79,15 @@ export default function UnitManager({ propertyId, adminEmail, onRefresh }) {
 
   const startEdit = (u) => { setEditId(u.id); setEditData({ name:u.name, block:u.block||'', street:u.street||'', number:u.number||'' }); };
 
-  const inputStyle = { width:'100%', padding:'10px 12px', borderRadius:'10px', border:'1px solid #E2E8F0', fontSize:'13px', outline:'none', background:'#F8FAFC' };
-  const labelStyle = { fontSize:'11px', fontWeight:700, color:'#64748B', marginBottom:'4px', display:'block', letterSpacing:'0.5px' };
+  const inputStyle = { width:'100%', padding:'10px 12px', borderRadius:'10px', border:'1px solid var(--border-subtle)', fontSize:'13px', outline:'none', background:'var(--bg-surface)', color:'var(--text-main)' };
+  const labelStyle = { fontSize:'11px', fontWeight:700, color:'var(--text-muted)', marginBottom:'4px', display:'block', letterSpacing:'0.5px' };
 
   return (
     <div style={{ padding:'20px 0' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px' }}>
         <div>
-          <h3 style={{ fontSize:'18px', fontWeight:800, margin:0 }}>Gestão de Unidades</h3>
-          <p style={{ fontSize:'12px', color:'#64748B', margin:'4px 0 0' }}>{units.length} unidade{units.length !== 1 ? 's' : ''} cadastrada{units.length !== 1 ? 's' : ''}</p>
+          <h3 style={{ fontSize:'18px', fontWeight:800, margin:0, color:'var(--text-main)' }}>Gestão de Unidades</h3>
+          <p style={{ fontSize:'12px', color:'var(--text-muted)', margin:'4px 0 0' }}>{units.length} unidade{units.length !== 1 ? 's' : ''} cadastrada{units.length !== 1 ? 's' : ''}</p>
         </div>
         <button onClick={() => setShowAdd(!showAdd)} style={{ background:'linear-gradient(135deg,#3B82F6,#2563EB)', color:'#fff', border:'none', padding:'10px 18px', borderRadius:'12px', fontWeight:700, fontSize:'13px', cursor:'pointer', display:'flex', alignItems:'center', gap:'6px' }}>
           <Plus size={16}/> Nova Unidade
@@ -96,8 +96,8 @@ export default function UnitManager({ propertyId, adminEmail, onRefresh }) {
 
       {/* Formulário Adicionar */}
       {showAdd && (
-        <div style={{ background:'#FFF', border:'1px solid #E2E8F0', borderRadius:'16px', padding:'20px', marginBottom:'16px', boxShadow:'0 4px 12px rgba(0,0,0,0.04)' }}>
-          <h4 style={{ fontSize:'14px', fontWeight:700, marginBottom:'16px', display:'flex', alignItems:'center', gap:'8px' }}><Plus size={16} color="#3B82F6"/> Cadastrar Nova Unidade</h4>
+        <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', borderRadius:'16px', padding:'20px', marginBottom:'16px', boxShadow:'0 4px 12px rgba(0,0,0,0.04)', color:'var(--text-main)' }}>
+          <h4 style={{ fontSize:'14px', fontWeight:700, marginBottom:'16px', display:'flex', alignItems:'center', gap:'8px', color:'var(--text-main)' }}><Plus size={16} color="var(--primary)"/> Cadastrar Nova Unidade</h4>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
             <div style={{ gridColumn:'1/-1' }}>
               <label style={labelStyle}>NOME DA UNIDADE *</label>
@@ -118,15 +118,15 @@ export default function UnitManager({ propertyId, adminEmail, onRefresh }) {
           </div>
           <div style={{ display:'flex', gap:'10px', marginTop:'16px' }}>
             <button onClick={addUnit} style={{ flex:1, background:'#10B981', color:'#fff', border:'none', padding:'12px', borderRadius:'10px', fontWeight:700, fontSize:'14px', cursor:'pointer' }}>Cadastrar</button>
-            <button onClick={() => setShowAdd(false)} style={{ padding:'12px 20px', background:'#F1F5F9', border:'none', borderRadius:'10px', cursor:'pointer', fontWeight:600, color:'#64748B' }}>Cancelar</button>
+            <button onClick={() => setShowAdd(false)} style={{ padding:'12px 20px', background:'var(--bg-deep)', border:'none', borderRadius:'10px', cursor:'pointer', fontWeight:600, color:'var(--text-muted)' }}>Cancelar</button>
           </div>
         </div>
       )}
 
-      {loading ? <p style={{ textAlign:'center', color:'#64748B', padding:'40px' }}>Carregando...</p> : (
+      {loading ? <p style={{ textAlign:'center', color:'var(--text-muted)', padding:'40px' }}>Carregando...</p> : (
         <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
           {units.map(u => (
-            <div key={u.id} style={{ background:'#FFF', border:'1px solid #E2E8F0', borderRadius:'14px', padding:'16px', transition:'all 0.2s' }}>
+            <div key={u.id} style={{ background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', borderRadius:'14px', padding:'16px', transition:'all 0.2s', color:'var(--text-main)' }}>
               {editId === u.id ? (
                 /* Modo Edição */
                 <div>
@@ -141,7 +141,7 @@ export default function UnitManager({ propertyId, adminEmail, onRefresh }) {
                   </div>
                   <div style={{ display:'flex', gap:'8px' }}>
                     <button onClick={() => saveEdit(u.id)} style={{ flex:1, background:'#10B981', color:'#fff', border:'none', padding:'10px', borderRadius:'8px', fontWeight:700, fontSize:'13px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}><Save size={14}/>Salvar</button>
-                    <button onClick={() => setEditId(null)} style={{ padding:'10px 16px', background:'#F1F5F9', border:'none', borderRadius:'8px', cursor:'pointer', color:'#64748B' }}><X size={14}/></button>
+                    <button onClick={() => setEditId(null)} style={{ padding:'10px 16px', background:'var(--bg-deep)', border:'none', borderRadius:'8px', cursor:'pointer', color:'var(--text-muted)' }}><X size={14}/></button>
                   </div>
                 </div>
               ) : (
@@ -150,16 +150,16 @@ export default function UnitManager({ propertyId, adminEmail, onRefresh }) {
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
                     <div style={{ flex:1 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' }}>
-                        <Building2 size={16} color="#3B82F6"/>
-                        <span style={{ fontWeight:700, fontSize:'15px' }}>{u.name}</span>
+                        <Building2 size={16} color="var(--primary)"/>
+                        <span style={{ fontWeight:700, fontSize:'15px', color:'var(--text-main)' }}>{u.name}</span>
                       </div>
                       <div style={{ display:'flex', gap:'12px', flexWrap:'wrap', marginBottom:'8px' }}>
-                        {u.block && <span style={{ fontSize:'12px', color:'#64748B', display:'flex', alignItems:'center', gap:'4px' }}><Hash size={11}/>Bloco: {u.block}</span>}
-                        {u.street && <span style={{ fontSize:'12px', color:'#64748B', display:'flex', alignItems:'center', gap:'4px' }}><MapPin size={11}/>Rua: {u.street}</span>}
-                        {u.number && <span style={{ fontSize:'12px', color:'#64748B', display:'flex', alignItems:'center', gap:'4px' }}>Nº: {u.number}</span>}
+                        {u.block && <span style={{ fontSize:'12px', color:'var(--text-muted)', display:'flex', alignItems:'center', gap:'4px' }}><Hash size={11}/>Bloco: {u.block}</span>}
+                        {u.street && <span style={{ fontSize:'12px', color:'var(--text-muted)', display:'flex', alignItems:'center', gap:'4px' }}><MapPin size={11}/>Rua: {u.street}</span>}
+                        {u.number && <span style={{ fontSize:'12px', color:'var(--text-muted)', display:'flex', alignItems:'center', gap:'4px' }}>Nº: {u.number}</span>}
                       </div>
                       {(!u.block && !u.street && !u.number) && (
-                        <p style={{ fontSize:'11px', color:'#F59E0B', fontWeight:600, margin:'4px 0' }}>⚠ Sem endereço cadastrado - morador não poderá ser localizado pelo interfone</p>
+                        <p style={{ fontSize:'11px', color:'#D97706', fontWeight:600, margin:'4px 0' }}>⚠ Sem endereço cadastrado - morador não poderá ser localizado pelo interfone</p>
                       )}
                     </div>
                     <div style={{ display:'flex', gap:'6px' }}>
@@ -168,8 +168,8 @@ export default function UnitManager({ propertyId, adminEmail, onRefresh }) {
                     </div>
                   </div>
                   {u.accessCode && (
-                    <div style={{ display:'flex', alignItems:'center', gap:'8px', marginTop:'8px', padding:'8px 12px', background:'#F8FAFC', borderRadius:'8px', border:'1px solid #E2E8F0' }}>
-                      <code style={{ fontSize:'14px', fontWeight:800, color:'#3B82F6', letterSpacing:'2px', flex:1 }}>{u.accessCode}</code>
+                    <div style={{ display:'flex', alignItems:'center', gap:'8px', marginTop:'8px', padding:'8px 12px', background:'var(--bg-deep)', borderRadius:'8px', border:'1px solid var(--border-subtle)' }}>
+                      <code style={{ fontSize:'14px', fontWeight:800, color:'var(--primary)', letterSpacing:'2px', flex:1 }}>{u.accessCode}</code>
                       <CopyBtn text={u.accessCode}/>
                       <WaBtn code={u.accessCode}/>
                     </div>
@@ -179,7 +179,7 @@ export default function UnitManager({ propertyId, adminEmail, onRefresh }) {
             </div>
           ))}
           {units.length === 0 && !loading && (
-            <div style={{ textAlign:'center', padding:'40px', color:'#64748B' }}>
+            <div style={{ textAlign:'center', padding:'40px', color:'var(--text-muted)' }}>
               <Building2 size={40} style={{ opacity:0.2, marginBottom:'12px' }}/>
               <p style={{ fontWeight:600 }}>Nenhuma unidade cadastrada</p>
               <p style={{ fontSize:'13px' }}>Clique em "Nova Unidade" para começar.</p>
