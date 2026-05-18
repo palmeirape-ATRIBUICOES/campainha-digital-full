@@ -79,7 +79,7 @@ body {
 
 .input-glass {
   width: 100%;
-  background: #FFFFFF;
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 16px;
@@ -136,7 +136,7 @@ body {
 }
 
 .btn-secondary {
-  background: #FFFFFF;
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   color: var(--text-main);
   padding: 16px 32px;
@@ -427,7 +427,10 @@ body {
   border-radius: 10px;
   font-size: 11px;
   font-weight: 500;
-  white-space: nowrap;
+  width: max-content;
+  max-width: 240px;
+  white-space: normal;
+  line-height: 1.4;
   box-shadow: 0 8px 20px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1);
   border: 1px solid rgba(255,255,255,0.1);
   opacity: 0;

@@ -100,6 +100,7 @@ export default function AdminPanel() {
   const [simCallState, setSimCallState] = useState('idle');
   const [simCallTarget, setSimCallTarget] = useState('portaria');
   const [simSelectedNeighbor, setSimSelectedNeighbor] = useState('');
+  const [doormanCallState, setDoormanCallState] = useState('idle');
   const videoRef = useRef(null);
   const navigate = useNavigate();
 
@@ -1045,7 +1046,9 @@ export default function AdminPanel() {
                           <HoverHelp key={u.id} text={hasAlert ? `${mainAlert.title}: ${mainAlert.description || ''} (Clique para simular ou resolver)` : `Status: ${isOnline ? 'Online' : 'Offline'} (${onlineResidentsCount} moradores online)`}>
                             <div
                               onClick={() => {
-                                if (isDemoMode) {
+                                if (isDemoMode && hasAlert) {
+                                  setSelectedMessage(mainAlert);
+                                } else if (isDemoMode) {
                                   setSimulatedUnit(u);
                                 } else if (hasAlert) {
                                   setSelectedMessage(mainAlert);
@@ -1495,69 +1498,187 @@ export default function AdminPanel() {
       {/* Modal de Alerta Ativo */}
       {selectedMessage && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', backdropFilter: 'blur(4px)' }}>
-          <div style={{ background: '#FFF', borderRadius: '24px', maxWidth: '440px', width: '100%', padding: '32px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', border: '1px solid var(--border-subtle)', position: 'relative' }}>
-            <button onClick={() => setSelectedMessage(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
+          <div style={{ background: 'var(--bg-surface)', color: 'var(--text-main)', borderRadius: '24px', maxWidth: '440px', width: '100%', padding: '32px', boxShadow: '0 20px 40px rgba(0,0,0,0.15)', border: '1px solid var(--border-subtle)', position: 'relative' }}>
+            <button onClick={() => { setSelectedMessage(null); setDoormanCallState('idle'); }} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: selectedMessage.type === 'package' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {selectedMessage.type === 'package' ? <Zap size={24} color="#F59E0B" /> : <ShieldCheck size={24} color="#10B981" />}
-              </div>
+            {isDemoMode ? (
+              /* MODO DEMONSTRAÇÃO: RESOLUÇÃO DO PORTEIRO */
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>{selectedMessage.title}</h3>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Unidade {selectedMessage.unit?.name || 'Morador'}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: selectedMessage.type === 'package' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {selectedMessage.type === 'package' ? <Zap size={24} color="#F59E0B" /> : <ShieldCheck size={24} color="#10B981" />}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>🎛️ Resolução da Portaria</h3>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Unidade: {properties[0]?.units.find(u => u.id === selectedMessage.unitId)?.name || 'Morador'}</p>
+                  </div>
+                </div>
+
+                {doormanCallState === 'idle' && (
+                  <>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '24px' }}>
+                      {selectedMessage.description || 'Nenhuma descrição adicional.'}
+                    </p>
+
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                      <button
+                        onClick={() => {
+                          try {
+                            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav');
+                            audio.volume = 0.4;
+                            audio.play().catch(() => {});
+                          } catch {}
+                          resolveAlert(selectedMessage.id);
+                          setSelectedMessage(null);
+                          alert('✅ Portaria autorizou o visitante e o portão social foi liberado!');
+                        }}
+                        style={{ flex: 1, background: '#10B981', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      >
+                        🔑 AUTORIZAR / OK
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setDoormanCallState('calling');
+                          try {
+                            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/1657/1657-84.wav');
+                            audio.volume = 0.3;
+                            audio.play().catch(() => {});
+                          } catch {}
+                          setTimeout(() => {
+                            setDoormanCallState('talking');
+                          }, 2550);
+                        }}
+                        style={{ flex: 1, background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                      >
+                        📞 LIGAR PRO MORADOR
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        const unitObj = properties[0]?.units.find(un => un.id === selectedMessage.unitId);
+                        if (unitObj) {
+                          setSimulatedUnit(unitObj);
+                          setSelectedMessage(null);
+                        }
+                      }}
+                      style={{ width: '100%', background: 'rgba(59,130,246,0.1)', color: 'var(--primary)', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '13px', marginBottom: '8px' }}
+                    >
+                      📱 Simular Aplicativo do Morador
+                    </button>
+
+                    <button
+                      onClick={() => setSelectedMessage(null)}
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)', padding: '12px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                )}
+
+                {doormanCallState === 'calling' && (
+                  <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                    <span style={{ fontSize: '32px', animation: 'bounce 1s infinite', display: 'inline-block' }}>📞</span>
+                    <h4 style={{ fontSize: '16px', color: 'var(--text-main)', margin: '16px 0 8px', fontWeight: 800 }}>Chamando Morador...</h4>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '24px' }}>Interfone de voz da portaria tocando no smartphone do morador...</p>
+                    <button
+                      onClick={() => setDoormanCallState('idle')}
+                      style={{ background: '#EF4444', color: '#FFF', border: 'none', padding: '10px 24px', borderRadius: '20px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      ❌ Desligar Chamada
+                    </button>
+                  </div>
+                )}
+
+                {doormanCallState === 'talking' && (
+                  <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                    <span style={{ fontSize: '32px', display: 'inline-block', animation: 'pulse 1.5s infinite' }}>🗣️</span>
+                    <h4 style={{ fontSize: '16px', color: 'var(--text-main)', margin: '12px 0 8px', fontWeight: 800 }}>Conexão de Voz Estabelecida</h4>
+                    
+                    <div style={{ background: 'rgba(59,130,246,0.05)', borderLeft: '4px solid var(--primary)', borderRadius: '12px', padding: '14px', textAlign: 'left', margin: '16px 0 24px', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                      <p style={{ margin: '0 0 8px' }}><strong>[Porteiro]:</strong> Olá! Estou com o visitante aqui na portaria. Posso autorizar a entrada?</p>
+                      <p style={{ margin: 0 }}><strong>[Morador]:</strong> Sim, claro! Pode autorizar, por favor!</p>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={() => {
+                          try {
+                            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav');
+                            audio.volume = 0.4;
+                            audio.play().catch(() => {});
+                          } catch {}
+                          resolveAlert(selectedMessage.id);
+                          setDoormanCallState('idle');
+                          setSelectedMessage(null);
+                          alert('✅ Visitante liberado e portão social aberto pelo porteiro!');
+                        }}
+                        style={{ flex: 1, background: '#10B981', color: '#FFF', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '13px' }}
+                      >
+                        ✅ AUTORIZAR E DESLIGAR
+                      </button>
+
+                      <button
+                        onClick={() => setDoormanCallState('idle')}
+                        style={{ flex: 1, background: '#EF4444', color: '#FFF', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '13px' }}
+                      >
+                        ❌ DESLIGAR
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            ) : (
+              /* MODO REAL: MENSAGEM DO SISTEMA PADRÃO */
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: selectedMessage.type === 'package' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {selectedMessage.type === 'package' ? <Zap size={24} color="#F59E0B" /> : <ShieldCheck size={24} color="#10B981" />}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>{selectedMessage.title}</h3>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Unidade {selectedMessage.unit?.name || 'Morador'}</p>
+                  </div>
+                </div>
 
-            <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '24px' }}>
-              {selectedMessage.description || 'Nenhuma descrição adicional.'}
-            </p>
+                <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '24px' }}>
+                  {selectedMessage.description || 'Nenhuma descrição adicional.'}
+                </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {selectedMessage.type === 'release' && (
-                <button
-                  onClick={() => {
-                    alert('[eWelink/Sonoff] Comando de liberação de portão disparado!');
-                    resolveAlert(selectedMessage.id);
-                    setSelectedMessage(null);
-                  }}
-                  style={{ width: '100%', background: '#10B981', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  🔑 AUTORIZAR E ABRIR PORTÃO
-                </button>
-              )}
-              
-              <button
-                onClick={() => {
-                  resolveAlert(selectedMessage.id);
-                  setSelectedMessage(null);
-                }}
-                style={{ width: '100%', background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
-              >
-                ✅ MARCAR COMO RESOLVIDO
-              </button>
-              
-              {isDemoMode && (
-                <button
-                  onClick={() => {
-                    const unitObj = properties[0]?.units.find(un => un.id === selectedMessage.unitId);
-                    if (unitObj) {
-                      setSimulatedUnit(unitObj);
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {selectedMessage.type === 'release' && (
+                    <button
+                      onClick={() => {
+                        alert('[eWelink/Sonoff] Comando de liberação de portão disparado!');
+                        resolveAlert(selectedMessage.id);
+                        setSelectedMessage(null);
+                      }}
+                      style={{ width: '100%', background: '#10B981', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      🔑 AUTORIZAR E ABRIR PORTÃO
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => {
+                      resolveAlert(selectedMessage.id);
                       setSelectedMessage(null);
-                    }
-                  }}
-                  style={{ width: '100%', background: 'rgba(59,130,246,0.1)', color: 'var(--primary)', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  📱 SIMULAR APP DO MORADOR
-                </button>
-              )}
+                    }}
+                    style={{ width: '100%', background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    ✅ MARCAR COMO RESOLVIDO
+                  </button>
 
-              <button
-                onClick={() => setSelectedMessage(null)}
-                style={{ width: '100%', background: '#F1F5F9', color: 'var(--text-muted)', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Fechar
-              </button>
-            </div>
+                  <button
+                    onClick={() => setSelectedMessage(null)}
+                    style={{ width: '100%', background: '#F1F5F9', color: 'var(--text-muted)', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
