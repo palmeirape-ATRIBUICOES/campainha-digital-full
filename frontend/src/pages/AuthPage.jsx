@@ -75,6 +75,26 @@ export default function AuthPage() {
     }
   }, [location.search, location.hash]);
 
+  // Se o usuário escaneou uma placa física:
+  // Verifica se a placa já está vinculada a algum cadastro/morador.
+  // Se estiver, redireciona o visitante imediatamente para a tela de chamada.
+  // Se não estiver, mantém na tela de cadastro para o cliente vincular.
+  useEffect(() => {
+    if (plateFromUrl) {
+      const checkPlate = async () => {
+        try {
+          const res = await fetch(`${API}/api/properties/${plateFromUrl}`);
+          if (res.ok) {
+            navigate(`/chamada/${plateFromUrl}`);
+          }
+        } catch (err) {
+          console.error('[PlateCheck] Erro ao verificar status da placa:', err);
+        }
+      };
+      checkPlate();
+    }
+  }, [plateFromUrl, navigate]);
+
   useEffect(() => {
     // Redireciona retornos do Mercado Pago
     const rawSearch = window.location.search;
