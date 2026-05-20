@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Bell, CheckCircle, ShieldCheck, MapPin, ChevronRight, Mic, Video, PhoneOff, WifiOff, KeyRound } from 'lucide-react';
+import { Bell, CheckCircle, ShieldCheck, MapPin, ChevronRight, Mic, Video, PhoneOff, WifiOff, KeyRound, Navigation, AlertTriangle, LocateFixed } from 'lucide-react';
 import Logo from '../components/Logo';
 
 // ─── Configuração do Socket.io ────────────────────────────────────────────────
@@ -43,6 +43,9 @@ export default function VisitorCall() {
   const [errorMsg, setErrorMsg]     = useState('');
   const [residentSocket, setResidentSocket] = useState(null);
   const [quickMessage, setQuickMessage] = useState('');
+  // Geofence
+  const [geoStatus, setGeoStatus]   = useState('idle'); // idle | requesting | denied | ready
+  const geoCoordsRef = useRef(null); // { lat, lng }
 
   const localVideoRef   = useRef(null); // câmera do visitante (oculta)
   const canvasRef       = useRef(null);
@@ -115,9 +118,13 @@ export default function VisitorCall() {
       stopAll();
     });
 
-    // Chamada falhou / Licença inativa
+    // Chamada falhou / Licença inativa / Geofence
     socket.on('call_failed', ({ reason, message }) => {
-      setStatus('call_failed_license');
+      if (reason === 'geofence_too_far' || reason === 'geofence_no_gps') {
+        setStatus('geofence_blocked');
+      } else {
+        setStatus('call_failed_license');
+      }
       setErrorMsg(message || 'A campainha digital desta residência está inativa.');
       stopAll();
     });
@@ -273,7 +280,28 @@ export default function VisitorCall() {
   }, []);
 
   // ─── Tocar campainha ────────────────────────────────────────────────────
+
+  /** Solicita GPS do visitante. Resolve com { lat, lng } ou null. */
+  const requestGeo = () =>
+    new Promise((resolve) => {
+      if (!('geolocation' in navigator)) return resolve(null);
+      setGeoStatus('requesting');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          geoCoordsRef.current = coords;
+          setGeoStatus('ready');
+          resolve(coords);
+        },
+        () => { geoCoordsRef.current = null; setGeoStatus('denied'); resolve(null); },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+
   const handleCall = async (unit) => {
+    // Solicita GPS antes de chamar (servidor rejeita se geofence ativo e coords ausentes)
+    const coords = geoCoordsRef.current || await requestGeo();
+
     setStatus('calling');
     setCallingUnit(unit);
     setCountdown(120);
@@ -282,8 +310,10 @@ export default function VisitorCall() {
 
     socketRef.current.emit('initiate_call', {
       unitId: unit.id,
-      propertyId: property.id, // Vínculo com a propriedade para isolamento
-      photoBase64: photo
+      propertyId: property.id,
+      photoBase64: photo,
+      visitorLat: coords?.lat ?? null,
+      visitorLng: coords?.lng ?? null
     });
   };
 
@@ -379,6 +409,16 @@ export default function VisitorCall() {
       {/* ── Idle: escolher unidade ─────────────────────────────────────────── */}
       {status === 'idle' && property && (
         <div className="fade-in" style={{ width: '100%', maxWidth: '400px' }}>
+          {/* Aviso GPS negado */}
+          {geoStatus === 'denied' && (
+            <div style={{ marginBottom: '16px', padding: '14px 16px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              <AlertTriangle size={17} color="#F59E0B" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#F59E0B' }}>Localização negada</p>
+                <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.4 }}>Se o geofence estiver ativo, a chamada será bloqueada sem GPS.</p>
+              </div>
+            </div>
+          )}
           {(property.type === 'individual' || property.type === 'house' || (property.units && property.units.length <= 1)) ? (
             <button
               id="btn-tocar-campainha"
@@ -529,7 +569,31 @@ export default function VisitorCall() {
         </div>
       )}
 
-      {/* ── Licença Expirada / Campainha Inativa ─────────────────────────────────── */}
+      {/* ── Bloqueado por Geofence ──────────────────────────────────────── */}
+      {status === 'geofence_blocked' && (
+        <div className="glass-panel fade-in" style={{ padding: '48px 24px', width: '100%', maxWidth: '400px', textAlign: 'center', border: '2px solid #F59E0B', background: 'rgba(245,158,11,0.04)' }}>
+          <div style={{ width: '90px', height: '90px', background: 'rgba(245,158,11,0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', border: '2px solid rgba(245,158,11,0.35)' }}>
+            <Navigation size={44} color="#F59E0B" />
+          </div>
+          <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#F59E0B', marginBottom: '16px' }}>Fora do Raio de Acesso</h2>
+          <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '12px', fontSize: '15px' }}>{errorMsg}</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '32px', opacity: 0.65 }}>
+            Por segurança, a campainha só pode ser acionada de dentro do endereço cadastrado.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button
+              className="btn-primary"
+              style={{ background: 'linear-gradient(135deg, #F59E0B, #EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              onClick={async () => { geoCoordsRef.current = null; const c = await requestGeo(); if (c) { setStatus('idle'); setErrorMsg(''); } }}
+            >
+              <LocateFixed size={18} /> Atualizar Localização
+            </button>
+            <button className="btn-secondary" style={{ width: '100%' }} onClick={() => { setStatus('idle'); setCallingUnit(null); setErrorMsg(''); }}>Voltar</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Licença Expirada / Campainha Inativa ─────────────────────────── */}
       {status === 'call_failed_license' && (
         <div className="glass-panel fade-in" style={{ padding: '48px 24px', width: '100%', maxWidth: '400px', textAlign: 'center', border: '2px solid #EF4444', background: 'rgba(239,68,68,0.02)' }}>
           <div style={{ width: '80px', height: '80px', background: '#EF4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 8px 20px rgba(239,68,68,0.3)' }}>

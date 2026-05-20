@@ -77,6 +77,12 @@ model Property {
   clientAddress   String?
   companyName     String?
   plan            String    @default("BASIC")
+
+  // ─── Geofence (raio de segurança do visitante) ──────────────────────────
+  geofenceEnabled Boolean   @default(false)
+  geofenceLat     Float?    // Latitude do imóvel (decimal)
+  geofenceLng     Float?    // Longitude do imóvel (decimal)
+  geofenceRadius  Int       @default(10) // Raio em metros (padrão: 10m)
   subdomain       String?   @unique
   
   createdAt       DateTime  @default(now())

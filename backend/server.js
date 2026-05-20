@@ -218,6 +218,69 @@ app.post('/api/push/test', authenticate, async (req, res) => {
   res.json({ success: true, message: 'Notificação de teste enviada!' });
 });
 
+// ─── Geofence Routes ──────────────────────────────────────────────────────────
+
+/**
+ * Fórmula de Haversine: calcula distância em metros entre dois pontos GPS.
+ * @param {number} lat1  Latitude ponto 1
+ * @param {number} lng1  Longitude ponto 1
+ * @param {number} lat2  Latitude ponto 2
+ * @param {number} lng2  Longitude ponto 2
+ * @returns {number} Distância em metros
+ */
+function haversineDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371000; // Raio da Terra em metros
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(Δφ / 2) ** 2 +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// GET  /api/properties/:id/geofence — Retorna configuração atual de geofence
+app.get('/api/properties/:id/geofence', authenticate, async (req, res) => {
+  try {
+    const prop = await prisma.property.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, geofenceEnabled: true, geofenceLat: true, geofenceLng: true, geofenceRadius: true }
+    });
+    if (!prop) return res.status(404).json({ error: 'Propriedade não encontrada.' });
+    res.json(prop);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar configuração de geofence.', details: err.message });
+  }
+});
+
+// POST /api/properties/:id/geofence — Salva/atualiza configuração de geofence
+app.post('/api/properties/:id/geofence', authenticate, async (req, res) => {
+  const { geofenceEnabled, geofenceLat, geofenceLng, geofenceRadius } = req.body;
+  try {
+    const prop = await prisma.property.findUnique({ where: { id: req.params.id } });
+    if (!prop) return res.status(404).json({ error: 'Propriedade não encontrada.' });
+    // Somente o admin da propriedade pode configurar
+    if (prop.adminId !== req.user.id && !req.user.isSuperAdmin) {
+      return res.status(403).json({ error: 'Sem permissão para alterar esta propriedade.' });
+    }
+    const updated = await prisma.property.update({
+      where: { id: req.params.id },
+      data: {
+        geofenceEnabled: !!geofenceEnabled,
+        geofenceLat: geofenceLat != null ? parseFloat(geofenceLat) : null,
+        geofenceLng: geofenceLng != null ? parseFloat(geofenceLng) : null,
+        geofenceRadius: geofenceRadius != null ? parseInt(geofenceRadius, 10) : 10
+      },
+      select: { id: true, geofenceEnabled: true, geofenceLat: true, geofenceLng: true, geofenceRadius: true }
+    });
+    res.json({ success: true, geofence: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao salvar configuração de geofence.', details: err.message });
+  }
+});
+
+
 // ─── Auth Routes (Unificadas) ─────────────────────────────────────────────────
 
 // Login Unificado (Para AuthPage)
@@ -2126,7 +2189,7 @@ io.on('connection', (socket) => {
     console.log(`[WS] Usuário ${userId} registrado no socket ${socket.id}`);
   });
 
-  const handleIncomingCall = async ({ unitId, propertyId, photoBase64, callerName }) => {
+  const handleIncomingCall = async ({ unitId, propertyId, photoBase64, callerName, visitorLat, visitorLng }) => {
     // Busca os moradores da unidade
     const unit = await prisma.unit.findUnique({
       where: { id: unitId },
@@ -2134,6 +2197,40 @@ io.on('connection', (socket) => {
     });
 
     if (!unit) return;
+
+    // ─── Validação de Geofence ─────────────────────────────────────────────
+    // Busca configuração de geofence da propriedade
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { geofenceEnabled: true, geofenceLat: true, geofenceLng: true, geofenceRadius: true }
+    });
+
+    if (property?.geofenceEnabled && property.geofenceLat != null && property.geofenceLng != null) {
+      if (visitorLat == null || visitorLng == null) {
+        // Visitante não compartilhou GPS — bloqueia
+        console.log(`[Geofence] Chamada BLOQUEADA: GPS do visitante não disponível para unidade ${unit.name}`);
+        socket.emit('call_failed', {
+          reason: 'geofence_no_gps',
+          message: 'Esta campainha requer que você compartilhe sua localização para ser usada. Ative o GPS e tente novamente.'
+        });
+        return;
+      }
+      const distanceM = haversineDistance(
+        property.geofenceLat, property.geofenceLng,
+        parseFloat(visitorLat), parseFloat(visitorLng)
+      );
+      const radius = property.geofenceRadius || 10;
+      if (distanceM > radius) {
+        console.log(`[Geofence] Chamada BLOQUEADA: Visitante a ${distanceM.toFixed(1)}m (máx ${radius}m) da unidade ${unit.name}`);
+        socket.emit('call_failed', {
+          reason: 'geofence_too_far',
+          message: `Você está a ${Math.round(distanceM)} metros do endereço. É necessário estar a menos de ${radius} metros para tocar a campainha.`
+        });
+        return;
+      }
+      console.log(`[Geofence] Visitante a ${distanceM.toFixed(1)}m — dentro do raio de ${radius}m ✔`);
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Filtra moradores que ainda possuem a assinatura ativa
     const activeResidents = unit.residents.filter(resident => {
