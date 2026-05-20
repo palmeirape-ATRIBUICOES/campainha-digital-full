@@ -1,6 +1,7 @@
 // ─── Campainha Digital — Service Worker ───────────────────────────────────────
 // Versão do cache — altere para forçar atualização
-const CACHE_NAME = 'campainha-v4';
+const CACHE_NAME = 'campainha-v5';
+
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -55,12 +56,19 @@ self.addEventListener('push', (event) => {
 
   let data = {
     title: '🔔 Alguém na sua porta!',
-    body: 'Toque para atender.',
+    body: 'Toque para atender agora.',
     icon: './logo.png',
     badge: './badge.png',
     tag: 'incoming-call',
     requireInteraction: true,
-    vibrate: [400, 200, 400, 200, 800],
+    // Padrão de vibração campainha:
+    // DING: 300ms | pausa: 100ms | DONG: 600ms | pausa: 800ms
+    // Repete 3 vezes para garantir que acorda o usuário
+    vibrate: [
+      300, 100, 600, 800,
+      300, 100, 600, 800,
+      300, 100, 600, 800
+    ],
     data: { url: './' }
   };
 
@@ -78,7 +86,12 @@ self.addEventListener('push', (event) => {
     tag: data.tag || 'campainha',
     renotify: data.renotify ?? true,
     requireInteraction: data.requireInteraction ?? true,
-    vibrate: data.vibrate || [400, 200, 400],
+    // Padrão campainha: DING-DONG repetido 3x para garantir alerta
+    vibrate: data.vibrate || [
+      300, 100, 600, 800,
+      300, 100, 600, 800,
+      300, 100, 600
+    ],
     data: data.data || {},
     actions: [
       { action: 'answer', title: '📞 Atender' },

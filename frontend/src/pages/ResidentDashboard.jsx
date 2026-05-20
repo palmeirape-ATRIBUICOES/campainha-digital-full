@@ -10,6 +10,7 @@ import ServicesPanel from '../components/resident/ServicesPanel';
 import PaymentModal from '../components/PaymentModal';
 import VisitorCodesPanel from '../components/resident/VisitorCodesPanel';
 import ResidentsPanel from '../components/resident/ResidentsPanel';
+import { startDoorbell, stopDoorbell } from '../hooks/useDoorbellAlert';
 
 import { API } from '../config';
 const DEFAULT_ICE = {
@@ -34,51 +35,6 @@ async function fetchIceConfig() {
   return DEFAULT_ICE;
 }
 
-// ─── Som real de campainha via Web Audio API ──────────────────────────────────
-// Gera o padrão "ding-dong" sem depender de arquivo externo
-let doorbellCtx = null;
-let doorbellInterval = null;
-
-function playDoorbellSound() {
-  try {
-    if (!doorbellCtx) doorbellCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const ctx = doorbellCtx;
-
-    // Força volume máximo via GainNode
-    const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(1.5, ctx.currentTime);
-    masterGain.connect(ctx.destination);
-
-    const ding = (freq, start, dur) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(masterGain);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.5, ctx.currentTime + start + dur);
-      gain.gain.setValueAtTime(0.8, ctx.currentTime + start);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
-      osc.start(ctx.currentTime + start);
-      osc.stop(ctx.currentTime + start + dur);
-    };
-
-    ding(880, 0,    0.6); // DING
-    ding(660, 0.65, 0.8); // DONG
-  } catch (e) { console.warn('[Doorbell]', e); }
-}
-
-function startDoorbell() {
-  playDoorbellSound();
-  doorbellInterval = setInterval(playDoorbellSound, 2200);
-  // Vibração: padrão campainha
-  if ('vibrate' in navigator) navigator.vibrate([400, 200, 400, 200, 800, 500, 400, 200, 400]);
-}
-
-function stopDoorbell() {
-  if (doorbellInterval) { clearInterval(doorbellInterval); doorbellInterval = null; }
-  if ('vibrate' in navigator) navigator.vibrate(0);
-}
 
 
 export default function ResidentDashboard() {
