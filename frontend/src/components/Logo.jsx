@@ -1,63 +1,42 @@
 import React from 'react';
 
-export default function Logo({ size = 40, showText = true, light = false, vertical = false }) {
-  const primaryColor = light ? '#FFFFFF' : '#0F172A';
-  const secondaryColor = '#00E5FF';
-  const accentColor = '#F59E0B';
+/**
+ * Logo component — uses the real brand PNG.
+ * Props:
+ *   size      {number}  Height in px of the logo image (default 40)
+ *   light     {boolean} If true, applies a white brightness filter for dark backgrounds
+ *   vertical  {boolean} Unused – kept for API compatibility
+ *   showText  {boolean} Unused – text is baked into the PNG
+ */
+export default function Logo({ size = 40, light = false, vertical = false, showText = true }) {
+  // Aspect ratio of the logo image (approx 3:1 wide)
+  const width = size * 3.5;
 
   return (
-    <div style={{ 
-      display: 'inline-flex', 
-      alignItems: 'center', 
-      justifyContent: vertical ? 'center' : 'flex-start',
-      gap: '12px',
-      userSelect: 'none',
-      flexDirection: vertical ? 'column' : 'row',
-      textAlign: vertical ? 'center' : 'left',
-      maxWidth: '100%',
-      overflow: 'hidden'
-    }}>
-      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <svg 
-          width={size * 1.2} 
-          height={size} 
-          viewBox="0 0 120 100" 
-          fill="none" 
-          xmlns="http://www.w3.org/2000/svg"
-          style={{ overflow: 'visible', maxWidth: '100%' }}
-        >
-          <circle cx="40" cy="50" r="38" fill={primaryColor} />
-          <circle cx="40" cy="50" r="14" fill={accentColor} />
-          <circle cx="40" cy="50" r="6" fill="#FFF" opacity="0.4" />
-          <path d="M75 25C90 35 90 65 75 75" stroke={secondaryColor} strokeWidth="10" strokeLinecap="round" />
-          <path d="M95 10C115 25 115 75 95 90" stroke={secondaryColor} strokeWidth="10" strokeLinecap="round" opacity="0.5" />
-        </svg>
-      </div>
-      
-      {showText && (
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          justifyContent: 'center',
-          lineHeight: 1,
-          minWidth: 0, // Allow shrinking
-          flexShrink: 1
-        }}>
-          <span style={{ 
-            fontSize: `clamp(14px, ${size * 0.65}px, 32px)`, 
-            fontWeight: 900, 
-            color: primaryColor,
-            letterSpacing: '-0.05em',
-            fontFamily: 'Inter, system-ui, sans-serif',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
-            Campainha<span style={{ color: secondaryColor }}>-Digital</span>
-          </span>
-        </div>
-      )}
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: vertical ? 'center' : 'flex-start',
+        userSelect: 'none',
+        maxWidth: '100%',
+        overflow: 'hidden',
+      }}
+    >
+      <img
+        src={`${import.meta.env.BASE_URL}logo.png`}
+        alt="Campainha Digital — Acesso Residencial Inteligente"
+        height={size}
+        width={width}
+        style={{
+          height: size,
+          width: 'auto',
+          maxWidth: '100%',
+          objectFit: 'contain',
+          filter: light ? 'brightness(0) invert(1)' : 'none',
+          display: 'block',
+        }}
+      />
     </div>
   );
 }
-

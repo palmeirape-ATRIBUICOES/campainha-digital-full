@@ -1966,7 +1966,9 @@ app.get('/api/properties/:propertyId/online-status', async (req, res) => {
     
     const statusMap = {};
     units.forEach(u => {
-      let unitOnline = false;
+      // O frontend as vezes registra usando o unit.id (id da rota) como fallback
+      let unitOnline = activeSockets.has(u.id); 
+      
       u.residents.forEach(r => {
         const isOnline = activeSockets.has(r.id);
         statusMap[r.id] = isOnline ? 'online' : 'offline';
