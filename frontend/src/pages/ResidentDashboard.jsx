@@ -118,6 +118,14 @@ export default function ResidentDashboard() {
       const reg = await navigator.serviceWorker.register(swUrl, { scope: import.meta.env.BASE_URL });
       await navigator.serviceWorker.ready;
       
+      // Força a atualização do Service Worker para carregar a versão mais recente
+      try {
+        await reg.update();
+        console.log('[SW] Service Worker atualizado programaticamente.');
+      } catch (e) {
+        console.warn('[SW] Erro ao atualizar SW programaticamente:', e);
+      }
+      
       const sub = await reg.pushManager.getSubscription();
       if (sub && Notification.permission === 'granted') {
         setPushEnabled(true);
@@ -162,6 +170,11 @@ export default function ResidentDashboard() {
       const reg = await navigator.serviceWorker.register(swUrl, { scope: import.meta.env.BASE_URL });
       await navigator.serviceWorker.ready;
 
+      // Garante a versão mais nova do Service Worker antes de subscrever
+      try {
+        await reg.update();
+      } catch {}
+
       const vapidRes = await fetch(`${API}/api/push/vapid-public-key`);
       const { publicKey } = await vapidRes.json();
 
@@ -172,13 +185,22 @@ export default function ResidentDashboard() {
         return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
       };
 
+      // Limpa qualquer assinatura anterior para evitar chaves VAPID incompatíveis
       let sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8(publicKey)
-        });
+      if (sub) {
+        try {
+          await sub.unsubscribe();
+          console.log('[Push] Assinatura anterior removida com sucesso.');
+        } catch (e) {
+          console.warn('[Push] Erro ao desinscrever assinatura anterior:', e);
+        }
       }
+
+      // Cria uma assinatura limpa, nova e 100% alinhada com as chaves atuais do servidor
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8(publicKey)
+      });
 
       const token = localStorage.getItem('cd_token');
       if (token) {
