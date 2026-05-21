@@ -938,8 +938,25 @@ export default function ResidentDashboard() {
                         setPushLoading(true);
                         try {
                           const token = localStorage.getItem('cd_token');
-                          await fetch(`${API}/api/push/test`, { method: 'POST', headers: { 'Authorization': token } });
-                        } catch {} finally { setPushLoading(false); }
+                          if (!token) {
+                            alert('Erro: Token de login não encontrado localmente. Refaça o login no app.');
+                            return;
+                          }
+                          const res = await fetch(`${API}/api/push/test`, { 
+                            method: 'POST', 
+                            headers: { 'Authorization': token } 
+                          });
+                          if (res.ok) {
+                            alert('Sinal enviado! Se o PWA estiver instalado na Tela Inicial e com permissões ativas, a notificação deve aparecer em instantes.');
+                          } else {
+                            const errData = await res.json().catch(() => ({}));
+                            alert(`Erro no servidor (${res.status}): ${errData.error || 'Falha na requisição'}`);
+                          }
+                        } catch (e) {
+                          alert(`Erro de conexão com o servidor: ${e.message}`);
+                        } finally { 
+                          setPushLoading(false); 
+                        }
                       }}
                       disabled={pushLoading}
                       style={{ padding: '5px 12px', borderRadius: '99px', background: 'rgba(59,130,246,0.1)', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
