@@ -121,6 +121,21 @@ export default function ResidentDashboard() {
       const sub = await reg.pushManager.getSubscription();
       if (sub && Notification.permission === 'granted') {
         setPushEnabled(true);
+        // SEMPRE re-envia a subscription ao servidor para garantir sincronização
+        // (o servidor pode ter perdido a subscription por restart, limpeza de DB, etc.)
+        const token = localStorage.getItem('cd_token');
+        if (token) {
+          try {
+            await fetch(`${API}/api/push/subscribe`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': token },
+              body: JSON.stringify(sub.toJSON())
+            });
+            console.log('[Push] Subscription re-sincronizada com o servidor');
+          } catch (e) {
+            console.warn('[Push] Falha ao re-sincronizar subscription:', e);
+          }
+        }
       } else {
         setPushEnabled(false);
       }

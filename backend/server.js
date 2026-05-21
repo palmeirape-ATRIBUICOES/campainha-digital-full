@@ -235,6 +235,28 @@ app.post('/api/push/test', authenticate, async (req, res) => {
   res.json({ success: true, message: 'Notificação de teste enviada!' });
 });
 
+// Diagnóstico: Quantas subscriptions push o usuário tem registradas?
+app.get('/api/push/status', authenticate, async (req, res) => {
+  try {
+    const subs = await prisma.pushSubscription.findMany({
+      where: { userId: req.user.id },
+      select: { id: true, endpoint: true, createdAt: true }
+    });
+    res.json({
+      userId: req.user.id,
+      userName: req.user.name,
+      subscriptionCount: subs.length,
+      subscriptions: subs.map(s => ({
+        id: s.id,
+        endpoint: s.endpoint.substring(0, 80) + '...',
+        createdAt: s.createdAt
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Geofence Routes ──────────────────────────────────────────────────────────
 
 /**
