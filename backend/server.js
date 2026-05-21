@@ -16,8 +16,8 @@ const webpush = require('web-push');
 const prisma = require('./prismaClient'); // Usando Prisma!
 
 // VAPID keys para Push Notifications
-const VAPID_PUBLIC_KEY = 'BOL7TRhhhHHze0bnWJY7w3ucZ9JhcxEzycbKQaCCPs2XCed4SVuLxSplr-dqfVeT6nfAmvj7JEvEUbXlnbZUT6U';
-const VAPID_PRIVATE_KEY = 'Cj-7L7Qzqfe3d_AxJ_KRL_wOq4jT2_ZWorgUXZDg8oE';
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BOL7TRhhhHHze0bnWJY7w3ucZ9JhcxEzycbKQaCCPs2XCed4SVuLxSplr-dqfVeT6nfAmvj7JEvEUbXlnbZUT6U';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'Cj-7L7Qzqfe3d_AxJ_KRL_wOq4jT2_ZWorgUXZDg8oE';
 webpush.setVapidDetails('mailto:admin@campainha.digital', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 // Debug: Verificação de conexão com o banco de dados
@@ -207,13 +207,18 @@ app.delete('/api/push/unsubscribe', authenticate, async (req, res) => {
 
 // Rota de TESTE para validar se o push está chegando
 app.post('/api/push/test', authenticate, async (req, res) => {
+  let baseUrl = process.env.FRONTEND_URL || 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+  if (baseUrl.includes('palmeirape-atribuicoes.github.io') && !baseUrl.includes('campainha-digital-full')) {
+    baseUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+  }
+
   await sendPushToUser(req.user.id, {
     title: '🔔 Teste de Campainha!',
     body: 'Se você está vendo isso, as notificações push estão funcionando!',
-    icon: '/logo.png',
-    badge: '/badge.png',
+    icon: `${baseUrl}/logo.png`,
+    badge: `${baseUrl}/badge.png`,
     tag: 'test-notification',
-    data: { url: '/morador/' + req.user.id }
+    data: { url: `${baseUrl}/#/morador/${req.user.id}` }
   });
   res.json({ success: true, message: 'Notificação de teste enviada!' });
 });
@@ -2281,7 +2286,11 @@ io.on('connection', (socket) => {
           });
 
           // 🔔 Push Notification: Acorda o app mesmo fechado
-          const baseUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+          let baseUrl = process.env.FRONTEND_URL || 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+          if (baseUrl.includes('palmeirape-atribuicoes.github.io') && !baseUrl.includes('campainha-digital-full')) {
+            baseUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+          }
+
           sendPushToUser(resident.id, {
             title: '🔔 Alguém na sua porta!',
             body: `${callerName || 'Visitante'} está chamando. Toque para atender.`,

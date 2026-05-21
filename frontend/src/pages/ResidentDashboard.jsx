@@ -354,7 +354,10 @@ export default function ResidentDashboard() {
         setSentMsg('');
         
         try {
-          const res = await fetch(`${API}/api/units/${id}/visitors`);
+          let res = await fetch(`${API}/api/visitors/${id}`);
+          if (!res.ok) {
+            res = await fetch(`${API}/api/visitors/by-user/${id}`);
+          }
           if (res.ok) {
             const visitors = await res.json();
             if (visitors && visitors.length > 0) {
