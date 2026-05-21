@@ -212,10 +212,19 @@ export default function ResidentDashboard() {
     const savedPropId = localStorage.getItem('residentPropertyId');
     if (savedCode) setAccessCode(savedCode);
 
-    const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 20 });
+    const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 1000, reconnectionDelayMax: 5000 });
     socketRef.current = s;
     const userIdToRegister = localStorage.getItem('cd_user_id') || id;
-    s.emit('register_user', { userId: userIdToRegister });
+    
+    // Registra o usuário na sala do socket (CRUCIAL: deve acontecer em TODA conexão/reconexão)
+    const registerSocket = () => {
+      const currentUserId = localStorage.getItem('cd_user_id') || id;
+      console.log('[Socket] Registrando usuário na sala:', currentUserId);
+      s.emit('register_user', { userId: currentUserId });
+    };
+    
+    s.on('connect', registerSocket);
+    registerSocket(); // Registra imediatamente na primeira conexão
 
     // Fetch broadcast messages
     const fetchMessages = async () => {
@@ -336,7 +345,37 @@ export default function ResidentDashboard() {
     const bip = (e) => { e.preventDefault(); setInstallPrompt(e); };
     window.addEventListener('beforeinstallprompt', bip);
 
-    return () => { s.disconnect(); window.removeEventListener('beforeinstallprompt', bip); stopAll(); };
+    // Listener para mensagens do Service Worker (quando push chega com app em background)
+    const handleSWMessage = (event) => {
+      if (event.data?.type === 'INCOMING_CALL') {
+        console.log('[SW Message] Push recebido via Service Worker — ativando campainha');
+        // Se já está ringing, não duplica
+        if (status !== 'ringing') {
+          startDoorbell();
+          setStatus('ringing');
+          setTab('home');
+          // Dados mínimos para exibir a tela de chamada
+          const payload = event.data.payload || {};
+          if (payload.unitId && payload.visitorSocketId) {
+            setVisitorSocketId(payload.visitorSocketId);
+            setCall({
+              visitorSocketId: payload.visitorSocketId,
+              callerName: 'Visitante',
+              photo: null,
+              propertyId: payload.propertyId
+            });
+          }
+        }
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage);
+
+    return () => {
+      s.disconnect();
+      window.removeEventListener('beforeinstallprompt', bip);
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
+      stopAll();
+    };
   }, [id]);
 
   useEffect(() => {

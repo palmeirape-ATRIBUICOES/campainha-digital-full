@@ -158,18 +158,30 @@ const generateAccessCode = () => crypto.randomBytes(3).toString('hex').toUpperCa
 const sendPushToUser = async (userId, payload) => {
   try {
     const subs = await prisma.pushSubscription.findMany({ where: { userId } });
+    console.log(`[Push] Enviando para userId=${userId}, ${subs.length} dispositivo(s) registrado(s)`);
+    if (subs.length === 0) {
+      console.warn(`[Push] ⚠ Nenhum dispositivo registrado para userId=${userId}. O morador precisa ativar notificações.`);
+      return;
+    }
     const dead = [];
+    let successCount = 0;
     await Promise.all(subs.map(async (sub) => {
       const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
       try {
         await webpush.sendNotification(pushSub, JSON.stringify(payload));
+        successCount++;
+        console.log(`[Push] ✔ Notificação enviada com sucesso para endpoint: ${sub.endpoint.substring(0, 60)}...`);
       } catch (err) {
-        if (err.statusCode === 410 || err.statusCode === 404) dead.push(sub.id); // Subscription expirada
+        console.error(`[Push] ✘ Erro ao enviar push para endpoint ${sub.endpoint.substring(0, 60)}...: status=${err.statusCode}, msg=${err.body || err.message}`);
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          dead.push(sub.id); // Subscription expirada
+        }
       }
     }));
+    console.log(`[Push] Resultado para userId=${userId}: ${successCount}/${subs.length} enviados, ${dead.length} expirados removidos`);
     if (dead.length > 0) await prisma.pushSubscription.deleteMany({ where: { id: { in: dead } } });
   } catch (err) {
-    console.error('[Push] Erro ao enviar:', err.message);
+    console.error('[Push] Erro crítico ao enviar:', err.message, err.stack);
   }
 };
 
@@ -2249,8 +2261,10 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Salvar visita no banco de dados
+    let visit;
     try {
-      const visit = await prisma.visitor.create({
+      visit = await prisma.visitor.create({
         data: {
           unitId,
           propertyId,
@@ -2258,9 +2272,22 @@ io.on('connection', (socket) => {
           callerName: callerName || 'Visitante'
         }
       });
+      console.log(`[WS Call] ✔ Visita registrada: visitId=${visit.id}, unidade=${unit.name}`);
+    } catch (e) {
+      console.error('[WS Call] ✘ Erro ao salvar visita no banco:', e);
+      return;
+    }
 
-      // Notifica todos os moradores da unidade
-      unit.residents.forEach(resident => {
+    // Notifica SOMENTE os moradores ATIVOS da unidade (com licença válida)
+    console.log(`[WS Call] Notificando ${activeResidents.length} morador(es) ativo(s) da unidade ${unit.name}`);
+    
+    let baseUrl = process.env.FRONTEND_URL || 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    if (baseUrl.includes('palmeirape-atribuicoes.github.io') && !baseUrl.includes('campainha-digital-full')) {
+      baseUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    }
+
+    for (const resident of activeResidents) {
+      try {
         // Verifica se está no horário de silêncio
         const now = new Date();
         const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -2270,42 +2297,47 @@ io.on('connection', (socket) => {
           if (resident.quietModeStart < resident.quietModeEnd) {
             if (currentTime >= resident.quietModeStart && currentTime <= resident.quietModeEnd) shouldRing = false;
           } else {
-            // Caso passe da meia-noite (ex: 22:00 as 07:00)
             if (currentTime >= resident.quietModeStart || currentTime <= resident.quietModeEnd) shouldRing = false;
           }
         }
 
-        if (shouldRing) {
-          io.to(`user_${resident.id}`).emit('incoming_call', {
-            visitorSocketId: socket.id,
-            photo: photoBase64,
-            callerName: callerName || 'Visitante',
-            timestamp: visit.timestamp,
-            visitId: visit.id,
-            propertyId
-          });
-
-          // 🔔 Push Notification: Acorda o app mesmo fechado
-          let baseUrl = process.env.FRONTEND_URL || 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
-          if (baseUrl.includes('palmeirape-atribuicoes.github.io') && !baseUrl.includes('campainha-digital-full')) {
-            baseUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
-          }
-
-          sendPushToUser(resident.id, {
-            title: '🔔 Alguém na sua porta!',
-            body: `${callerName || 'Visitante'} está chamando. Toque para atender.`,
-            icon: `${baseUrl}/logo.png`,
-            badge: `${baseUrl}/badge.png`,
-            tag: 'incoming-call',
-            renotify: true,
-            requireInteraction: true,
-            vibrate: [400, 200, 400, 200, 800],
-            data: { url: `${baseUrl}/#/morador/${unitId}?call=true&visitorSocketId=${socket.id}`, unitId, propertyId }
-          });
+        if (!shouldRing) {
+          console.log(`[WS Call] ⏸ Morador ${resident.id} (${resident.name}) está no modo silencioso — não será notificado`);
+          continue;
         }
-      });
-    } catch (e) {
-      console.error('Error initiating call:', e);
+
+        // 1. Notifica via Socket.io (funciona se o app está aberto em primeiro plano)
+        const socketRoom = `user_${resident.id}`;
+        const roomSockets = await io.in(socketRoom).fetchSockets();
+        console.log(`[WS Call] 📡 Socket room '${socketRoom}': ${roomSockets.length} conexão(ões) ativa(s)`);
+        
+        io.to(socketRoom).emit('incoming_call', {
+          visitorSocketId: socket.id,
+          photo: photoBase64,
+          callerName: callerName || 'Visitante',
+          timestamp: visit.timestamp,
+          visitId: visit.id,
+          propertyId
+        });
+
+        // 2. Push Notification: Acorda o app mesmo fechado/background (SEMPRE envia, independente do socket)
+        await sendPushToUser(resident.id, {
+          title: '🔔 Alguém na sua porta!',
+          body: `${callerName || 'Visitante'} está chamando. Toque para atender.`,
+          icon: `${baseUrl}/logo.png`,
+          badge: `${baseUrl}/badge.png`,
+          tag: 'incoming-call',
+          renotify: true,
+          requireInteraction: true,
+          vibrate: [400, 200, 400, 200, 800],
+          data: { url: `${baseUrl}/#/morador/${unitId}?call=true&visitorSocketId=${socket.id}`, unitId, propertyId }
+        });
+
+        console.log(`[WS Call] ✔ Morador ${resident.name} (${resident.id}) notificado com sucesso via Socket + Push`);
+      } catch (e) {
+        console.error(`[WS Call] ✘ Erro ao notificar morador ${resident.id}:`, e.message);
+        // Continua para o próximo morador — não interrompe o loop
+      }
     }
   };
 

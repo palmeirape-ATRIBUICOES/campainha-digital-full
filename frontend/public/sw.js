@@ -1,6 +1,6 @@
 // ─── Campainha Digital — Service Worker ───────────────────────────────────────
 // Versão do cache — altere para forçar atualização
-const CACHE_NAME = 'campainha-v5';
+const CACHE_NAME = 'campainha-v6';
 
 const STATIC_ASSETS = [
   './',
@@ -61,9 +61,6 @@ self.addEventListener('push', (event) => {
     badge: './badge.png',
     tag: 'incoming-call',
     requireInteraction: true,
-    // Padrão de vibração campainha:
-    // DING: 300ms | pausa: 100ms | DONG: 600ms | pausa: 800ms
-    // Repete 3 vezes para garantir que acorda o usuário
     vibrate: [
       300, 100, 600, 800,
       300, 100, 600, 800,
@@ -86,7 +83,7 @@ self.addEventListener('push', (event) => {
     tag: data.tag || 'campainha',
     renotify: data.renotify ?? true,
     requireInteraction: data.requireInteraction ?? true,
-    // Padrão campainha: DING-DONG repetido 3x para garantir alerta
+    silent: false, // Garante que o SO toca o som padrão de notificação
     vibrate: data.vibrate || [
       300, 100, 600, 800,
       300, 100, 600, 800,
@@ -100,7 +97,21 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
+    // 1. Exibe a notificação do sistema
     self.registration.showNotification(data.title, options)
+      .then(() => {
+        // 2. Tenta acordar qualquer janela aberta do app para tocar o som de campainha
+        return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      })
+      .then((clientList) => {
+        clientList.forEach((client) => {
+          client.postMessage({
+            type: 'INCOMING_CALL',
+            payload: data.data || {}
+          });
+        });
+        console.log(`[SW] Push processado. Notificação exibida. ${clientList.length} janela(s) notificada(s).`);
+      })
   );
 });
 
