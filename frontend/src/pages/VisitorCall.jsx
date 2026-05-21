@@ -612,7 +612,7 @@ export default function VisitorCall() {
 
       <footer style={{ marginTop: 'auto', paddingTop: '40px' }}>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
-          Tecnologia Campainha Digital® • Conexão P2P Segura
+          Tecnologia Campainha Digital®
         </p>
       </footer>
     </div>
