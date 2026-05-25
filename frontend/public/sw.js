@@ -1,6 +1,6 @@
 // ─── Campainha Digital — Service Worker ───────────────────────────────────────
 // Versão do cache — altere para forçar atualização
-const CACHE_NAME = 'campainha-v7';
+const CACHE_NAME = 'campainha-v8';
 
 const STATIC_ASSETS = [
   './',
@@ -80,18 +80,17 @@ self.addEventListener('push', (event) => {
     console.warn('[SW] Erro ao parsear push payload:', e);
   }
 
+  // Opções de notificação otimizadas para iOS + Android
   const options = {
     body: data.body,
-    icon: data.icon,
-    badge: data.badge,
+    icon: data.icon || BASE_URL + 'logo.png',
+    badge: data.badge || BASE_URL + 'badge.png',
     tag: data.tag || 'campainha',
-    renotify: data.renotify ?? true,
-    requireInteraction: data.requireInteraction ?? true,
-    vibrate: data.vibrate || [
-      300, 100, 600, 800,
-      300, 100, 600, 800,
-      300, 100, 600
-    ],
+    renotify: true,
+    requireInteraction: true,
+    silent: false,            // CRUCIAL: garante que o iOS toca o som do sistema
+    sound: 'default',         // Som do sistema no iOS
+    vibrate: data.vibrate || [300, 100, 600, 800, 300, 100, 600, 800, 300, 100, 600],
     data: data.data || {},
     actions: [
       { action: 'answer', title: '📞 Atender' },
@@ -100,21 +99,22 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    // 1. Exibe a notificação do sistema com fallback resiliente para iOS/Android
+    // 1. Exibe notificação (com fallback simplificado para iOS que não suporta actions)
     self.registration.showNotification(data.title, options)
       .catch((err) => {
-        console.warn('[SW] Falha ao exibir com opções complexas, tentando simplificada:', err);
-        // Fallback robusto sem ações ou padrões complexos de vibração (seguro para todas as versões de iOS/Android)
+        console.warn('[SW] Falha com opções complexas, tentando simplificada:', err);
+        // Fallback robusto sem actions (iOS não suporta notification actions em PWA)
         return self.registration.showNotification(data.title, {
           body: data.body,
           icon: BASE_URL + 'logo.png',
           badge: BASE_URL + 'badge.png',
           tag: 'campainha',
+          silent: false,
           data: data.data || {}
         });
       })
       .then(() => {
-        // 2. Tenta acordar qualquer janela aberta do app para tocar o som de campainha
+        // 2. Acorda janelas abertas do app para tocar campainha
         return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       })
       .then((clientList) => {
@@ -124,10 +124,10 @@ self.addEventListener('push', (event) => {
             payload: data.data || {}
           });
         });
-        console.log(`[SW] Push processado com sucesso. ${clientList.length} janela(s) acordada(s).`);
+        console.log(`[SW] Push processado. ${clientList.length} janela(s) notificada(s).`);
       })
       .catch((err) => {
-        console.error('[SW] Erro crítico no pipeline do push handler:', err);
+        console.error('[SW] Erro crítico no push handler:', err);
       })
   );
 });

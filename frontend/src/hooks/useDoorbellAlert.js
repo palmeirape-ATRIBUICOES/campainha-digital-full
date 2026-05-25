@@ -3,32 +3,51 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Campainha Digital — Hook de alerta de campainha
  *
- * Responsabilidades:
- *  1. Toca um "ding-dong" real via Web Audio API (sem arquivo externo)
- *     com volume máximo forçado via GainNode (gain = 2.0).
- *  2. Vibra o dispositivo de forma repetitiva e sincronizada com o ritmo
- *     do ding-dong: [300ms ON, 100ms OFF, 500ms ON, 800ms PAUSA] → loop.
- *  3. Expõe startDoorbell() e stopDoorbell() para controle externo.
+ * Estratégia Dual de Áudio (compatível com iOS):
+ *  1. Web Audio API — som "ding-dong" sintético via oscilador (preferencial)
+ *  2. HTML5 <audio> fallback — arquivo de som externo (funciona quando Web Audio
+ *     está bloqueado pelo iOS)
  *
- * Compatibilidade:
- *  - Web Audio API: suportado em todos os browsers modernos, inclusive Safari iOS.
- *  - Vibration API: suportado em Android (Chrome/Firefox). iOS ainda não suporta
- *    Vibration API em browsers — nesse caso o código simplesmente ignora.
+ * IMPORTANTE iOS:
+ *  - O AudioContext e <audio> precisam ser "desbloqueados" com uma interação
+ *    do usuário (toque/click). Chame warmUpAudio() no primeiro toque do usuário.
+ *  - Se startDoorbell() for chamado sem interação prévia, ele marca como
+ *    "pendente" e o som toca assim que o usuário tocar na tela.
  *
- * IMPORTANTE: No iOS, para contornar a restrição de autoplay de áudio,
- * o AudioContext deve ser criado/retomado dentro de um evento de interação
- * do usuário. Por isso, startDoorbell() deve ser chamado em resposta a um
- * evento do socket (que é disparado após interação prévia do usuário na página).
+ * Exporta:
+ *  - warmUpAudio()    — Desbloqueia áudio no iOS (chamar no primeiro toque)
+ *  - startDoorbell()  — Inicia som + vibração em loop
+ *  - stopDoorbell()   — Para tudo imediatamente
+ *  - isPending()      — Retorna true se há campainha pendente aguardando interação
+ *  - tryResumePending() — Tenta tocar campainha pendente (chamar em onClick)
  */
 
-let _ctx = null;           // AudioContext singleton (reutilizado entre chamadas)
-let _soundInterval = null; // ID do setInterval do som
-let _vibeInterval  = null; // ID do setInterval da vibração
+let _ctx = null;              // AudioContext singleton
+let _soundInterval = null;    // setInterval do Web Audio
+let _vibeInterval  = null;    // setInterval da vibração
+let _audioEl = null;          // HTML5 <audio> element fallback
+let _isWarmedUp = false;      // Se o áudio já foi desbloqueado
+let _pendingRing = false;     // Se há campainha aguardando interação do usuário
+let _isPlaying = false;       // Se está tocando atualmente
 
 // ─── Padrão de vibração campainha ─────────────────────────────────────────────
-// [300ms ligado, 100ms desligado, 600ms ligado, 1000ms pausa]
-// Duração total do padrão: 2000ms — igual ao intervalo do som (2.2s)
 const VIBRATION_PATTERN = [300, 100, 600, 1000];
+
+// URL de som de campainha (fallback HTML5)
+const DOORBELL_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
+
+// ─── Cria o elemento <audio> HTML5 singleton ──────────────────────────────────
+function getAudioElement() {
+  if (!_audioEl) {
+    _audioEl = new Audio(DOORBELL_SOUND_URL);
+    _audioEl.loop = true;
+    _audioEl.preload = 'auto';
+    _audioEl.volume = 1.0;
+    // iOS precisa que o elemento seja carregado
+    _audioEl.load();
+  }
+  return _audioEl;
+}
 
 // ─── Cria ou retoma o AudioContext ────────────────────────────────────────────
 function getAudioContext() {
@@ -41,63 +60,121 @@ function getAudioContext() {
   return _ctx;
 }
 
-// ─── Toca UMA batida de ding-dong ─────────────────────────────────────────────
+// ─── Desbloqueia áudio no iOS ─────────────────────────────────────────────────
+/**
+ * Deve ser chamado em resposta a um gesto do usuário (click/touchstart).
+ * Cria/resume o AudioContext e faz play/pause silencioso no <audio> HTML5
+ * para desbloquear ambas as APIs de áudio no Safari iOS.
+ */
+export function warmUpAudio() {
+  if (_isWarmedUp) return;
+  
+  try {
+    // 1. Desbloqueia Web Audio API
+    const ctx = getAudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    // Toca um som inaudível para forçar desbloqueio
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, ctx.currentTime); // praticamente inaudível
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.05);
+    
+    // 2. Desbloqueia HTML5 Audio
+    const audio = getAudioElement();
+    const playPromise = audio.play();
+    if (playPromise) {
+      playPromise.then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      }).catch(() => {});
+    }
+    
+    _isWarmedUp = true;
+    console.log('[DoorbellAlert] Áudio desbloqueado com sucesso (warm-up)');
+  } catch (err) {
+    console.warn('[DoorbellAlert] Erro no warm-up:', err);
+  }
+}
+
+// ─── Toca UMA batida de ding-dong via Web Audio ──────────────────────────────
 function playOneDingDong() {
   try {
     const ctx = getAudioContext();
+    if (ctx.state === 'suspended') {
+      // Web Audio bloqueado — não tenta
+      return false;
+    }
 
-    // Master gain com volume máximo (2.0 = força clipping suave — máximo audível)
     const master = ctx.createGain();
     master.gain.setValueAtTime(2.0, ctx.currentTime);
     master.connect(ctx.destination);
 
-    /**
-     * Cria um oscilador com envelope ADSR simplificado.
-     * @param {number} freq      - Frequência em Hz
-     * @param {number} startSec  - Offset em segundos a partir de ctx.currentTime
-     * @param {number} durSec    - Duração total em segundos
-     */
     const note = (freq, startSec, durSec) => {
       const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
-
       osc.connect(gain);
       gain.connect(master);
-
       osc.type = 'sine';
-
-      // Frequência: começa no tom e decai levemente (caráter de sino)
       osc.frequency.setValueAtTime(freq, ctx.currentTime + startSec);
       osc.frequency.exponentialRampToValueAtTime(
         freq * 0.55,
         ctx.currentTime + startSec + durSec
       );
-
-      // Envelope de amplitude: attack rápido, decay longo (comportamento de sino)
       gain.gain.setValueAtTime(0.001, ctx.currentTime + startSec);
-      gain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + startSec + 0.01); // attack 10ms
+      gain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + startSec + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startSec + durSec);
-
       osc.start(ctx.currentTime + startSec);
       osc.stop(ctx.currentTime + startSec + durSec + 0.05);
     };
 
-    // DING — 880 Hz (nota A5), duração 0.7s
     note(880, 0.0, 0.7);
-    // DONG — 660 Hz (nota E5), duração 1.0s, começa 0.65s depois
     note(660, 0.65, 1.0);
-
+    return true;
   } catch (err) {
     console.warn('[DoorbellAlert] Erro no Web Audio:', err);
+    return false;
   }
 }
 
-// ─── Dispara vibração uma vez com o padrão campainha ─────────────────────────
+// ─── Toca via HTML5 Audio (fallback) ──────────────────────────────────────────
+function playHTML5Audio() {
+  try {
+    const audio = getAudioElement();
+    audio.currentTime = 0;
+    audio.volume = 1.0;
+    audio.loop = true;
+    const p = audio.play();
+    if (p) {
+      p.then(() => {
+        console.log('[DoorbellAlert] HTML5 Audio tocando com sucesso');
+      }).catch((err) => {
+        console.warn('[DoorbellAlert] HTML5 Audio bloqueado:', err.message);
+      });
+    }
+  } catch (err) {
+    console.warn('[DoorbellAlert] Erro HTML5 Audio:', err);
+  }
+}
+
+// ─── Para HTML5 Audio ─────────────────────────────────────────────────────────
+function stopHTML5Audio() {
+  if (_audioEl) {
+    try {
+      _audioEl.pause();
+      _audioEl.currentTime = 0;
+    } catch {}
+  }
+}
+
+// ─── Dispara vibração ─────────────────────────────────────────────────────────
 function vibrateOnce() {
   if ('vibrate' in navigator) {
-    try {
-      navigator.vibrate(VIBRATION_PATTERN);
-    } catch {}
+    try { navigator.vibrate(VIBRATION_PATTERN); } catch {}
   }
 }
 
@@ -105,32 +182,53 @@ function vibrateOnce() {
 
 /**
  * Inicia o alerta de campainha: som + vibração em loop.
- * Deve ser chamado em contexto de interação do usuário (ou evento de socket
- * disparado após interação) para respeitar a política de autoplay do iOS.
+ * Usa Web Audio API como primário e HTML5 Audio como fallback.
+ * Se nenhum funcionar (iOS sem interação), marca como pendente.
  */
 export function startDoorbell() {
-  stopDoorbell(); // garante que não há loop duplo
+  if (_isPlaying) return; // Já está tocando
+  stopDoorbell(); // Limpa qualquer estado anterior
 
-  // Primeira execução imediata
-  playOneDingDong();
+  console.log('[DoorbellAlert] Iniciando campainha...');
+  
+  // Tenta Web Audio primeiro
+  const webAudioWorked = playOneDingDong();
+  
+  // Sempre tenta HTML5 Audio também (redundância)
+  playHTML5Audio();
+  
+  // Vibração
   vibrateOnce();
+  
+  _isPlaying = true;
+  _pendingRing = false;
 
-  // Loop: repete a cada 2.2s (som ding=0.7s + dong=1.0s + pausa ~0.5s)
-  _soundInterval = setInterval(() => {
-    playOneDingDong();
-  }, 2200);
+  // Se Web Audio funcionou, mantém o loop do ding-dong sintético
+  if (webAudioWorked) {
+    _soundInterval = setInterval(() => {
+      playOneDingDong();
+    }, 2200);
+  }
 
-  // Vibração repete a cada 2.2s também (sincronizado com o som)
+  // Vibração em loop sempre
   _vibeInterval = setInterval(() => {
     vibrateOnce();
   }, 2200);
+
+  // Se nenhum áudio funcionou, marca como pendente
+  if (!webAudioWorked && _audioEl && _audioEl.paused) {
+    console.warn('[DoorbellAlert] Áudio bloqueado — marcando como pendente');
+    _pendingRing = true;
+  }
 }
 
 /**
  * Para o alerta de campainha imediatamente.
- * Chame ao atender, ignorar ou encerrar a chamada.
  */
 export function stopDoorbell() {
+  _isPlaying = false;
+  _pendingRing = false;
+  
   if (_soundInterval) {
     clearInterval(_soundInterval);
     _soundInterval = null;
@@ -139,8 +237,41 @@ export function stopDoorbell() {
     clearInterval(_vibeInterval);
     _vibeInterval = null;
   }
-  // Para vibração imediatamente
+  stopHTML5Audio();
   if ('vibrate' in navigator) {
     try { navigator.vibrate(0); } catch {}
   }
+}
+
+/**
+ * Retorna true se há campainha pendente aguardando interação do usuário.
+ */
+export function isPending() {
+  return _pendingRing;
+}
+
+/**
+ * Tenta tocar campainha pendente. Chamar em onClick/onTouchStart.
+ * Retorna true se havia pendência e foi resolvida.
+ */
+export function tryResumePending() {
+  if (!_pendingRing) return false;
+  
+  console.log('[DoorbellAlert] Resumindo campainha pendente após interação do usuário');
+  warmUpAudio();
+  _pendingRing = false;
+  
+  // Reinicia o som com AudioContext desbloqueado
+  playOneDingDong();
+  playHTML5Audio();
+  vibrateOnce();
+  
+  // Inicia loops
+  if (!_soundInterval) {
+    _soundInterval = setInterval(() => {
+      playOneDingDong();
+    }, 2200);
+  }
+  
+  return true;
 }

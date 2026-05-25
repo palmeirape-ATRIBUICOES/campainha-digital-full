@@ -10,7 +10,7 @@ import ServicesPanel from '../components/resident/ServicesPanel';
 import PaymentModal from '../components/PaymentModal';
 import VisitorCodesPanel from '../components/resident/VisitorCodesPanel';
 import ResidentsPanel from '../components/resident/ResidentsPanel';
-import { startDoorbell, stopDoorbell } from '../hooks/useDoorbellAlert';
+import { startDoorbell, stopDoorbell, warmUpAudio, isPending, tryResumePending } from '../hooks/useDoorbellAlert';
 
 import { API } from '../config';
 const DEFAULT_ICE = {
@@ -445,6 +445,50 @@ export default function ResidentDashboard() {
     };
   }, [id]);
 
+  // ─── iOS Audio Warm-up: Desbloqueia áudio no primeiro gesto do usuário ──────
+  useEffect(() => {
+    let warmedUp = false;
+    const handleFirstInteraction = () => {
+      if (!warmedUp) {
+        warmedUp = true;
+        warmUpAudio();
+        console.log('[iOS] Áudio desbloqueado via interação global');
+      }
+      // Se há campainha pendente, toca agora
+      if (isPending()) {
+        tryResumePending();
+      }
+    };
+
+    // Escuta qualquer toque/click no documento inteiro
+    document.addEventListener('touchstart', handleFirstInteraction, { passive: true });
+    document.addEventListener('click', handleFirstInteraction, { passive: true });
+
+    // Keep-alive: quando o app volta ao foreground, re-conecta socket e verifica pendências
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[iOS] App voltou ao foreground');
+        // Resume AudioContext se estava suspended
+        warmUpAudio();
+        // Se há campainha pendente, toca
+        if (isPending()) {
+          tryResumePending();
+        }
+        // Força reconexão do socket se desconectado
+        if (socketRef.current && !socketRef.current.connected) {
+          socketRef.current.connect();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      document.removeEventListener('touchstart', handleFirstInteraction);
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
   useEffect(() => {
     const checkActiveCallParam = async () => {
       const hashPart = window.location.hash;
@@ -829,11 +873,15 @@ export default function ResidentDashboard() {
   }
 
   const handleUserInteraction = () => {
+    // Desbloqueia áudio no iOS no primeiro toque do usuário
+    warmUpAudio();
+    // Se há campainha pendente (chegou antes da interação), toca agora
+    if (isPending()) {
+      tryResumePending();
+    }
+    // Se está tocando e o Web Audio falhou, re-tenta com interação
     if (status === 'ringing') {
       triggerDoorbell();
-    }
-    if (audioRef.current) {
-      audioRef.current.play().then(() => audioRef.current.pause()).catch(() => {});
     }
   };
 
@@ -843,7 +891,6 @@ export default function ResidentDashboard() {
       onClick={handleUserInteraction}
       onTouchStart={handleUserInteraction}
     >
-      <audio ref={audioRef} loop preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" type="audio/mpeg" /></audio>
 
       {/* Header (Premium Sticky) */}
       <div style={{ 
