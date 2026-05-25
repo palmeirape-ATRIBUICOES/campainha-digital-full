@@ -60,7 +60,10 @@ export default function ResidentDashboard() {
   const isHouseResident = localStorage.getItem('cd_is_house_resident') === 'true';
   const isDependent = localStorage.getItem('cd_is_dependent') === 'true';
   // Apenas quem logou por email pode gerenciar moradores e criar códigos de visitante
-  const isEmailResident = localStorage.getItem('cd_login_type') === 'email';
+  // Usa useState para atualizar quando fetchUserProfile detectar o tipo (sessões antigas)
+  const [isEmailResident, setIsEmailResident] = useState(
+    () => localStorage.getItem('cd_login_type') === 'email'
+  );
   const HOUSE_QUICK_MSGS = [
     { id: 'general', label: 'Geral', messages: ['Já estou indo', 'Já está Aberto', 'Pode entrar'] },
     { id: 'services', label: 'Serviços', messages: ['Pode entrar pra marcar a luz', 'Pode entrar para marcar a água'] },
@@ -339,6 +342,15 @@ export default function ResidentDashboard() {
             localStorage.setItem('residentPropertyName', data.propertyName);
           }
           setUserContact(data.email || data.phone || data.clientCode || data.plateCode || '');
+
+          // AUTO-DETECT para sessões existentes sem cd_login_type:
+          // Se o perfil tem email, é um morador cadastrado por email (morador principal)
+          // Se só tem clientCode/plateCode, é um morador cadastrado por código (dependente)
+          if (!localStorage.getItem('cd_login_type')) {
+            const detectedType = data.email ? 'email' : 'code';
+            localStorage.setItem('cd_login_type', detectedType);
+            setIsEmailResident(detectedType === 'email'); // Atualiza o estado e re-renderiza
+          }
         }
       } catch {}
     };

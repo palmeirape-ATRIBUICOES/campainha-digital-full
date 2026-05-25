@@ -48,17 +48,15 @@ export default function ResidentLogin() {
     localStorage.setItem('cd_is_condo_resident', data.isCondoResident ? 'true' : 'false');
     localStorage.setItem('cd_is_dependent', data.isDependent ? 'true' : 'false');
     localStorage.setItem('cd_parent_user_id', data.parentUserId || '');
-    // login_type: 'email' = logou com email/senha | 'code' = logou com código
-    // Preserva o tipo se já estava salvo (caso refresh sem novo login)
-    if (!localStorage.getItem('cd_login_type')) {
-      localStorage.setItem('cd_login_type', 'code');
-    }
+    // Nota: cd_login_type é definido pelo handler específico (email ou code)
+    // ANTES de chamar saveAndNavigate. Não fazer fallback aqui.
     if (data.token) {
       localStorage.setItem('cd_token', data.token);
       localStorage.setItem('cd_user_id', data.userId || data.token);
     }
     navigate(`/morador/${data.unitId}`);
   };
+
 
   const handleCodeLogin = async (e) => {
     e.preventDefault();
