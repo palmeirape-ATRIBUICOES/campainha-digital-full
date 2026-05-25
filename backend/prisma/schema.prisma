@@ -29,6 +29,10 @@ model User {
   isReseller      Boolean   @default(false)
   isHouseResident Boolean   @default(false)
   isCondoResident Boolean   @default(false)
+
+  // Morador dependente (criado pelo morador principal)
+  isDependent     Boolean   @default(false)
+  parentUserId    String?   // ID do morador principal que criou este dependente
   
   propertiesManaged Property[] @relation("PropertyAdmin")
   propertiesDoorman Property[] @relation("PropertyDoorman")
@@ -45,10 +49,26 @@ model User {
   clientCode        String?   @unique
   // Código da placa pré-configurada (Opção 1: placa entregue pronta)
   plateCode         String?   @unique
+
+  // Mensagens internas entre morador principal e dependentes
+  sentFamilyMessages      FamilyMessage[] @relation("FamilyMessageSender")
+  receivedFamilyMessages  FamilyMessage[] @relation("FamilyMessageReceiver")
   
   // Assinaturas de Push Notification (um por aparelho)
   pushSubscriptions PushSubscription[]
 }
+
+model FamilyMessage {
+  id          String   @id @default(uuid())
+  senderId    String
+  sender      User     @relation("FamilyMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User     @relation("FamilyMessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  content     String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
 
 model PushSubscription {
   id        String   @id @default(uuid())

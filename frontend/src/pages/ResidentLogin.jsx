@@ -46,6 +46,8 @@ export default function ResidentLogin() {
     localStorage.setItem('residentAccessCode', data.accessCode || accessCode || '');
     localStorage.setItem('cd_is_house_resident', data.isHouseResident ? 'true' : 'false');
     localStorage.setItem('cd_is_condo_resident', data.isCondoResident ? 'true' : 'false');
+    localStorage.setItem('cd_is_dependent', data.isDependent ? 'true' : 'false');
+    localStorage.setItem('cd_parent_user_id', data.parentUserId || '');
     if (data.token) {
       localStorage.setItem('cd_token', data.token);
       localStorage.setItem('cd_user_id', data.userId || data.token);

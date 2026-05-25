@@ -10,6 +10,7 @@ import ServicesPanel from '../components/resident/ServicesPanel';
 import PaymentModal from '../components/PaymentModal';
 import VisitorCodesPanel from '../components/resident/VisitorCodesPanel';
 import ResidentsPanel from '../components/resident/ResidentsPanel';
+import FamilyChat from '../components/resident/FamilyChat';
 import { startDoorbell, stopDoorbell, warmUpAudio, isPending, tryResumePending } from '../hooks/useDoorbellAlert';
 
 import { API } from '../config';
@@ -57,6 +58,7 @@ export default function ResidentDashboard() {
   const [accessCode, setAccessCode] = useState('');
   const [visitorSocketId, setVisitorSocketId] = useState(null);
   const isHouseResident = localStorage.getItem('cd_is_house_resident') === 'true';
+  const isDependent = localStorage.getItem('cd_is_dependent') === 'true';
   const HOUSE_QUICK_MSGS = [
     { id: 'general', label: 'Geral', messages: ['Já estou indo', 'Já está Aberto', 'Pode entrar'] },
     { id: 'services', label: 'Serviços', messages: ['Pode entrar pra marcar a luz', 'Pode entrar para marcar a água'] },
@@ -815,6 +817,7 @@ export default function ResidentDashboard() {
       {[
         { key: 'home', icon: <Home size={22} />, label: 'Início' },
         ...(!isHouseResident ? [{ key: 'messages', icon: <Mail size={22} />, label: 'Avisos', badge: unreadCount }] : []),
+        { key: 'family', icon: <MessageCircle size={22} />, label: 'Família' },
         { key: 'history', icon: <History size={22} />, label: 'Atividade' },
       ].map(n => (
         <button key={n.key} onClick={() => { setTab(n.key); if (n.key === 'messages') markMessagesRead(); }} style={{ flex: 1, padding: '12px 4px 8px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: tab === n.key ? 'var(--primary)' : '#94A3B8', fontSize: '11px', fontWeight: 700, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative' }}>
@@ -857,9 +860,12 @@ export default function ResidentDashboard() {
             <KeyRound size={20} color={tab === 'visitor-codes' ? '#0369A1' : '#64748B'} /> Códigos de Visitante
           </button>
 
-          <button onClick={() => { setTab('residents'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'residents' ? '#F0F9FF' : 'transparent', color: tab === 'residents' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
-            <Users size={20} color={tab === 'residents' ? '#0369A1' : '#64748B'} /> Moradores & Acessos
-          </button>
+          {/* Moradores & Acessos: só morador principal pode gerenciar */}
+          {!isDependent && (
+            <button onClick={() => { setTab('residents'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'residents' ? '#F0F9FF' : 'transparent', color: tab === 'residents' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
+              <Users size={20} color={tab === 'residents' ? '#0369A1' : '#64748B'} /> Moradores & Acessos
+            </button>
+          )}
 
           <div style={{ height: '1px', background: '#F1F5F9', margin: '8px 0' }} />
           
@@ -1315,8 +1321,8 @@ export default function ResidentDashboard() {
                 </div>
               )}
 
-              {/* Caixa Postal (Fale com o Síndico) */}
-              {!isHouseResident && (
+              {/* Caixa Postal (Fale com o Síndico) — só para não-dependentes */}
+              {!isHouseResident && !isDependent && (
                 <>
                   <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
                     <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 12px' }}>📬 FALAR COM A ADMINISTRAÇÃO (CAIXA POSTAL)</p>
@@ -1581,6 +1587,16 @@ export default function ResidentDashboard() {
           <ResidentsPanel unitId={savedUnitId || id} propertyId={propertyId} />
         </div>
       )}
+      {tab === 'family' && (
+        <div style={{ padding: '20px' }}>
+          <FamilyChat
+            userId={localStorage.getItem('cd_user_id')}
+            userName={localStorage.getItem('residentName') || 'Morador'}
+            socket={socketRef?.current}
+          />
+        </div>
+      )}
+
       {tab === 'settings' && <SettingsPanel unitName={unitName} setUnitName={setUnitName} onSave={saveSettings} unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
 
       <HamburgerMenu />

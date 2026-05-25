@@ -65,10 +65,11 @@ export default function ResidentsPanel({ unitId, propertyId }) {
     if (!newResidentName.trim()) return;
     setSubmitting(true);
     try {
+      const requesterId = localStorage.getItem('cd_user_id') || '';
       const res = await fetch(`${API}/api/units/${unitId}/residents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newResidentName.trim() })
+        body: JSON.stringify({ name: newResidentName.trim(), requesterId })
       });
       if (res.ok) {
         setNewResidentName('');

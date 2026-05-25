@@ -885,7 +885,9 @@ app.post('/api/resident/login-by-code', async (req, res) => {
       clientCode: user.clientCode,
       adminEmail: user.email,
       isHouseResident: user.isHouseResident,
-      isCondoResident: user.isCondoResident
+      isCondoResident: user.isCondoResident,
+      isDependent: user.isDependent ?? false,
+      parentUserId: user.parentUserId ?? null
     });
   } catch (err) {
     res.status(500).json({ error: 'Erro no servidor.', details: err.message });
@@ -1587,12 +1589,20 @@ app.post('/api/properties/:propertyId/units/:unitId/residents', async (req, res)
 
 // Criar um morador (dependente) diretamente pelo morador da unidade
 app.post('/api/units/:unitId/residents', async (req, res) => {
-  const { name } = req.body;
+  const { name, requesterId } = req.body; // requesterId = userId do morador principal que está criando
   if (!name) return res.status(400).json({ error: 'Nome do morador é obrigatório.' });
 
   try {
-    const unit = await prisma.unit.findUnique({ where: { id: req.params.unitId } });
+    const unit = await prisma.unit.findUnique({
+      where: { id: req.params.unitId },
+      include: { residents: true }
+    });
     if (!unit) return res.status(404).json({ error: 'Unidade não encontrada.' });
+
+    // Identifica o morador principal para herdar as flags dele
+    const primaryResident = requesterId
+      ? unit.residents.find(r => r.id === requesterId)
+      : unit.residents.find(r => !r.isDependent); // Fallback: primeiro não-dependente
 
     const cleanUnit = unit.name.replace(/\s+/g, '').toUpperCase();
     const cleanName = name.trim().split(' ')[0].toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -1605,7 +1615,14 @@ app.post('/api/units/:unitId/residents', async (req, res) => {
         password: Math.random().toString(36).substring(2, 8).toUpperCase(),
         clientCode: generatedCode,
         isResident: true,
-        isCondoResident: true,
+        isDependent: true,
+        parentUserId: primaryResident?.id || null,
+        // Herda o tipo de residência do morador principal
+        isHouseResident: primaryResident?.isHouseResident ?? false,
+        isCondoResident: primaryResident?.isCondoResident ?? true,
+        // Herda o prazo de licença do morador principal
+        trialEndsAt: primaryResident?.trialEndsAt ?? null,
+        doorbellEnabled: true,
         units: { connect: { id: req.params.unitId } }
       }
     });
@@ -1616,6 +1633,7 @@ app.post('/api/units/:unitId/residents', async (req, res) => {
     res.status(500).json({ error: 'Erro ao cadastrar morador.' });
   }
 });
+
 
 // Remover um morador específico de uma unidade
 app.delete('/api/properties/:propertyId/units/:unitId/residents/:residentId', async (req, res) => {
@@ -1642,6 +1660,96 @@ app.get('/api/visitors/property/:propertyId', async (req, res) => {
   }
 });
 
+
+// ─── Mensagens Internas Família (Morador Principal ↔ Dependentes) ─────────────
+
+// Enviar mensagem (principal → dependente ou dependente → principal)
+app.post('/api/family-messages', async (req, res) => {
+  const { senderId, receiverId, content } = req.body;
+  if (!senderId || !receiverId || !content?.trim()) {
+    return res.status(400).json({ error: 'Campos obrigatórios: senderId, receiverId, content.' });
+  }
+  try {
+    const msg = await prisma.familyMessage.create({
+      data: { senderId, receiverId, content: content.trim() },
+      include: { sender: { select: { id: true, name: true } }, receiver: { select: { id: true, name: true } } }
+    });
+    // Notifica via socket em tempo real
+    io.to(`user_${receiverId}`).emit('family_message', msg);
+    res.status(201).json(msg);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao enviar mensagem.', details: err.message });
+  }
+});
+
+// Buscar conversa entre dois usuários
+app.get('/api/family-messages/:userId/conversation/:otherId', async (req, res) => {
+  const { userId, otherId } = req.params;
+  try {
+    const messages = await prisma.familyMessage.findMany({
+      where: {
+        OR: [
+          { senderId: userId, receiverId: otherId },
+          { senderId: otherId, receiverId: userId }
+        ]
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 100,
+      include: { sender: { select: { id: true, name: true } } }
+    });
+    // Marca como lidas as mensagens recebidas pelo userId
+    await prisma.familyMessage.updateMany({
+      where: { senderId: otherId, receiverId: userId, read: false },
+      data: { read: true }
+    });
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar mensagens.', details: err.message });
+  }
+});
+
+// Listar dependentes de um morador principal (para exibir a lista de chats)
+app.get('/api/family-messages/:userId/contacts', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, isDependent: true, parentUserId: true }
+    });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+    let contacts = [];
+    if (!user.isDependent) {
+      // Morador principal → lista seus dependentes
+      contacts = await prisma.user.findMany({
+        where: { parentUserId: userId },
+        select: {
+          id: true, name: true, clientCode: true,
+          receivedFamilyMessages: {
+            where: { read: false, senderId: { not: userId } },
+            select: { id: true }
+          }
+        }
+      });
+    } else if (user.parentUserId) {
+      // Dependente → só pode falar com o morador principal
+      const parent = await prisma.user.findUnique({
+        where: { id: user.parentUserId },
+        select: { id: true, name: true }
+      });
+      if (parent) contacts = [{ ...parent, receivedFamilyMessages: [] }];
+    }
+
+    res.json(contacts.map(c => ({
+      id: c.id,
+      name: c.name,
+      clientCode: c.clientCode,
+      unreadCount: c.receivedFamilyMessages?.length ?? 0
+    })));
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar contatos.', details: err.message });
+  }
+});
 
 // ─── Caixa Postal (Fale com a Administração) ─────────────────────────────────
 
@@ -2351,7 +2459,12 @@ io.on('connection', (socket) => {
         }
 
         if (!shouldRing) {
-          console.log(`[WS Call] ⏸ Morador ${resident.id} (${resident.name}) está no modo silencioso — não será notificado`);
+          console.log(`[WS Call] ⏸ Morador ${resident.name} SILENCIADO`);
+          console.log(`[WS Call]   doorbellEnabled: ${resident.doorbellEnabled}`);
+          console.log(`[WS Call]   quietModeStart: ${resident.quietModeStart}`);
+          console.log(`[WS Call]   quietModeEnd: ${resident.quietModeEnd}`);
+          console.log(`[WS Call]   horário atual (servidor UTC): ${currentTime}`);
+          console.log(`[WS Call]   → Para receber chamadas, desative o Modo Silencioso nas configurações do app`);
           continue;
         }
 
