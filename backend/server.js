@@ -2314,7 +2314,9 @@ io.on('connection', (socket) => {
         const now = new Date();
         const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
-        let shouldRing = resident.doorbellEnabled;
+        // BUG FIX: doorbellEnabled pode ser null em contas antigas (antes da migration @default(true))
+        // Tratamos null/undefined como true — o usuário deve explicitamente DESATIVAR para silenciar
+        let shouldRing = resident.doorbellEnabled !== false;
         if (resident.quietModeStart && resident.quietModeEnd) {
           if (resident.quietModeStart < resident.quietModeEnd) {
             if (currentTime >= resident.quietModeStart && currentTime <= resident.quietModeEnd) shouldRing = false;
@@ -2331,6 +2333,15 @@ io.on('connection', (socket) => {
         // 1. Notifica via Socket.io (funciona se o app está aberto em primeiro plano)
         const socketRoomUser = `user_${resident.id}`;
         const socketRoomUnit = `user_${unitId}`;
+        
+        // Diagnóstico: verifica quantos sockets estão em cada sala
+        const roomUser = io.sockets.adapter.rooms.get(socketRoomUser);
+        const roomUnit = io.sockets.adapter.rooms.get(socketRoomUnit);
+        console.log(`[WS Call] 📡 Emitindo para sala ${socketRoomUser} (${roomUser?.size || 0} socket(s)) e ${socketRoomUnit} (${roomUnit?.size || 0} socket(s))`);
+        
+        if (!roomUser?.size && !roomUnit?.size) {
+          console.warn(`[WS Call] ⚠️ ALERTA: Nenhum socket conectado para o morador ${resident.name} (${resident.id}) — o app pode estar fechado ou com ID errado registrado`);
+        }
         
         // Emite para ambas as salas para redundância absoluta (morador / unidade)
         io.to(socketRoomUser).to(socketRoomUnit).emit('incoming_call', {

@@ -260,20 +260,33 @@ export default function ResidentDashboard() {
 
     const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 1000, reconnectionDelayMax: 5000 });
     socketRef.current = s;
-    const userIdToRegister = localStorage.getItem('cd_user_id') || id;
     
-    // Registra o usuário na sala do socket (CRUCIAL: deve acontecer em TODA conexão/reconexão)
+    // Registra o usuário em TODAS as salas possíveis para garantir que o evento chegue
+    // O backend emite para user_${resident.id} (userId) — mas o URL tem unitId
+    // Registramos nos 3 para redundância total
     const registerSocket = () => {
-      const currentUserId = localStorage.getItem('cd_user_id') || id;
-      console.log('[Socket] Registrando usuário na sala principal:', currentUserId);
-      s.emit('register_user', { userId: currentUserId });
-
-      // Também registra na sala de redundância da Unidade (se for diferente)
+      const currentUserId = localStorage.getItem('cd_user_id');
       const currentUnitId = localStorage.getItem('residentUnitId') || savedUnitId || id;
-      if (currentUnitId && currentUnitId !== currentUserId) {
-        console.log('[Socket] Registrando usuário na sala de redundância da unidade:', currentUnitId);
-        s.emit('register_user', { userId: currentUnitId });
-      }
+      const currentToken  = localStorage.getItem('cd_token');
+
+      const registered = new Set();
+
+      const doRegister = (uid) => {
+        if (uid && !registered.has(uid)) {
+          registered.add(uid);
+          console.log('[Socket] Registrando na sala:', uid);
+          s.emit('register_user', { userId: uid });
+        }
+      };
+
+      // 1. userId real do banco de dados (mais importante — é o que o backend usa)
+      doRegister(currentUserId);
+      // 2. token (que é igual ao userId no sistema atual)
+      doRegister(currentToken);
+      // 3. unitId (fallback — backend também emite para user_${unitId})
+      doRegister(currentUnitId);
+      // 4. id da URL (pode ser unitId ou userId dependendo da rota)
+      doRegister(id);
     };
     
     s.on('connect', registerSocket);
