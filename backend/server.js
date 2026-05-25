@@ -41,9 +41,12 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  transports: ['websocket', 'polling']
+  // Render.com fecha conexões inativas após 30s
+  // Reduzimos o ping para 10s para manter o WebSocket vivo
+  pingTimeout: 25000,
+  pingInterval: 10000,
+  transports: ['websocket', 'polling'],
+  allowEIO3: true
 });
 
 app.use(cors());

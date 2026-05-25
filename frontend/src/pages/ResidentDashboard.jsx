@@ -112,11 +112,10 @@ export default function ResidentDashboard() {
   const doorbellStartedRef = useRef(false);
 
   const triggerDoorbell = useCallback(() => {
-    if (!doorbellStartedRef.current) {
-      console.log('[Dashboard] Iniciando som de campainha e vibracao');
-      doorbellStartedRef.current = true;
-      startDoorbell();
-    }
+    // Sempre reseta e reinicia — garante que cada nova chamada toca o som
+    console.log('[Dashboard] Disparando campainha...');
+    doorbellStartedRef.current = true;
+    startDoorbell();
   }, []);
 
   const checkPushSubscription = useCallback(async () => {
@@ -289,8 +288,15 @@ export default function ResidentDashboard() {
       doRegister(id);
     };
     
-    s.on('connect', registerSocket);
-    registerSocket(); // Registra imediatamente na primeira conexão
+    // Registra no connect E já está conectado (socket.io conecta rapidamente)
+    s.on('connect', () => {
+      console.log('[Socket] Conectado — registrando salas...');
+      registerSocket();
+    });
+    // Se já está conectado no momento do mount, registra imediatamente
+    if (s.connected) {
+      registerSocket();
+    }
 
     // Fetch broadcast messages
     const fetchMessages = async () => {
@@ -365,10 +371,17 @@ export default function ResidentDashboard() {
 
 
     s.on('incoming_call', (data) => {
-      setCall(data); setStatus('ringing'); setVisitorSocketId(data.visitorSocketId);
-      setTab('home'); setSentMsg('');
-      // Som de campainha real + vibração
-      triggerDoorbell();
+      console.log('[Socket] incoming_call recebido:', data.callerName, data.visitorSocketId);
+      // Reseta o estado da campainha para garantir que toca sempre
+      doorbellStartedRef.current = false;
+      setCall(data);
+      setStatus('ringing');
+      setVisitorSocketId(data.visitorSocketId);
+      setTab('home');
+      setSentMsg('');
+      // Som de campainha
+      startDoorbell();
+      doorbellStartedRef.current = true;
       if ('Notification' in window && Notification.permission === 'granted') {
         try {
           new Notification('🔔 CAMPAINHA!', { body: `${unitName} — alguém está na porta!`, icon: '/logo.png' });
@@ -380,7 +393,15 @@ export default function ResidentDashboard() {
     s.on('webrtc_ice_candidate', async ({ candidate }) => {
       if (pcRef.current && candidate) try { await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
     });
-    s.on('call_ended', () => { setStatus('idle'); setCall(null); stopAll(); });
+    // BUG FIX: call_ended deve chamar stopRing() para resetar doorbellStartedRef
+    // sem isso, a próxima chamada não toca som
+    s.on('call_ended', () => {
+      stopDoorbell();
+      doorbellStartedRef.current = false;
+      setStatus('idle');
+      setCall(null);
+      stopAll();
+    });
 
     // Receber mensagens broadcast do condomínio
     s.on('broadcast_message', (msg) => {
@@ -415,37 +436,36 @@ export default function ResidentDashboard() {
     const handleSWMessage = (event) => {
       if (event.data?.type === 'INCOMING_CALL') {
         console.log('[SW Message] Push recebido via Service Worker — ativando campainha');
-        // Se já está ringing, não duplica
-        if (status !== 'ringing') {
-          triggerDoorbell();
-          setStatus('ringing');
-          setTab('home');
-          
-          // Dados mínimos para exibir a tela de chamada
-          const payload = event.data.payload || {};
-          let visitorSocketIdVal = payload.visitorSocketId;
-          
-          // Fallback robusto para extrair o visitorSocketId caso esteja ausente no primeiro nível de payload
-          if (!visitorSocketIdVal && payload.url) {
-            try {
-              const urlPart = payload.url.split('?')[1] || '';
-              const urlParams = new URLSearchParams(urlPart);
-              visitorSocketIdVal = urlParams.get('visitorSocketId');
-            } catch (e) {
-              console.warn('[SW Message] Erro ao extrair socket da URL:', e);
-            }
-          }
-          
-          if (payload.unitId || visitorSocketIdVal) {
-            setVisitorSocketId(visitorSocketIdVal);
-            setCall({
-              visitorSocketId: visitorSocketIdVal,
-              callerName: 'Visitante',
-              photo: null,
-              propertyId: payload.propertyId
-            });
+        
+        const payload = event.data.payload || {};
+        let visitorSocketIdVal = payload.visitorSocketId;
+        
+        // Fallback: extrai visitorSocketId da URL do push
+        if (!visitorSocketIdVal && payload.url) {
+          try {
+            const urlPart = payload.url.split('?')[1] || '';
+            const urlParams = new URLSearchParams(urlPart);
+            visitorSocketIdVal = urlParams.get('visitorSocketId');
+          } catch (e) {
+            console.warn('[SW Message] Erro ao extrair socket da URL:', e);
           }
         }
+        
+        // Reseta campainha e dispara (sem verificar status — o SW message é sempre uma nova chamada)
+        doorbellStartedRef.current = false;
+        startDoorbell();
+        doorbellStartedRef.current = true;
+        setStatus('ringing');
+        setTab('home');
+        
+        // Sempre seta call — mesmo sem visitorSocketId, a UI de ringing deve aparecer
+        setVisitorSocketId(visitorSocketIdVal || null);
+        setCall({
+          visitorSocketId: visitorSocketIdVal || null,
+          callerName: payload.callerName || 'Visitante',
+          photo: payload.photo || null,
+          propertyId: payload.propertyId || null
+        });
       }
     };
     navigator.serviceWorker?.addEventListener('message', handleSWMessage);
@@ -637,8 +657,9 @@ export default function ResidentDashboard() {
   };
 
   const handleEnd = () => {
-    stopRing();
-    if (visitorSocketId) socketRef.current.emit('call_ended', { target: visitorSocketId });
+    stopDoorbell();
+    doorbellStartedRef.current = false;
+    if (visitorSocketId) socketRef.current?.emit('call_ended', { target: visitorSocketId });
     setStatus('idle'); setCall(null); stopAll();
   };
 
