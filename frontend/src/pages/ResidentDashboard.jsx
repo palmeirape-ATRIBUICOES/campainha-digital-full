@@ -265,8 +265,15 @@ export default function ResidentDashboard() {
     // Registra o usuário na sala do socket (CRUCIAL: deve acontecer em TODA conexão/reconexão)
     const registerSocket = () => {
       const currentUserId = localStorage.getItem('cd_user_id') || id;
-      console.log('[Socket] Registrando usuário na sala:', currentUserId);
+      console.log('[Socket] Registrando usuário na sala principal:', currentUserId);
       s.emit('register_user', { userId: currentUserId });
+
+      // Também registra na sala de redundância da Unidade (se for diferente)
+      const currentUnitId = localStorage.getItem('residentUnitId') || savedUnitId || id;
+      if (currentUnitId && currentUnitId !== currentUserId) {
+        console.log('[Socket] Registrando usuário na sala de redundância da unidade:', currentUnitId);
+        s.emit('register_user', { userId: currentUnitId });
+      }
     };
     
     s.on('connect', registerSocket);
@@ -400,12 +407,26 @@ export default function ResidentDashboard() {
           triggerDoorbell();
           setStatus('ringing');
           setTab('home');
+          
           // Dados mínimos para exibir a tela de chamada
           const payload = event.data.payload || {};
-          if (payload.unitId && payload.visitorSocketId) {
-            setVisitorSocketId(payload.visitorSocketId);
+          let visitorSocketIdVal = payload.visitorSocketId;
+          
+          // Fallback robusto para extrair o visitorSocketId caso esteja ausente no primeiro nível de payload
+          if (!visitorSocketIdVal && payload.url) {
+            try {
+              const urlPart = payload.url.split('?')[1] || '';
+              const urlParams = new URLSearchParams(urlPart);
+              visitorSocketIdVal = urlParams.get('visitorSocketId');
+            } catch (e) {
+              console.warn('[SW Message] Erro ao extrair socket da URL:', e);
+            }
+          }
+          
+          if (payload.unitId || visitorSocketIdVal) {
+            setVisitorSocketId(visitorSocketIdVal);
             setCall({
-              visitorSocketId: payload.visitorSocketId,
+              visitorSocketId: visitorSocketIdVal,
               callerName: 'Visitante',
               photo: null,
               propertyId: payload.propertyId

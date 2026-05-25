@@ -2329,11 +2329,11 @@ io.on('connection', (socket) => {
         }
 
         // 1. Notifica via Socket.io (funciona se o app está aberto em primeiro plano)
-        const socketRoom = `user_${resident.id}`;
-        const roomSockets = await io.in(socketRoom).fetchSockets();
-        console.log(`[WS Call] 📡 Socket room '${socketRoom}': ${roomSockets.length} conexão(ões) ativa(s)`);
+        const socketRoomUser = `user_${resident.id}`;
+        const socketRoomUnit = `user_${unitId}`;
         
-        io.to(socketRoom).emit('incoming_call', {
+        // Emite para ambas as salas para redundância absoluta (morador / unidade)
+        io.to(socketRoomUser).to(socketRoomUnit).emit('incoming_call', {
           visitorSocketId: socket.id,
           photo: photoBase64,
           callerName: callerName || 'Visitante',
@@ -2352,7 +2352,12 @@ io.on('connection', (socket) => {
           renotify: true,
           requireInteraction: true,
           vibrate: [400, 200, 400, 200, 800],
-          data: { url: `${baseUrl}/#/morador/${unitId}?call=true&visitorSocketId=${socket.id}`, unitId, propertyId }
+          data: { 
+            url: `${baseUrl}/#/morador/${unitId}?call=true&visitorSocketId=${socket.id}`, 
+            unitId, 
+            propertyId,
+            visitorSocketId: socket.id
+          }
         });
 
         console.log(`[WS Call] ✔ Morador ${resident.name} (${resident.id}) notificado com sucesso via Socket + Push`);
