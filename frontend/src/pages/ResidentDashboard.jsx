@@ -114,6 +114,7 @@ export default function ResidentDashboard() {
   const pcRef = useRef(null);
   const socketRef = useRef(null);
   const doorbellStartedRef = useRef(false);
+  const lastCallIdRef = useRef(null); // Dedup: evita processar o mesmo incoming_call duas vezes
 
   const triggerDoorbell = useCallback(() => {
     // Sempre reseta e reinicia — garante que cada nova chamada toca o som
@@ -375,6 +376,13 @@ export default function ResidentDashboard() {
 
 
     s.on('incoming_call', (data) => {
+      // DEDUP: o backend emite para 2 salas (user_userId e user_unitId).
+      // Se o socket está nas 2 salas, o evento chega 2x. Ignoramos duplicatas.
+      if (data.callId && data.callId === lastCallIdRef.current) {
+        console.log('[Socket] incoming_call duplicado ignorado (callId:', data.callId, ')');
+        return;
+      }
+      lastCallIdRef.current = data.callId || null;
       console.log('[Socket] incoming_call recebido:', data.callerName, data.visitorSocketId);
       // Reseta o estado da campainha para garantir que toca sempre
       doorbellStartedRef.current = false;
@@ -620,6 +628,12 @@ export default function ResidentDashboard() {
   };
 
   const handleOffer = useCallback(async (senderSocketId, offer) => {
+    // Fecha qualquer PeerConnection anterior antes de criar um novo
+    if (pcRef.current) {
+      console.log('[WebRTC] Fechando PC anterior antes de criar novo');
+      pcRef.current.close();
+      pcRef.current = null;
+    }
     const iceConfig = await fetchIceConfig();
     console.log('[ICE] Resident using', iceConfig.iceServers.length, 'ICE servers');
     const pc = new RTCPeerConnection(iceConfig);

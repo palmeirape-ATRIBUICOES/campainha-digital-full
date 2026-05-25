@@ -54,6 +54,7 @@ export default function VisitorCall() {
   const socketRef       = useRef(null);
   const pcRef           = useRef(null);   // RTCPeerConnection
   const localStreamRef  = useRef(null);
+  const webrtcStartedRef = useRef(false); // Dedup: evita criar 2 PeerConnections
 
   // ─── Inicialização do Socket.io ─────────────────────────────────────────
   useEffect(() => {
@@ -81,6 +82,11 @@ export default function VisitorCall() {
 
     // Morador sinalizou que está pronto (mídia local capturada) – agora cria a offer
     socket.on('webrtc_ready', async ({ residentSocketId }) => {
+      if (webrtcStartedRef.current) {
+        console.log('[WebRTC] webrtc_ready duplicado ignorado');
+        return;
+      }
+      webrtcStartedRef.current = true;
       await startWebRTC(residentSocketId, 'active');
     });
 
@@ -168,6 +174,7 @@ export default function VisitorCall() {
       pcRef.current.close();
       pcRef.current = null;
     }
+    webrtcStartedRef.current = false; // Permite nova chamada depois
   };
 
   const fetchProperty = async () => {

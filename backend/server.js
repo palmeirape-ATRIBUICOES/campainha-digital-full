@@ -2481,8 +2481,13 @@ io.on('connection', (socket) => {
           console.warn(`[WS Call] ⚠️ ALERTA: Nenhum socket conectado para o morador ${resident.name} (${resident.id}) — o app pode estar fechado ou com ID errado registrado`);
         }
         
+        // DEDUP FIX: emite para ambas as salas mas inclui um callId único
+        // O frontend usa o callId para ignorar duplicatas (mesmo evento chegando por 2 salas)
+        const callId = `${socket.id}-${Date.now()}`;
+        
         // Emite para ambas as salas para redundância absoluta (morador / unidade)
         io.to(socketRoomUser).to(socketRoomUnit).emit('incoming_call', {
+          callId,
           visitorSocketId: socket.id,
           photo: photoBase64,
           callerName: callerName || 'Visitante',
