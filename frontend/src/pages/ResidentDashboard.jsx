@@ -59,6 +59,8 @@ export default function ResidentDashboard() {
   const [visitorSocketId, setVisitorSocketId] = useState(null);
   const isHouseResident = localStorage.getItem('cd_is_house_resident') === 'true';
   const isDependent = localStorage.getItem('cd_is_dependent') === 'true';
+  // Apenas quem logou por email pode gerenciar moradores e criar códigos de visitante
+  const isEmailResident = localStorage.getItem('cd_login_type') === 'email';
   const HOUSE_QUICK_MSGS = [
     { id: 'general', label: 'Geral', messages: ['Já estou indo', 'Já está Aberto', 'Pode entrar'] },
     { id: 'services', label: 'Serviços', messages: ['Pode entrar pra marcar a luz', 'Pode entrar para marcar a água'] },
@@ -856,12 +858,15 @@ export default function ResidentDashboard() {
             <ShoppingBag size={20} color={tab === 'services' ? '#0369A1' : '#64748B'} /> Parceiros da Região
           </button>
 
-          <button onClick={() => { setTab('visitor-codes'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'visitor-codes' ? '#F0F9FF' : 'transparent', color: tab === 'visitor-codes' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
-            <KeyRound size={20} color={tab === 'visitor-codes' ? '#0369A1' : '#64748B'} /> Códigos de Visitante
-          </button>
+          {/* Códigos de Visitante: só moradores cadastrados por email */}
+          {isEmailResident && (
+            <button onClick={() => { setTab('visitor-codes'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'visitor-codes' ? '#F0F9FF' : 'transparent', color: tab === 'visitor-codes' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
+              <KeyRound size={20} color={tab === 'visitor-codes' ? '#0369A1' : '#64748B'} /> Códigos de Visitante
+            </button>
+          )}
 
-          {/* Moradores & Acessos: só morador principal pode gerenciar */}
-          {!isDependent && (
+          {/* Moradores & Acessos: só moradores cadastrados por email */}
+          {isEmailResident && (
             <button onClick={() => { setTab('residents'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'residents' ? '#F0F9FF' : 'transparent', color: tab === 'residents' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
               <Users size={20} color={tab === 'residents' ? '#0369A1' : '#64748B'} /> Moradores & Acessos
             </button>

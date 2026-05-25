@@ -48,6 +48,11 @@ export default function ResidentLogin() {
     localStorage.setItem('cd_is_condo_resident', data.isCondoResident ? 'true' : 'false');
     localStorage.setItem('cd_is_dependent', data.isDependent ? 'true' : 'false');
     localStorage.setItem('cd_parent_user_id', data.parentUserId || '');
+    // login_type: 'email' = logou com email/senha | 'code' = logou com código
+    // Preserva o tipo se já estava salvo (caso refresh sem novo login)
+    if (!localStorage.getItem('cd_login_type')) {
+      localStorage.setItem('cd_login_type', 'code');
+    }
     if (data.token) {
       localStorage.setItem('cd_token', data.token);
       localStorage.setItem('cd_user_id', data.userId || data.token);
@@ -80,6 +85,7 @@ export default function ResidentLogin() {
           localStorage.setItem('cd_admin_propertyName', data.propertyName || '');
           navigate('/admin');
         } else if (data.unitId) {
+          localStorage.setItem('cd_login_type', 'code'); // logou por código
           saveAndNavigate(data);
         } else {
           setError('Ocorreu um erro inesperado.');
@@ -112,6 +118,7 @@ export default function ResidentLogin() {
           localStorage.setItem('cd_admin_name', data.clientName || '');
           navigate('/admin');
         } else if (data.unitId) {
+          localStorage.setItem('cd_login_type', 'email'); // logou por email
           saveAndNavigate(data);
         } else {
           setError('Ocorreu um erro inesperado.');
