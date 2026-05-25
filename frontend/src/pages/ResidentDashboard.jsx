@@ -109,6 +109,15 @@ export default function ResidentDashboard() {
   const localStreamRef = useRef(null);
   const pcRef = useRef(null);
   const socketRef = useRef(null);
+  const doorbellStartedRef = useRef(false);
+
+  const triggerDoorbell = useCallback(() => {
+    if (!doorbellStartedRef.current) {
+      console.log('[Dashboard] Iniciando som de campainha e vibracao');
+      doorbellStartedRef.current = true;
+      startDoorbell();
+    }
+  }, []);
 
   const checkPushSubscription = useCallback(async () => {
     try {
@@ -339,7 +348,7 @@ export default function ResidentDashboard() {
       setCall(data); setStatus('ringing'); setVisitorSocketId(data.visitorSocketId);
       setTab('home'); setSentMsg('');
       // Som de campainha real + vibração
-      startDoorbell();
+      triggerDoorbell();
       if ('Notification' in window && Notification.permission === 'granted') {
         try {
           new Notification('🔔 CAMPAINHA!', { body: `${unitName} — alguém está na porta!`, icon: '/logo.png' });
@@ -388,7 +397,7 @@ export default function ResidentDashboard() {
         console.log('[SW Message] Push recebido via Service Worker — ativando campainha');
         // Se já está ringing, não duplica
         if (status !== 'ringing') {
-          startDoorbell();
+          triggerDoorbell();
           setStatus('ringing');
           setTab('home');
           // Dados mínimos para exibir a tela de chamada
@@ -428,6 +437,7 @@ export default function ResidentDashboard() {
         setStatus('ringing');
         setTab('home');
         setSentMsg('');
+        triggerDoorbell(); // Toca a campainha imediatamente ao carregar via push
         
         try {
           let res = await fetch(`${API}/api/visitors/${id}`);
@@ -460,7 +470,11 @@ export default function ResidentDashboard() {
     checkActiveCallParam();
   }, [location, id]);
 
-  const stopRing = () => { stopDoorbell(); setAudioError(false); };
+  const stopRing = () => { 
+    stopDoorbell(); 
+    doorbellStartedRef.current = false; 
+    setAudioError(false); 
+  };
   const stopAll = () => {
     if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t => t.stop()); localStreamRef.current = null; }
     if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
@@ -793,8 +807,21 @@ export default function ResidentDashboard() {
     return null;
   }
 
+  const handleUserInteraction = () => {
+    if (status === 'ringing') {
+      triggerDoorbell();
+    }
+    if (audioRef.current) {
+      audioRef.current.play().then(() => audioRef.current.pause()).catch(() => {});
+    }
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', paddingBottom: '72px' }} onClick={() => { if (audioRef.current) audioRef.current.play().then(() => audioRef.current.pause()).catch(() => {}); }}>
+    <div 
+      style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', paddingBottom: '72px' }} 
+      onClick={handleUserInteraction}
+      onTouchStart={handleUserInteraction}
+    >
       <audio ref={audioRef} loop preload="auto"><source src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" type="audio/mpeg" /></audio>
 
       {/* Header (Premium Sticky) */}

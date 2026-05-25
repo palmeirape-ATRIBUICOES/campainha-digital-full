@@ -55,7 +55,8 @@ self.addEventListener('push', (event) => {
   console.log('[SW] Push recebido!');
 
   // Constrói URLs absolutas dinamicamente com base na origem do PWA
-  const BASE_URL = self.location.origin + '/campainha-digital-full/';
+  const basePath = self.location.pathname.substring(0, self.location.pathname.lastIndexOf('/') + 1);
+  const BASE_URL = self.location.origin + basePath;
 
   let data = {
     title: '🔔 Alguém na sua porta!',
