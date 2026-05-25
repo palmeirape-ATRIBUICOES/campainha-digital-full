@@ -2232,13 +2232,31 @@ io.on('connection', (socket) => {
   });
 
   const handleIncomingCall = async ({ unitId, propertyId, photoBase64, callerName, visitorLat, visitorLng }) => {
+    console.log(`\n[WS Call] ===== NOVA CHAMADA =====`);
+    console.log(`[WS Call] unitId: ${unitId}`);
+    console.log(`[WS Call] propertyId: ${propertyId}`);
+    console.log(`[WS Call] callerName: ${callerName}`);
+    console.log(`[WS Call] photo: ${photoBase64 ? 'SIM (' + photoBase64.length + ' chars)' : 'NÃO'}`);
+    console.log(`[WS Call] visitorSocket: ${socket.id}`);
+    
+    if (!unitId) {
+      console.error('[WS Call] ✘ ABORTADO: unitId não fornecido!');
+      return;
+    }
+
     // Busca os moradores da unidade
+    console.log('[WS Call] Buscando unidade no banco...');
     const unit = await prisma.unit.findUnique({
       where: { id: unitId },
       include: { residents: true }
     });
 
-    if (!unit) return;
+    if (!unit) {
+      console.error(`[WS Call] ✘ ABORTADO: unidade ${unitId} não encontrada no banco!`);
+      return;
+    }
+    console.log(`[WS Call] ✔ Unidade encontrada: ${unit.name} com ${unit.residents.length} morador(es)`);
+
 
     // ─── Validação de Geofence ─────────────────────────────────────────────
     // Busca configuração de geofence da propriedade
@@ -2287,6 +2305,8 @@ io.on('connection', (socket) => {
     }
 
     // Salvar visita no banco de dados
+    // BUG FIX CRÍTICO: NÃO abortar a chamada se o banco falhar!
+    // O morador DEVE ser notificado mesmo se a foto não puder ser salva.
     let visit;
     try {
       visit = await prisma.visitor.create({
@@ -2299,8 +2319,10 @@ io.on('connection', (socket) => {
       });
       console.log(`[WS Call] ✔ Visita registrada: visitId=${visit.id}, unidade=${unit.name}`);
     } catch (e) {
-      console.error('[WS Call] ✘ Erro ao salvar visita no banco:', e);
-      return;
+      // ANTES: return aqui silenciava TODAS as chamadas quando o banco falhava
+      // AGORA: loga o erro mas continua para notificar o morador
+      console.error('[WS Call] ⚠️ Erro ao salvar visita no banco (CONTINUANDO mesmo assim):', e.message);
+      visit = { id: 'temp-' + Date.now(), timestamp: new Date() };
     }
 
     // Notifica SOMENTE os moradores ATIVOS da unidade (com licença válida)
