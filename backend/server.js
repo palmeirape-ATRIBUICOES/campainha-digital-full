@@ -350,6 +350,36 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Credenciais incorretas.' });
     }
 
+    if (user.isVilaAdmin) {
+      const vilaProperty = await prisma.property.findFirst({
+        where: {
+          OR: [
+            { vilaAdminId: user.id },
+            { adminId: user.id }
+          ]
+        }
+      });
+      return res.json({
+        success: true,
+        token: user.id,
+        user: {
+          id: user.id,
+          name: user.name,
+          isSuperAdmin: user.isSuperAdmin,
+          isAdmin: user.isAdmin,
+          isDoorman: user.isDoorman,
+          isResident: user.isResident,
+          isReseller: user.isReseller,
+          isHouseResident: user.isHouseResident,
+          isCondoResident: user.isCondoResident,
+          isVilaAdmin: user.isVilaAdmin,
+          propertyName: vilaProperty?.name,
+          propertyId: vilaProperty?.id,
+          accessCode: user.clientCode || user.plateCode
+        }
+      });
+    }
+
     const property = user.propertiesManaged[0] || (user.units[0] ? user.units[0].property : null);
     const unit = user.units[0];
 
@@ -1199,9 +1229,16 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
     }
 
     // Obtém o propertyId sendo o usuário admin da propriedade, morador de uma unidade ou admin de vila
-    const propertyId = user.propertiesManaged?.[0]?.id || user.units?.[0]?.propertyId || user.propertiesVilaAdmin?.[0]?.id;
-    const propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.property?.name || user.propertiesVilaAdmin?.[0]?.name || '';
-    const isVila = user.propertiesManaged?.[0]?.isVila || user.propertiesVilaAdmin?.[0]?.isVila || user.units?.[0]?.property?.isVila || false;
+    let propertyId, propertyName, isVila;
+    if (user.isVilaAdmin) {
+      propertyId = user.propertiesVilaAdmin?.[0]?.id || null;
+      propertyName = user.propertiesVilaAdmin?.[0]?.name || '';
+      isVila = true;
+    } else {
+      propertyId = user.propertiesManaged?.[0]?.id || user.units?.[0]?.propertyId || null;
+      propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.property?.name || '';
+      isVila = user.propertiesManaged?.[0]?.isVila || user.units?.[0]?.property?.isVila || false;
+    }
     
     res.json({ ...user, propertyId, propertyName, isVila });
   } catch (err) {
@@ -1281,14 +1318,19 @@ app.post('/api/properties', async (req, res) => {
       return res.status(401).json({ error: 'Sessão administrativa inválida. Faça login novamente.' });
     }
 
+    const userObj = await prisma.user.findUnique({ where: { id: adminId } });
+    const isVilaUser = userObj?.isVilaAdmin || type === 'village';
+
     // Cria a propriedade de forma limpa
     const property = await prisma.property.create({
       data: {
         id: finalId,
         name,
-        type: type === 'individual' ? 'individual' : 'collective',
+        type: isVilaUser ? 'village' : (type === 'individual' ? 'individual' : 'collective'),
+        isVila: isVilaUser,
+        vilaAdminId: isVilaUser ? adminId : null,
+        adminId: isVilaUser ? null : adminId,
         clientName: clientName || '',
-        adminId,
         subdomain: subdomain ? subdomain.toLowerCase().trim() : null,
         nextPaymentAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 dias de teste
       }

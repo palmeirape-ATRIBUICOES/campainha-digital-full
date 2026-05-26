@@ -60,15 +60,19 @@ export default function VilaAdminDashboard() {
   const printRef = useRef(null);
 
   const adminId = localStorage.getItem('cd_token');
-  const propertyId = localStorage.getItem('cd_vila_property_id');
+  const [propertyId, setPropertyId] = useState(() => localStorage.getItem('cd_vila_property_id') || '');
   const adminName = localStorage.getItem('cd_vila_admin_name') || 'Admin';
+
+  const [newVilaNameInput, setNewVilaNameInput] = useState('');
+  const [creatingVila, setCreatingVila] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   // ── Auth guard ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!adminId || !propertyId) {
+    if (!adminId) {
       navigate('/auth');
     }
-  }, []);
+  }, [adminId, navigate]);
 
   const selectedUnitRef = useRef(selectedUnit);
   useEffect(() => {
@@ -430,6 +434,38 @@ export default function VilaAdminDashboard() {
     setTimeout(() => setFeedback(null), 4000);
   };
 
+  const handleCreateVila = async (e) => {
+    e.preventDefault();
+    if (!newVilaNameInput.trim()) return;
+    setCreatingVila(true);
+    setCreateError('');
+    try {
+      const res = await fetch(`${API}/api/properties`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': adminId
+        },
+        body: JSON.stringify({
+          name: newVilaNameInput.trim(),
+          type: 'village'
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('cd_vila_property_id', data.id);
+        setPropertyId(data.id);
+      } else {
+        const data = await res.json();
+        setCreateError(data.error || 'Erro ao criar Vila.');
+      }
+    } catch (err) {
+      setCreateError('Erro de conexão ao criar Vila.');
+    } finally {
+      setCreatingVila(false);
+    }
+  };
+
   // ── Logout ───────────────────────────────────────────────────────────
   const logout = () => {
     ['cd_token', 'cd_user_id', 'cd_vila_property_id', 'cd_vila_admin_name', 'cd_login_type']
@@ -451,6 +487,53 @@ export default function VilaAdminDashboard() {
   const totalUnread = messages.filter(m => !m.isFromAdmin && !m.read).length;
 
   // ─── Render ───────────────────────────────────────────────────────────
+  if (!propertyId) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#F0F4F8', padding: '24px', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{ width: '100%', maxWidth: '420px', background: '#FFF', borderRadius: '24px', padding: '32px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <Logo size={80} />
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: '0 0 8px' }}>Crie a sua Vila Digital</h2>
+            <p style={{ fontSize: '14px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>Cadastre o nome da sua vila para começar a gerenciar campainhas e moradores.</p>
+          </div>
+
+          <form onSubmit={handleCreateVila} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {createError && (
+              <div style={{ background: '#FEF2F2', border: '1px solid #FDE2E2', borderRadius: '12px', padding: '10px 14px', color: '#991B1B', fontSize: '13px', fontWeight: 600 }}>
+                ⚠️ {createError}
+              </div>
+            )}
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nome da Vila</label>
+              <input
+                type="text"
+                placeholder="Ex: Residencial Ipês, Vila das Flores..."
+                value={newVilaNameInput}
+                onChange={e => setNewVilaNameInput(e.target.value)}
+                required
+                style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '15px', boxSizing: 'border-box' }}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={creatingVila}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', color: '#FFF', fontWeight: 800, fontSize: '15px', cursor: 'pointer', boxShadow: '0 8px 20px rgba(59,130,246,0.2)', opacity: creatingVila ? 0.7 : 1 }}
+            >
+              {creatingVila ? 'Criando...' : 'Criar Vila'}
+            </button>
+            <button
+              type="button"
+              onClick={logout}
+              style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: '#F1F5F9', color: '#475569', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+            >
+              Sair
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: '100vh', fontFamily: 'Inter, sans-serif', background: '#F0F4F8' }}>
 
