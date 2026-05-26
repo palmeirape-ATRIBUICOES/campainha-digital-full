@@ -147,6 +147,28 @@ export default function ResidentDashboard() {
     startDoorbell();
   }, []);
 
+  const markVilaMessagesAsRead = useCallback(async () => {
+    const currentPropId = propertyId || localStorage.getItem('residentPropertyId');
+    const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
+    if (!currentPropId || !currentUnitId) return;
+    try {
+      await fetch(`${API}/api/vila/${currentPropId}/messages/read`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unitId: currentUnitId, isFromAdmin: false })
+      });
+      setUnreadCount(0);
+    } catch (e) {
+      console.warn('[Read] Falha ao marcar mensagens como lidas:', e);
+    }
+  }, [propertyId, savedUnitId]);
+
+  useEffect(() => {
+    if (tab === 'messages') {
+      markVilaMessagesAsRead();
+    }
+  }, [tab, messagesSubTab, markVilaMessagesAsRead]);
+
   const checkPushSubscription = useCallback(async () => {
     try {
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -320,10 +342,19 @@ export default function ResidentDashboard() {
     s.on('connect', () => {
       console.log('[Socket] Conectado — registrando salas...');
       registerSocket();
+      
+      const currentPropId = savedPropId || localStorage.getItem('residentPropertyId');
+      if (currentPropId) {
+        s.emit('join_room', { room: `vila_${currentPropId}` });
+      }
     });
     // Se já está conectado no momento do mount, registra imediatamente
     if (s.connected) {
       registerSocket();
+      const currentPropId = savedPropId || localStorage.getItem('residentPropertyId');
+      if (currentPropId) {
+        s.emit('join_room', { room: `vila_${currentPropId}` });
+      }
     }
 
     // Fetch broadcast messages
@@ -380,6 +411,9 @@ export default function ResidentDashboard() {
           if (data.propertyId) {
             setPropertyId(data.propertyId);
             localStorage.setItem('residentPropertyId', data.propertyId);
+            if (s && s.connected) {
+              s.emit('join_room', { room: `vila_${data.propertyId}` });
+            }
           }
           if (data.propertyName) {
             setPropertyName(data.propertyName);
@@ -488,6 +522,12 @@ export default function ResidentDashboard() {
     s.on('vila_message', (msg) => {
       setRawVilaMessages(prev => {
         if (prev.some(m => m.id === msg.id)) return prev;
+        const tempIndex = prev.findIndex(m => m.sending && m.content === msg.content && m.isFromAdmin === msg.isFromAdmin);
+        if (tempIndex >= 0) {
+          const updated = [...prev];
+          updated[tempIndex] = msg;
+          return updated;
+        }
         return [...prev, msg];
       });
       const formattedMsg = {
@@ -504,6 +544,15 @@ export default function ResidentDashboard() {
       setUnreadCount(prev => prev + 1);
       if ('Notification' in window && Notification.permission === 'granted') {
         try { new Notification(formattedMsg.title, { body: formattedMsg.body, icon: '/logo.png' }); } catch {}
+      }
+    });
+
+    s.on('vila_messages_read', ({ unitId, isFromAdmin }) => {
+      const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
+      if (isFromAdmin && unitId === currentUnitId) {
+        setRawVilaMessages(prev => prev.map(m => !m.isFromAdmin ? { ...m, read: true } : m));
+      } else if (!isFromAdmin && (unitId === currentUnitId || !unitId)) {
+        setUnreadCount(0);
       }
     });
 
@@ -1771,11 +1820,12 @@ export default function ResidentDashboard() {
                               fontSize: '13px',
                               fontWeight: 500,
                               boxShadow: isMine ? '0 4px 12px rgba(59,130,246,0.15)' : '0 2px 8px rgba(0,0,0,0.04)',
-                              border: isMine ? 'none' : '1px solid #E2E8F0'
+                              border: isMine ? 'none' : '1px solid #E2E8F0',
+                              opacity: m.sending ? 0.6 : 1
                             }}>
                               <p style={{ margin: '0 0 4px 0', lineHeight: 1.4 }}>{m.content}</p>
                               <span style={{ fontSize: '9px', opacity: 0.6, display: 'block', textAlign: 'right' }}>
-                                {new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                {m.sending ? 'Enviando...' : m.error ? '⚠️ Falha ao enviar' : new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
                           </div>
@@ -1788,33 +1838,59 @@ export default function ResidentDashboard() {
                 <form 
                   onSubmit={async (e) => {
                     e.preventDefault();
-                    if (!newReplyMsg.trim() || sendingReply) return;
-                    setSendingReply(true);
+                    const textContent = newReplyMsg.trim();
+                    if (!textContent) return;
+
+                    const currentPropId = savedPropId || localStorage.getItem('residentPropertyId');
+                    const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
+                    const currentUserId = localStorage.getItem('cd_user_id');
+
+                    // 1. Limpa o input imediatamente
+                    setNewReplyMsg('');
+
+                    // 2. Insere mensagem otimista temporária
+                    const tempId = 'temp-' + Date.now();
+                    const optimisticMsg = {
+                      id: tempId,
+                      senderId: currentUserId,
+                      senderName: unitName || 'Morador',
+                      content: textContent,
+                      unitId: currentUnitId,
+                      isFromAdmin: false,
+                      createdAt: new Date().toISOString(),
+                      sending: true
+                    };
+
+                    setRawVilaMessages(prev => [...prev, optimisticMsg]);
+                    
+                    // Auto scroll rápido
+                    setTimeout(() => {
+                      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    }, 50);
+
+                    // 3. POST em segundo plano
                     try {
-                      const currentPropId = savedPropId || localStorage.getItem('residentPropertyId');
-                      const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
-                      const currentUserId = localStorage.getItem('cd_user_id');
-                      
                       const res = await fetch(`${API}/api/vila/${currentPropId}/messages`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                           senderId: currentUserId,
                           senderName: unitName || 'Morador',
-                          content: newReplyMsg.trim(),
+                          content: textContent,
                           unitId: currentUnitId,
                           isFromAdmin: false
                         })
                       });
                       if (res.ok) {
                         const msg = await res.json();
-                        setRawVilaMessages(prev => [...prev, msg]);
-                        setNewReplyMsg('');
+                        setRawVilaMessages(prev => prev.map(m => m.id === tempId ? msg : m));
+                      } else {
+                        setRawVilaMessages(prev => prev.map(m => m.id === tempId ? { ...m, error: true, sending: false } : m));
                       }
                     } catch (err) {
                       console.error(err);
+                      setRawVilaMessages(prev => prev.map(m => m.id === tempId ? { ...m, error: true, sending: false } : m));
                     }
-                    setSendingReply(false);
                   }} 
                   style={{ display: 'flex', gap: '8px', padding: '12px 16px', background: '#FFF', borderTop: '1px solid #E2E8F0', flexShrink: 0 }}
                 >

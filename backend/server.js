@@ -1863,6 +1863,45 @@ app.post('/api/vila/:propertyId/messages', async (req, res) => {
   }
 });
 
+// Vila: marcar mensagens como lidas (solicitado pelo morador ou pelo administrador)
+app.put('/api/vila/:propertyId/messages/read', async (req, res) => {
+  const { unitId, isFromAdmin } = req.body;
+  try {
+    const propertyId = req.params.propertyId;
+    
+    // Se for morador marcando como lido, ele quer marcar mensagens enviadas pelo admin para a sua unidade ou gerais (broadcast)
+    // Se for o admin marcando como lido, ele quer marcar mensagens enviadas pelos moradores da unidade especificada
+    const condition = {
+      propertyId,
+      isFromAdmin: !isFromAdmin, // Marca como lido as mensagens que vieram da outra parte
+      read: false
+    };
+
+    if (isFromAdmin) {
+      if (unitId) {
+        condition.unitId = unitId;
+      }
+    } else {
+      condition.OR = [
+        { unitId },
+        { unitId: null }
+      ];
+    }
+
+    const updated = await prisma.vilaMessage.updateMany({
+      where: condition,
+      data: { read: true }
+    });
+
+    // Notifica a atualização do contador de não lidas via socket
+    io.to(`vila_${propertyId}`).emit('vila_messages_read', { propertyId, unitId, isFromAdmin });
+
+    res.json({ success: true, count: updated.count });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao marcar mensagens como lidas.', details: err.message });
+  }
+});
+
 // ─── Autonomia do Administrador de Vila: Gestão de Campanhas e Moradores ───
 
 // Criar Campainha (Unidade) na Vila
@@ -3072,6 +3111,13 @@ io.on('connection', (socket) => {
     activeSockets.set(userId, socket.id);
     socket.join(`user_${userId}`);
     console.log(`[WS] Usuário ${userId} registrado no socket ${socket.id}`);
+  });
+
+  socket.on('join_room', ({ room }) => {
+    if (room) {
+      socket.join(room);
+      console.log(`[WS] Socket ${socket.id} entrou na sala ${room}`);
+    }
   });
 
   const handleIncomingCall = async ({ unitId, propertyId, photoBase64, callerName, visitorLat, visitorLng }) => {

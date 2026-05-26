@@ -70,6 +70,11 @@ export default function VilaAdminDashboard() {
     }
   }, []);
 
+  const selectedUnitRef = useRef(selectedUnit);
+  useEffect(() => {
+    selectedUnitRef.current = selectedUnit;
+  }, [selectedUnit]);
+
   // ── Socket.io ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!propertyId) return;
@@ -78,12 +83,41 @@ export default function VilaAdminDashboard() {
     s.on('connect', () => s.emit('join_room', { room: `vila_${propertyId}` }));
     s.on('vila_message', (msg) => {
       setMessages(prev => {
-        if (prev.find(m => m.id === msg.id)) return prev;
+        if (prev.some(m => m.id === msg.id)) return prev;
+        const tempIndex = prev.findIndex(m => m.sending && m.content === msg.content && m.isFromAdmin === msg.isFromAdmin);
+        if (tempIndex >= 0) {
+          const updated = [...prev];
+          updated[tempIndex] = msg;
+          return updated;
+        }
         return [...prev, msg];
       });
+
+      // Se for mensagem de morador e for a conversa atualmente aberta, marca como lida
+      const currentSelected = selectedUnitRef.current;
+      if (!msg.isFromAdmin && currentSelected && msg.unitId === currentSelected.id) {
+        fetch(`${API}/api/vila/${propertyId}/messages/read`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': adminId },
+          body: JSON.stringify({ unitId: currentSelected.id, isFromAdmin: true })
+        }).then(() => {
+          setMessages(prev => prev.map(m => m.unitId === currentSelected.id && !m.isFromAdmin ? { ...m, read: true } : m));
+        }).catch(() => {});
+      }
     });
+
+    s.on('vila_messages_read', ({ unitId, isFromAdmin }) => {
+      if (!isFromAdmin) {
+        // Morador marcou como lida (leu as mensagens do admin)
+        setMessages(prev => prev.map(m => m.isFromAdmin && m.unitId === unitId ? { ...m, read: true } : m));
+      } else {
+        // O próprio admin marcou como lida
+        setMessages(prev => prev.map(m => !m.isFromAdmin && m.unitId === unitId ? { ...m, read: true } : m));
+      }
+    });
+
     return () => s.disconnect();
-  }, [propertyId]);
+  }, [propertyId, adminId]);
 
   // ── Fetch property + messages ────────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -105,6 +139,26 @@ export default function VilaAdminDashboard() {
   }, [propertyId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const markMessagesAsRead = useCallback(async (unitId) => {
+    if (!propertyId || !unitId) return;
+    try {
+      await fetch(`${API}/api/vila/${propertyId}/messages/read`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': adminId },
+        body: JSON.stringify({ unitId, isFromAdmin: true })
+      });
+      setMessages(prev => prev.map(m => m.unitId === unitId && !m.isFromAdmin ? { ...m, read: true } : m));
+    } catch (e) {
+      console.warn('[Read] Falha ao marcar mensagens como lidas:', e);
+    }
+  }, [propertyId, adminId]);
+
+  useEffect(() => {
+    if (selectedUnit) {
+      markMessagesAsRead(selectedUnit.id);
+    }
+  }, [selectedUnit, markMessagesAsRead]);
 
   // ── Fetch QR Code ────────────────────────────────────────────────────
   const fetchQrCode = useCallback(async () => {
@@ -296,23 +350,57 @@ export default function VilaAdminDashboard() {
 
   // ── Send message ─────────────────────────────────────────────────────
   const sendMessage = async (isBroadcast = false) => {
-    if (!msgText.trim()) return;
-    setSending(true);
+    const textContent = msgText.trim();
+    if (!textContent) return;
+
+    // 1. Limpa o input de texto imediatamente
+    setMsgText('');
+
+    // 2. Insere a mensagem de forma otimista
+    const tempId = 'temp-' + Date.now();
+    const optimisticMsg = {
+      id: tempId,
+      propertyId,
+      senderId: adminId,
+      senderName: adminName,
+      content: textContent,
+      unitId: isBroadcast ? null : selectedUnit?.id,
+      isFromAdmin: true,
+      createdAt: new Date().toISOString(),
+      sending: true
+    };
+
+    setMessages(prev => [...prev, optimisticMsg]);
+
+    // Scroll para baixo rápido
+    setTimeout(() => {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+
+    // 3. Envia o POST em segundo plano
     try {
-      await fetch(`${API}/api/vila/${propertyId}/messages`, {
+      const res = await fetch(`${API}/api/vila/${propertyId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           senderId: adminId,
           senderName: adminName,
-          content: msgText.trim(),
+          content: textContent,
           unitId: isBroadcast ? null : selectedUnit?.id,
           isFromAdmin: true
         })
       });
-      setMsgText('');
-    } catch (err) { console.error(err); }
-    setSending(false);
+      if (res.ok) {
+        const msg = await res.json();
+        // Substitui a mensagem otimista pelo objeto real retornado da API
+        setMessages(prev => prev.map(m => m.id === tempId ? msg : m));
+      } else {
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...m, error: true, sending: false } : m));
+      }
+    } catch (err) {
+      console.error(err);
+      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, error: true, sending: false } : m));
+    }
   };
 
   // ── Save settings ────────────────────────────────────────────────────
@@ -599,7 +687,8 @@ export default function VilaAdminDashboard() {
                         ? (msg.unitId === null ? 'linear-gradient(135deg,#F97316,#EA580C)' : 'linear-gradient(135deg,#3B82F6,#1D4ED8)')
                         : '#FFF',
                       color: msg.isFromAdmin ? '#FFF' : '#1E293B',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      opacity: msg.sending ? 0.6 : 1
                     }}>
                       {!msg.isFromAdmin && (
                         <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', marginBottom: '4px' }}>
@@ -613,7 +702,7 @@ export default function VilaAdminDashboard() {
                       )}
                       <div style={{ fontSize: '14px', lineHeight: 1.5 }}>{msg.content}</div>
                       <div style={{ fontSize: '10px', marginTop: '6px', color: msg.isFromAdmin ? 'rgba(255,255,255,0.6)' : '#94A3B8' }}>
-                        {new Date(msg.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        {msg.sending ? 'Enviando...' : msg.error ? '⚠️ Falha ao enviar' : new Date(msg.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   </div>
