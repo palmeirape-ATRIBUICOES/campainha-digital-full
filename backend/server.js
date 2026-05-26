@@ -873,7 +873,12 @@ app.post('/api/resident/login-by-code', async (req, res) => {
     // Vila Admin: detecta e redireciona para painel de Vila
     if (user.isVilaAdmin) {
       const vilaProperty = await prisma.property.findFirst({
-        where: { vilaAdminId: user.id }
+        where: {
+          OR: [
+            { vilaAdminId: user.id },
+            { adminId: user.id }
+          ]
+        }
       });
       return res.json({
         role: 'vila_admin',
@@ -935,7 +940,14 @@ app.post('/api/resident/login', async (req, res) => {
 
     // Vila Admin
     if (user.isVilaAdmin) {
-      const vilaProperty = await prisma.property.findFirst({ where: { vilaAdminId: user.id } });
+      const vilaProperty = await prisma.property.findFirst({
+        where: {
+          OR: [
+            { vilaAdminId: user.id },
+            { adminId: user.id }
+          ]
+        }
+      });
       return res.json({
         role: 'vila_admin',
         token: user.id,
@@ -1726,7 +1738,13 @@ app.put('/api/vila/:propertyId/settings', async (req, res) => {
     if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
 
     const property = await prisma.property.findFirst({
-      where: { id: req.params.propertyId, vilaAdminId: admin.id },
+      where: {
+        id: req.params.propertyId,
+        OR: [
+          { vilaAdminId: admin.id },
+          { adminId: admin.id }
+        ]
+      },
       include: { units: true }
     });
     if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
@@ -1761,7 +1779,13 @@ app.put('/api/vila/:propertyId/settings', async (req, res) => {
 
     const updated = await prisma.property.update({
       where: { id: property.id },
-      data: { name: name || property.name, vilaHouseCount: count },
+      data: {
+        name: name || property.name,
+        vilaHouseCount: count,
+        isVila: true,
+        type: 'village',
+        vilaAdminId: admin.id
+      },
       include: { units: { orderBy: { name: 'asc' } } }
     });
     res.json(updated);
@@ -1850,7 +1874,13 @@ app.post('/api/vila/:propertyId/units', async (req, res) => {
     if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
 
     const property = await prisma.property.findFirst({
-      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+      where: {
+        id: req.params.propertyId,
+        OR: [
+          { vilaAdminId: admin.id },
+          { adminId: admin.id }
+        ]
+      }
     });
     if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
 
@@ -1893,7 +1923,13 @@ app.put('/api/vila/:propertyId/units/:unitId', async (req, res) => {
     if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
 
     const property = await prisma.property.findFirst({
-      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+      where: {
+        id: req.params.propertyId,
+        OR: [
+          { vilaAdminId: admin.id },
+          { adminId: admin.id }
+        ]
+      }
     });
     if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
 
@@ -1919,7 +1955,13 @@ app.delete('/api/vila/:propertyId/units/:unitId', async (req, res) => {
     if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
 
     const property = await prisma.property.findFirst({
-      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+      where: {
+        id: req.params.propertyId,
+        OR: [
+          { vilaAdminId: admin.id },
+          { adminId: admin.id }
+        ]
+      }
     });
     if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
 
@@ -1962,7 +2004,13 @@ app.post('/api/vila/:propertyId/units/:unitId/residents', async (req, res) => {
     if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
 
     const property = await prisma.property.findFirst({
-      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+      where: {
+        id: req.params.propertyId,
+        OR: [
+          { vilaAdminId: admin.id },
+          { adminId: admin.id }
+        ]
+      }
     });
     if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
 
@@ -2014,7 +2062,13 @@ app.delete('/api/vila/:propertyId/units/:unitId/residents/:residentId', async (r
     if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
 
     const property = await prisma.property.findFirst({
-      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+      where: {
+        id: req.params.propertyId,
+        OR: [
+          { vilaAdminId: admin.id },
+          { adminId: admin.id }
+        ]
+      }
     });
     if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
 
@@ -2040,7 +2094,13 @@ app.put('/api/vila/:propertyId/units/:unitId/residents/:residentId', async (req,
     if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
 
     const property = await prisma.property.findFirst({
-      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+      where: {
+        id: req.params.propertyId,
+        OR: [
+          { vilaAdminId: admin.id },
+          { adminId: admin.id }
+        ]
+      }
     });
     if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
 
