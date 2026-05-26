@@ -47,19 +47,6 @@ export default function ResidentDashboard() {
   const savedPropId = localStorage.getItem('residentPropertyId');
   const token = localStorage.getItem('cd_token');
 
-  // Redireciona Vila Admin imediatamente
-  useEffect(() => {
-    if (localStorage.getItem('cd_vila_property_id')) {
-      navigate('/vila-admin', { replace: true });
-    }
-  }, [navigate]);
-
-  useEffect(() => {
-    if (messagesSubTab === 'chat') {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [rawVilaMessages, messagesSubTab]);
-
   const [tab, setTab] = useState('home'); // home | history | messages
   const [messagesSubTab, setMessagesSubTab] = useState('board'); // 'board' | 'chat'
   const [rawVilaMessages, setRawVilaMessages] = useState([]);
@@ -139,6 +126,19 @@ export default function ResidentDashboard() {
   const socketRef = useRef(null);
   const doorbellStartedRef = useRef(false);
   const lastCallIdRef = useRef(null); // Dedup: evita processar o mesmo incoming_call duas vezes
+
+  // Redireciona Vila Admin imediatamente
+  useEffect(() => {
+    if (localStorage.getItem('cd_vila_property_id')) {
+      navigate('/vila-admin', { replace: true });
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    if (messagesSubTab === 'chat') {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [rawVilaMessages, messagesSubTab]);
 
   const triggerDoorbell = useCallback(() => {
     // Sempre reseta e reinicia — garante que cada nova chamada toca o som
