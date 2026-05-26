@@ -452,27 +452,27 @@ export default function VisitorCall() {
                     onClick={() => handleCall(unit)}
                     style={{
                       width: '100%', padding: '18px 20px', borderRadius: '18px',
-                      border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px',
-                      background: 'rgba(255,255,255,0.07)',
+                      border: '1px solid var(--border-subtle)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px',
+                      background: 'var(--bg-surface)',
                       backdropFilter: 'blur(12px)',
                       transition: 'all 0.2s',
-                      boxShadow: '0 2px 12px rgba(0,0,0,0.3)'
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,229,255,0.12)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}
                   >
                     <div style={{
                       width: '48px', height: '48px', borderRadius: '14px', flexShrink: 0,
                       background: `hsl(${(idx * 47) % 360},70%,50%)`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: `0 4px 14px hsl(${(idx * 47) % 360},70%,40%,0.5)`
+                      boxShadow: `0 4px 14px hsl(${(idx * 47) % 360},70%,40%,0.3)`
                     }}>
                       <Bell size={22} color="#FFF" />
                     </div>
                     <div style={{ textAlign: 'left', flex: 1 }}>
-                      <div style={{ fontSize: '17px', fontWeight: 800, color: '#FFF' }}>{unit.name}</div>
+                      <div style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)' }}>{unit.name}</div>
                       {unit.residents?.length > 0 && (
-                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
                           {unit.residents.map(r => r.name).join(', ')}
                         </div>
                       )}

@@ -1702,7 +1702,7 @@ app.get('/api/vila/:propertyId', async (req, res) => {
       where: { id: req.params.propertyId },
       include: {
         units: {
-          include: { residents: { select: { id: true, name: true } } },
+          include: { residents: { select: { id: true, name: true, email: true, clientCode: true, plateCode: true } } },
           orderBy: { name: 'asc' }
         },
         vilaAdmin: { select: { id: true, name: true, email: true } }
@@ -2028,6 +2028,72 @@ app.delete('/api/vila/:propertyId/units/:unitId/residents/:residentId', async (r
   }
 });
 
+// Editar Morador de uma Campainha na Vila
+app.put('/api/vila/:propertyId/units/:unitId/residents/:residentId', async (req, res) => {
+  const { name, email, password, plateCode } = req.body;
+  const token = req.headers['authorization'];
+  if (!token) return res.status(401).json({ error: 'Não autorizado.' });
+  if (!name?.trim()) return res.status(400).json({ error: 'Nome do morador é obrigatório.' });
+
+  try {
+    const admin = await prisma.user.findUnique({ where: { id: token } });
+    if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+
+    const property = await prisma.property.findFirst({
+      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+    });
+    if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
+
+    const unit = await prisma.unit.findFirst({
+      where: { id: req.params.unitId, propertyId: property.id }
+    });
+    if (!unit) return res.status(404).json({ error: 'Campainha não encontrada.' });
+
+    // Verificar se o e-mail editado pertence a outro usuário
+    if (email) {
+      const existing = await prisma.user.findFirst({
+        where: {
+          email: email.trim().toLowerCase(),
+          NOT: { id: req.params.residentId }
+        }
+      });
+      if (existing) return res.status(400).json({ error: 'Este e-mail já está cadastrado no sistema por outro usuário.' });
+    }
+
+    // Verificar se a placa editada pertence a outro usuário
+    if (plateCode) {
+      const cleanPlate = plateCode.trim().toUpperCase();
+      const existingPlate = await prisma.user.findFirst({
+        where: {
+          plateCode: cleanPlate,
+          NOT: { id: req.params.residentId }
+        }
+      });
+      if (existingPlate) return res.status(400).json({ error: 'Esta placa já está sendo usada por outro usuário.' });
+    }
+
+    const updateData = {
+      name: name.trim(),
+      email: email?.trim().toLowerCase() || null,
+      plateCode: plateCode?.trim().toUpperCase() || null
+    };
+
+    if (password?.trim()) {
+      updateData.password = password.trim();
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.params.residentId },
+      data: updateData
+    });
+
+    res.json(user);
+  } catch (err) {
+    console.error('Update Vila resident error:', err);
+    res.status(500).json({ error: 'Erro ao atualizar morador.', details: err.message });
+  }
+});
+
 // ─── Demonstração do Sistema (Dados de Exemplo para Vendas) ──────────────────
 
 // Lista todos os usuários demo do sistema
@@ -2172,7 +2238,8 @@ app.post('/api/master/demo/setup', async (req, res) => {
           name: resData.name,
           isCondoResident: true,
           trialEndsAt: far,
-          plateCode: resData.plate
+          plateCode: resData.plate,
+          clientCode: clientCode
         },
         create: {
           email: resData.email,

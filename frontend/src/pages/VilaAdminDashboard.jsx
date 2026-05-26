@@ -44,6 +44,17 @@ export default function VilaAdminDashboard() {
   const [newResidentPlate, setNewResidentPlate] = useState('');
   const [residentModalError, setResidentModalError] = useState('');
 
+  // Mobile & Resident Edit States
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [chatActiveMobile, setChatActiveMobile] = useState(false);
+  const [editingResident, setEditingResident] = useState(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
   const printRef = useRef(null);
@@ -204,13 +215,43 @@ export default function VilaAdminDashboard() {
   };
 
   // ── Resident Management API actions ──────────────────────────────────
+  const handleStartEditResident = (unit, resident) => {
+    setTargetUnit(unit);
+    setEditingResident(resident);
+    setNewResidentName(resident.name);
+    setNewResidentEmail(resident.email || '');
+    setNewResidentPassword('');
+    setNewResidentPlate(resident.plateCode || '');
+    setResidentModalError('');
+    setIsResidentModalOpen(true);
+  };
+
+  const handleCloseResidentModal = () => {
+    setIsResidentModalOpen(false);
+    setEditingResident(null);
+    setNewResidentName('');
+    setNewResidentEmail('');
+    setNewResidentPassword('');
+    setNewResidentPlate('');
+    setResidentModalError('');
+    setTargetUnit(null);
+  };
+
   const handleRegisterResident = async (e) => {
     e.preventDefault();
     if (!newResidentName.trim() || !targetUnit) return;
     setResidentModalError('');
+
+    const isEdit = !!editingResident;
+    const url = isEdit
+      ? `${API}/api/vila/${propertyId}/units/${targetUnit.id}/residents/${editingResident.id}`
+      : `${API}/api/vila/${propertyId}/units/${targetUnit.id}/residents`;
+
+    const method = isEdit ? 'PUT' : 'POST';
+
     try {
-      const res = await fetch(`${API}/api/vila/${propertyId}/units/${targetUnit.id}/residents`, {
-        method: 'POST',
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json', 'Authorization': adminId },
         body: JSON.stringify({
           name: newResidentName.trim(),
@@ -220,16 +261,11 @@ export default function VilaAdminDashboard() {
         })
       });
       if (res.ok) {
-        setIsResidentModalOpen(false);
-        setNewResidentName('');
-        setNewResidentEmail('');
-        setNewResidentPassword('');
-        setNewResidentPlate('');
-        setTargetUnit(null);
+        handleCloseResidentModal();
         fetchData();
       } else {
         const d = await res.json();
-        setResidentModalError(d.error || 'Erro ao cadastrar morador.');
+        setResidentModalError(d.error || `Erro ao ${isEdit ? 'atualizar' : 'cadastrar'} morador.`);
       }
     } catch {
       setResidentModalError('Erro de conexão.');
@@ -323,128 +359,201 @@ export default function VilaAdminDashboard() {
 
   // ─── Render ───────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'Inter, sans-serif', background: '#F0F4F8' }}>
+    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: '100vh', fontFamily: 'Inter, sans-serif', background: '#F0F4F8' }}>
 
-      {/* SIDEBAR */}
-      <aside style={{
-        width: '260px', background: 'linear-gradient(180deg, #0F2027 0%, #1a3a4a 100%)',
-        display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh',
-        boxShadow: '4px 0 24px rgba(0,0,0,0.2)'
-      }}>
-        {/* Logo + Name */}
-        <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <Logo size={28} />
-          <div style={{ marginTop: '16px' }}>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>Admin de Vila</div>
-            <div style={{ fontSize: '16px', color: '#FFF', fontWeight: 800, marginTop: '4px' }}>{property?.name || 'Carregando...'}</div>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{adminName}</div>
+      {/* MOBILE HEADER */}
+      {isMobile && (
+        <header style={{
+          position: 'fixed', top: 0, left: 0, right: 0, height: '60px',
+          background: 'linear-gradient(135deg, #0F2027 0%, #1a3a4a 100%)',
+          color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 20px', zIndex: 1000, boxShadow: '0 2px 10px rgba(0,0,0,0.15)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Logo size={20} />
+            <span style={{ fontSize: '14px', fontWeight: 800 }}>{property?.name || 'Vila'}</span>
           </div>
-        </div>
+          <button onClick={logout} style={{
+            padding: '6px 12px', borderRadius: '8px', border: 'none',
+            background: 'rgba(239,68,68,0.2)', color: '#FCA5A5', fontWeight: 700,
+            fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+          }}>
+            <LogOut size={12} /> Sair
+          </button>
+        </header>
+      )}
 
-        {/* Nav */}
-        <nav style={{ padding: '16px 12px', flex: 1 }}>
+      {/* MOBILE BOTTOM NAVIGATION */}
+      {isMobile && (
+        <nav style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, height: '64px',
+          background: '#FFF', borderTop: '1px solid #E2E8F0', display: 'flex',
+          justifyContent: 'space-around', alignItems: 'center', zIndex: 1000,
+          boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
+        }}>
           {[
             { id: 'messages', icon: MessageSquare, label: 'Mensagens', badge: totalUnread },
-            { id: 'units', icon: Home, label: 'Campanhas', badge: units.length },
-            { id: 'settings', icon: Settings, label: 'Configurações' }
+            { id: 'units', icon: Home, label: 'Campainhas', badge: units.length },
+            { id: 'settings', icon: Settings, label: 'Ajustes' }
           ].map(item => (
             <button key={item.id} onClick={() => setTab(item.id)} style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
-              padding: '12px 16px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-              background: tab === item.id ? 'rgba(255,255,255,0.12)' : 'transparent',
-              color: tab === item.id ? '#FFF' : 'rgba(255,255,255,0.5)',
-              fontWeight: 700, fontSize: '14px', marginBottom: '4px',
-              transition: 'all 0.2s', textAlign: 'left', position: 'relative'
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              border: 'none', background: 'transparent', cursor: 'pointer',
+              color: tab === item.id ? '#3B82F6' : '#64748B', fontWeight: 700, fontSize: '11px',
+              padding: '6px', width: '80px', position: 'relative', transition: 'color 0.2s'
             }}>
-              <item.icon size={18} />
+              <item.icon size={20} style={{ marginBottom: '4px' }} />
               {item.label}
               {item.badge > 0 && (
                 <span style={{
-                  marginLeft: 'auto', background: item.id === 'messages' ? '#F97316' : 'rgba(255,255,255,0.15)',
-                  color: '#FFF', fontSize: '11px', fontWeight: 800, padding: '2px 7px',
-                  borderRadius: '20px', minWidth: '20px', textAlign: 'center'
+                  position: 'absolute', top: '2px', right: '16px', background: '#F97316',
+                  color: '#FFF', fontSize: '9px', fontWeight: 800, padding: '2px 5px',
+                  borderRadius: '10px', minWidth: '15px', textAlign: 'center'
                 }}>{item.badge}</span>
               )}
             </button>
           ))}
         </nav>
+      )}
 
-        <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <button onClick={logout} style={{
-            width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
-            background: 'rgba(239,68,68,0.15)', color: '#FCA5A5', fontWeight: 700,
-            fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', gap: '8px'
-          }}>
-            <LogOut size={16} /> Sair
-          </button>
-        </div>
-      </aside>
+      {/* SIDEBAR */}
+      {!isMobile && (
+        <aside style={{
+          width: '260px', background: 'linear-gradient(180deg, #0F2027 0%, #1a3a4a 100%)',
+          display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh',
+          boxShadow: '4px 0 24px rgba(0,0,0,0.2)'
+        }}>
+          {/* Logo + Name */}
+          <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <Logo size={28} />
+            <div style={{ marginTop: '16px' }}>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>Admin de Vila</div>
+              <div style={{ fontSize: '16px', color: '#FFF', fontWeight: 800, marginTop: '4px' }}>{property?.name || 'Carregando...'}</div>
+              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{adminName}</div>
+            </div>
+          </div>
+
+          {/* Nav */}
+          <nav style={{ padding: '16px 12px', flex: 1 }}>
+            {[
+              { id: 'messages', icon: MessageSquare, label: 'Mensagens', badge: totalUnread },
+              { id: 'units', icon: Home, label: 'Campainhas', badge: units.length },
+              { id: 'settings', icon: Settings, label: 'Configurações' }
+            ].map(item => (
+              <button key={item.id} onClick={() => setTab(item.id)} style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
+                padding: '12px 16px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                background: tab === item.id ? 'rgba(255,255,255,0.12)' : 'transparent',
+                color: tab === item.id ? '#FFF' : 'rgba(255,255,255,0.5)',
+                fontWeight: 700, fontSize: '14px', marginBottom: '4px',
+                transition: 'all 0.2s', textAlign: 'left', position: 'relative'
+              }}>
+                <item.icon size={18} />
+                {item.label}
+                {item.badge > 0 && (
+                  <span style={{
+                    marginLeft: 'auto', background: item.id === 'messages' ? '#F97316' : 'rgba(255,255,255,0.15)',
+                    color: '#FFF', fontSize: '11px', fontWeight: 800, padding: '2px 7px',
+                    borderRadius: '20px', minWidth: '20px', textAlign: 'center'
+                  }}>{item.badge}</span>
+                )}
+              </button>
+            ))}
+          </nav>
+
+          <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <button onClick={logout} style={{
+              width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
+              background: 'rgba(239,68,68,0.15)', color: '#FCA5A5', fontWeight: 700,
+              fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', gap: '8px'
+            }}>
+              <LogOut size={16} /> Sair
+            </button>
+          </div>
+        </aside>
+      )}
 
       {/* MAIN */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', paddingTop: isMobile ? '60px' : '0', paddingBottom: isMobile ? '64px' : '0' }}>
 
         {/* ── MENSAGENS ── */}
         {tab === 'messages' && (
-          <div style={{ display: 'flex', flex: 1, height: '100vh' }}>
+          <div style={{ display: 'flex', flex: 1, height: isMobile ? 'calc(100vh - 124px)' : '100vh' }}>
 
             {/* Unit list */}
-            <div style={{ width: '280px', background: '#FFF', borderRight: '1px solid #E2E8F0', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '20px 16px 12px', borderBottom: '1px solid #F1F5F9' }}>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Conversas</div>
+            {(!isMobile || !chatActiveMobile) && (
+              <div style={{ width: isMobile ? '100%' : '280px', background: '#FFF', borderRight: '1px solid #E2E8F0', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '20px 16px 12px', borderBottom: '1px solid #F1F5F9' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Conversas</div>
+                </div>
+
+                {/* Broadcast */}
+                <button onClick={() => { setSelectedUnit(null); if (isMobile) setChatActiveMobile(true); }} style={{
+                  display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
+                  border: 'none', borderBottom: '1px solid #F1F5F9', cursor: 'pointer', textAlign: 'left', width: '100%',
+                  background: selectedUnit === null ? '#EFF6FF' : 'transparent'
+                }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#F97316,#EA580C)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Megaphone size={18} color="#FFF" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>📢 Aviso Geral</div>
+                    <div style={{ fontSize: '12px', color: '#64748B' }}>Envia para toda a vila</div>
+                  </div>
+                </button>
+
+                {/* Individual units */}
+                {units.map(unit => {
+                  const unread = unreadByUnit(unit.id);
+                  const lastMsg = [...messages].filter(m => m.unitId === unit.id).pop();
+                  return (
+                    <button key={unit.id} onClick={() => { setSelectedUnit(unit); if (isMobile) setChatActiveMobile(true); }} style={{
+                      display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
+                      border: 'none', borderBottom: '1px solid #F1F5F9', cursor: 'pointer', textAlign: 'left', width: '100%',
+                      background: selectedUnit?.id === unit.id ? '#EFF6FF' : 'transparent'
+                    }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
+                        <Bell size={18} color="#FFF" />
+                        {unread > 0 && (
+                          <span style={{ position: 'absolute', top: '-4px', right: '-4px', width: '16px', height: '16px', background: '#EF4444', borderRadius: '50%', fontSize: '9px', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{unread}</span>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>{unit.name}</div>
+                        {lastMsg && (
+                          <div style={{ fontSize: '11px', color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {lastMsg.isFromAdmin ? 'Você: ' : ''}{lastMsg.content}
+                          </div>
+                        )}
+                        {unit.residents?.length > 0 && (
+                          <div style={{ fontSize: '10px', color: '#10B981', fontWeight: 600 }}>● {unit.residents.length} morador(es)</div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-
-              {/* Broadcast */}
-              <button onClick={() => setSelectedUnit(null)} style={{
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                border: 'none', borderBottom: '1px solid #F1F5F9', cursor: 'pointer', textAlign: 'left', width: '100%',
-                background: selectedUnit === null ? '#EFF6FF' : 'transparent'
-              }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#F97316,#EA580C)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Megaphone size={18} color="#FFF" />
-                </div>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>📢 Aviso Geral</div>
-                  <div style={{ fontSize: '12px', color: '#64748B' }}>Envia para toda a vila</div>
-                </div>
-              </button>
-
-              {/* Individual units */}
-              {units.map(unit => {
-                const unread = unreadByUnit(unit.id);
-                const lastMsg = [...messages].filter(m => m.unitId === unit.id).pop();
-                return (
-                  <button key={unit.id} onClick={() => setSelectedUnit(unit)} style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                    border: 'none', borderBottom: '1px solid #F1F5F9', cursor: 'pointer', textAlign: 'left', width: '100%',
-                    background: selectedUnit?.id === unit.id ? '#EFF6FF' : 'transparent'
-                  }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
-                      <Bell size={18} color="#FFF" />
-                      {unread > 0 && (
-                        <span style={{ position: 'absolute', top: '-4px', right: '-4px', width: '16px', height: '16px', background: '#EF4444', borderRadius: '50%', fontSize: '9px', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>{unread}</span>
-                      )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>{unit.name}</div>
-                      {lastMsg && (
-                        <div style={{ fontSize: '11px', color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {lastMsg.isFromAdmin ? 'Você: ' : ''}{lastMsg.content}
-                        </div>
-                      )}
-                      {unit.residents?.length > 0 && (
-                        <div style={{ fontSize: '10px', color: '#10B981', fontWeight: 600 }}>● {unit.residents.length} morador(es)</div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            )}
 
             {/* Chat area */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#F8FAFC' }}>
+            {(!isMobile || chatActiveMobile) && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#F8FAFC' }}>
               {/* Header */}
-              <div style={{ padding: '20px 28px', background: '#FFF', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ padding: isMobile ? '12px 16px' : '20px 28px', background: '#FFF', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {isMobile && chatActiveMobile && (
+                  <button
+                    onClick={() => setChatActiveMobile(false)}
+                    style={{
+                      padding: '8px 12px', background: '#F1F5F9', border: 'none',
+                      borderRadius: '10px', cursor: 'pointer', fontSize: '13px',
+                      fontWeight: 700, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px',
+                      marginRight: '4px'
+                    }}
+                  >
+                    Voltar
+                  </button>
+                )}
                 {selectedUnit === null ? (
                   <>
                     <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg,#F97316,#EA580C)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -476,7 +585,7 @@ export default function VilaAdminDashboard() {
               </div>
 
               {/* Messages */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px' : '24px 28px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {visibleMessages.length === 0 && (
                   <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '14px', marginTop: '40px' }}>
                     Nenhuma mensagem ainda. Comece a conversa!
@@ -513,7 +622,7 @@ export default function VilaAdminDashboard() {
               </div>
 
               {/* Input */}
-              <div style={{ padding: '16px 28px', background: '#FFF', borderTop: '1px solid #E2E8F0', display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+              <div style={{ padding: isMobile ? '12px 16px' : '16px 28px', background: '#FFF', borderTop: '1px solid #E2E8F0', display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
                 <textarea
                   value={msgText}
                   onChange={e => setMsgText(e.target.value)}
@@ -541,19 +650,27 @@ export default function VilaAdminDashboard() {
                   }}
                 >
                   <Send size={16} />
-                  {selectedUnit === null ? 'Avisar Todos' : 'Enviar'}
+                  {selectedUnit === null ? (isMobile ? 'Avisar' : 'Avisar Todos') : 'Enviar'}
                 </button>
-              </div>
             </div>
           </div>
         )}
+      </div>
+    )}
 
         {/* ── UNIDADES ── */}
         {tab === 'units' && (
-          <div style={{ padding: '40px 48px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <div style={{ padding: isMobile ? '20px' : '40px 48px' }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              justifyContent: 'space-between',
+              alignItems: isMobile ? 'stretch' : 'center',
+              gap: isMobile ? '16px' : '0',
+              marginBottom: '32px'
+            }}>
               <div>
-                <h2 style={{ fontSize: '26px', fontWeight: 900, color: '#0F172A', margin: 0 }}>🔔 Campanhas da Vila</h2>
+                <h2 style={{ fontSize: '26px', fontWeight: 900, color: '#0F172A', margin: 0 }}>🔔 Campainhas da Vila</h2>
                 <p style={{ color: '#64748B', marginTop: '4px', margin: 0 }}>
                   {units.length} campainha(s) configurada(s). Gerencie as casas e moradores abaixo.
                 </p>
@@ -610,14 +727,23 @@ export default function VilaAdminDashboard() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {unit.residents.map(res => (
                             <div key={res.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: '#F8FAFC', borderRadius: '10px', padding: '10px', border: '1px solid #EFF2F5', position: 'relative' }}>
-                              <button 
-                                onClick={() => handleRemoveResident(unit.id, res.id)}
-                                style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
-                                title="Remover Morador"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', paddingRight: '20px' }}>{res.name}</div>
+                              <div style={{ position: 'absolute', top: '8px', right: '8px', display: 'flex', gap: '4px' }}>
+                                <button 
+                                  onClick={() => handleStartEditResident(unit, res)}
+                                  style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: '4px' }}
+                                  title="Editar Morador"
+                                >
+                                  <Edit2 size={13} />
+                                </button>
+                                <button 
+                                  onClick={() => handleRemoveResident(unit.id, res.id)}
+                                  style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
+                                  title="Remover Morador"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', paddingRight: '40px' }}>{res.name}</div>
                               {res.email && (
                                 <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px', wordBreak: 'break-all' }}>
                                   <Mail size={10} style={{ flexShrink: 0 }} /> {res.email}
@@ -635,7 +761,7 @@ export default function VilaAdminDashboard() {
                       )}
                       
                       <button 
-                        onClick={() => { setTargetUnit(unit); setIsResidentModalOpen(true); }}
+                        onClick={() => { setTargetUnit(unit); setEditingResident(null); setIsResidentModalOpen(true); }}
                         style={{
                           marginTop: '10px', width: '100%', padding: '8px', borderRadius: '8px',
                           border: '1px dashed #CBD5E1', background: 'transparent', color: '#64748B',
@@ -648,7 +774,7 @@ export default function VilaAdminDashboard() {
                     </div>
                   </div>
 
-                  <button onClick={() => { setSelectedUnit(unit); setTab('messages'); }} style={{
+                  <button onClick={() => { setSelectedUnit(unit); setTab('messages'); if (isMobile) setChatActiveMobile(true); }} style={{
                     marginTop: '20px', width: '100%', padding: '10px', borderRadius: '10px',
                     border: 'none', background: '#EFF6FF', color: '#3B82F6', fontWeight: 700,
                     fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
@@ -663,10 +789,10 @@ export default function VilaAdminDashboard() {
 
         {/* ── CONFIGURAÇÕES ── */}
         {tab === 'settings' && (
-          <div style={{ padding: '40px 48px', maxWidth: '600px' }}>
+          <div style={{ padding: isMobile ? '20px' : '40px 48px', maxWidth: '600px', width: '100%' }}>
             <h2 style={{ fontSize: '26px', fontWeight: 900, color: '#0F172A', marginBottom: '8px' }}>⚙️ Configurações da Vila</h2>
             <p style={{ color: '#64748B', marginBottom: '32px' }}>
-              Defina o nome e o número de casas. O sistema criará as campanhas automaticamente.
+              Defina o nome e o número de casas. O sistema criará as campainhas automaticamente.
             </p>
 
             {feedback && (
@@ -697,7 +823,7 @@ export default function VilaAdminDashboard() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Número de Casas / Campanhas
+                  Número de Casas / Campainhas
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <input
@@ -709,13 +835,13 @@ export default function VilaAdminDashboard() {
                     style={{ width: '120px', padding: '14px 16px', borderRadius: '12px', border: '2px solid #E2E8F0', fontSize: '18px', fontWeight: 800, outline: 'none', textAlign: 'center' }}
                   />
                   <div style={{ fontSize: '14px', color: '#64748B' }}>
-                    {houseCount} campanhas serão criadas no QR code da vila
+                    {houseCount} campainhas serão criadas no QR code da vila
                   </div>
                 </div>
               </div>
 
               <div style={{ padding: '16px', background: '#FFFBEB', borderRadius: '12px', border: '1px solid #FDE68A', fontSize: '13px', color: '#92400E', lineHeight: 1.6 }}>
-                <strong>⚠️ Atenção:</strong> Reduzir o número de casas remove as campanhas excedentes que não têm moradores cadastrados.
+                <strong>⚠️ Atenção:</strong> Reduzir o número de casas remove as campainhas excedentes que não têm moradores cadastrados.
               </div>
 
               <button
@@ -736,7 +862,7 @@ export default function VilaAdminDashboard() {
             <div style={{ marginTop: '40px', padding: '24px', background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
               <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '4px', width: '100%', textAlign: 'left' }}>📱 QR Code Principal da Vila</h3>
               <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px', width: '100%', textAlign: 'left' }}>
-                Este é o QR Code de entrada da Vila. Ao escanear, o visitante verá a lista de campanhas e poderá tocar na campainha desejada.
+                Este é o QR Code de entrada da Vila. Ao escanear, o visitante verá a lista de campainhas e poderá tocar na campainha desejada.
               </p>
               
               <div style={{ padding: '16px', background: '#FFF', borderRadius: '16px', border: '2px solid #F1F5F9', display: 'flex', justifyContent: 'center' }}>
@@ -826,15 +952,15 @@ export default function VilaAdminDashboard() {
           <div style={{ background: '#FFF', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                👤 Cadastrar Morador
+                {editingResident ? '✏️ Editar Morador' : '👤 Cadastrar Morador'}
               </h3>
-              <button onClick={() => setIsResidentModalOpen(false)} style={{ background: '#F1F5F9', border: 'none', padding: '6px', borderRadius: '50%', cursor: 'pointer', color: '#64748B' }}>
+              <button onClick={handleCloseResidentModal} style={{ background: '#F1F5F9', border: 'none', padding: '6px', borderRadius: '50%', cursor: 'pointer', color: '#64748B' }}>
                 <X size={16} />
               </button>
             </div>
 
             <div style={{ fontSize: '13px', color: '#64748B', background: '#F8FAFC', padding: '10px 14px', borderRadius: '10px', marginBottom: '16px' }}>
-              Vincular morador à <strong>{targetUnit?.name}</strong>
+              {editingResident ? 'Editar morador de' : 'Vincular morador à'} <strong>{targetUnit?.name}</strong>
             </div>
 
             {residentModalError && (
@@ -868,7 +994,9 @@ export default function VilaAdminDashboard() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Senha (opcional - gerada se vazia)</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                  {editingResident ? 'Senha (deixe vazio para não alterar)' : 'Senha (opcional - gerada se vazia)'}
+                </label>
                 <input 
                   type="text" 
                   value={newResidentPassword} 
@@ -893,7 +1021,7 @@ export default function VilaAdminDashboard() {
                 type="submit" 
                 style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', color: '#FFF', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
               >
-                Cadastrar e Vincular
+                {editingResident ? 'Salvar Alterações' : 'Cadastrar e Vincular'}
               </button>
             </form>
           </div>
