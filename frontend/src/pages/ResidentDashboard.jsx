@@ -380,11 +380,14 @@ export default function ResidentDashboard() {
               priority: m.unitId ? 'normal' : 'urgent'
             }));
             setBroadcastMessages([...formatted].reverse());
+            // Para Vila, as mensagens não lidas são as vindas do admin com read = false
+            const unread = data.filter(m => m.isFromAdmin && !m.read).length;
+            setUnreadCount(unread);
           } else {
             setBroadcastMessages(data);
+            const readIds = JSON.parse(localStorage.getItem('cd_read_msgs') || '[]');
+            setUnreadCount(data.filter(m => !readIds.includes(m.id)).length);
           }
-          const readIds = JSON.parse(localStorage.getItem('cd_read_msgs') || '[]');
-          setUnreadCount(data.filter(m => !readIds.includes(m.id)).length);
         }
       } catch {}
     };
@@ -520,6 +523,12 @@ export default function ResidentDashboard() {
 
     // Receber mensagem da Vila (Vila Admin)
     s.on('vila_message', (msg) => {
+      const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
+      // Ignora mensagens direcionadas a outras unidades (privacidade)
+      if (msg.unitId && msg.unitId !== currentUnitId) {
+        return;
+      }
+
       setRawVilaMessages(prev => {
         if (prev.some(m => m.id === msg.id)) return prev;
         const tempIndex = prev.findIndex(m => m.sending && m.content === msg.content && m.isFromAdmin === msg.isFromAdmin);
@@ -541,9 +550,13 @@ export default function ResidentDashboard() {
         if (prev.some(m => m.id === msg.id)) return prev;
         return [formattedMsg, ...prev];
       });
-      setUnreadCount(prev => prev + 1);
-      if ('Notification' in window && Notification.permission === 'granted') {
-        try { new Notification(formattedMsg.title, { body: formattedMsg.body, icon: '/logo.png' }); } catch {}
+      
+      // Apenas incrementa não lidas e notifica se a mensagem vier do Admin
+      if (msg.isFromAdmin) {
+        setUnreadCount(prev => prev + 1);
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try { new Notification(formattedMsg.title, { body: formattedMsg.body, icon: '/logo.png' }); } catch {}
+        }
       }
     });
 
@@ -994,7 +1007,7 @@ export default function ResidentDashboard() {
     <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', borderTop: '1px solid var(--border-subtle)', display: 'flex', zIndex: 100, paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {[
         { key: 'home', icon: <Home size={22} />, label: 'Início' },
-        ...(!isHouseResident ? [{ key: 'messages', icon: <Mail size={22} />, label: 'Avisos', badge: unreadCount }] : []),
+        ...((!isHouseResident || residentIsVila) ? [{ key: 'messages', icon: <Mail size={22} />, label: 'Avisos', badge: unreadCount }] : []),
         { key: 'family', icon: <MessageCircle size={22} />, label: 'Família' },
         { key: 'history', icon: <History size={22} />, label: 'Atividade' },
       ].map(n => (
@@ -1740,10 +1753,10 @@ export default function ResidentDashboard() {
                   <div>
                     <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>Quadro de Avisos</h2>
                     <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>
-                      {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id)).length} mensagem(ns) ativa(s)
+                      {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id) && m.priority === 'urgent').length} mensagem(ns) ativa(s)
                     </p>
                   </div>
-                  {broadcastMessages.some(m => !JSON.parse(localStorage.getItem('cd_read_msgs') || '[]').includes(m.id)) && (
+                  {broadcastMessages.some(m => !JSON.parse(localStorage.getItem('cd_read_msgs') || '[]').includes(m.id) && m.priority === 'urgent') && (
                     <button 
                       onClick={markMessagesRead} 
                       style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#EFF6FF', color: '#1D4ED8', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
@@ -1753,7 +1766,7 @@ export default function ResidentDashboard() {
                   )}
                 </div>
 
-                {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id)).length === 0 ? (
+                {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id) && m.priority === 'urgent').length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
                     <Mail size={40} style={{ opacity: 0.2, marginBottom: '12px' }}/>
                     <p style={{ fontWeight: 600 }}>Nenhum aviso recebido</p>
@@ -1761,11 +1774,11 @@ export default function ResidentDashboard() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {broadcastMessages
-                      .filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id))
+                      .filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id) && m.priority === 'urgent')
                       .map(m => {
                         const isRead = JSON.parse(localStorage.getItem('cd_read_msgs') || '[]').includes(m.id);
                         return (
-                          <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239,68,68,0.3)' : '#E2E8F0'}`, borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', position: 'relative' }}>
+                          <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239, 68, 68, 0.3)' : '#E2E8F0'}`, borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', position: 'relative' }}>
                             {!isRead && (
                               <div style={{ position: 'absolute', top: '22px', left: '8px', width: '6px', height: '6px', borderRadius: '50%', background: '#3B82F6' }} />
                             )}

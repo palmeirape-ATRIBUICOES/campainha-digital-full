@@ -1200,7 +1200,7 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
 
     // Obtém o propertyId sendo o usuário admin da propriedade, morador de uma unidade ou admin de vila
     const propertyId = user.propertiesManaged?.[0]?.id || user.units?.[0]?.propertyId || user.propertiesVilaAdmin?.[0]?.id;
-    const propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.name || user.propertiesVilaAdmin?.[0]?.name || '';
+    const propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.property?.name || user.propertiesVilaAdmin?.[0]?.name || '';
     const isVila = user.propertiesManaged?.[0]?.isVila || user.propertiesVilaAdmin?.[0]?.isVila || user.units?.[0]?.property?.isVila || false;
     
     res.json({ ...user, propertyId, propertyName, isVila });
