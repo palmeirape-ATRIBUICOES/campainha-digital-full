@@ -44,6 +44,7 @@ export default function ResidentDashboard() {
   const location = useLocation();
   
   const savedUnitId = localStorage.getItem('residentUnitId');
+  const savedPropId = localStorage.getItem('residentPropertyId');
   const token = localStorage.getItem('cd_token');
 
   // Redireciona Vila Admin imediatamente
@@ -282,7 +283,6 @@ export default function ResidentDashboard() {
 
     // Busca informações salvas localmente para evitar consultas inseguras
     const savedCode = localStorage.getItem('residentAccessCode');
-    const savedPropId = localStorage.getItem('residentPropertyId');
     if (savedCode) setAccessCode(savedCode);
 
     const s = io(API, { transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 1000, reconnectionDelayMax: 5000 });
