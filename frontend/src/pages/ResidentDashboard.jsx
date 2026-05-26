@@ -46,6 +46,13 @@ export default function ResidentDashboard() {
   const savedUnitId = localStorage.getItem('residentUnitId');
   const token = localStorage.getItem('cd_token');
 
+  // Redireciona Vila Admin imediatamente
+  useEffect(() => {
+    if (localStorage.getItem('cd_vila_property_id')) {
+      navigate('/vila-admin', { replace: true });
+    }
+  }, [navigate]);
+
   const [tab, setTab] = useState('home'); // home | history | messages
   const [showMenu, setShowMenu] = useState(false);
   const [call, setCall] = useState(null);
@@ -329,6 +336,12 @@ export default function ResidentDashboard() {
         });
         if (res.ok) {
           const data = await res.json();
+          if (data.isVilaAdmin) {
+            localStorage.setItem('cd_vila_property_id', data.propertyId || '');
+            localStorage.setItem('cd_vila_admin_name', data.name || '');
+            navigate('/vila-admin', { replace: true });
+            return;
+          }
           if (data.clientCode) setAccessCode(data.clientCode);
           else if (data.plateCode) setAccessCode(data.plateCode);
           if (data.name) setUnitName(data.name);

@@ -70,7 +70,15 @@ export default function ResidentLogin() {
       const data = await res.json();
       
       if (res.ok) {
-        if (data.role === 'doorman') {
+        if (data.role === 'vila_admin') {
+          // Admin de Vila logando pelo código de cliente
+          localStorage.setItem('cd_token', data.token);
+          localStorage.setItem('cd_user_id', data.userId);
+          localStorage.setItem('cd_vila_property_id', data.propertyId || '');
+          localStorage.setItem('cd_vila_admin_name', data.adminName || '');
+          localStorage.setItem('cd_login_type', 'code');
+          navigate('/vila-admin');
+        } else if (data.role === 'doorman') {
           localStorage.setItem('cd_doorman_propertyId', data.propertyId);
           localStorage.setItem('cd_doorman_propertyName', data.propertyName);
           navigate('/portaria');

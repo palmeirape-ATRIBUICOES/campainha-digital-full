@@ -1167,6 +1167,7 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
       select: {
         email: true,
         phone: true,
+        isVilaAdmin: true,
         doorbellEnabled: true,
         quietModeStart: true,
         quietModeEnd: true,
@@ -1174,6 +1175,7 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
         plateCode: true,
         trialEndsAt: true,
         propertiesManaged: { select: { id: true, name: true } },
+        propertiesVilaAdmin: { select: { id: true, name: true } },
         units: { select: { id: true, name: true, propertyId: true, property: { select: { name: true } } } }
       }
     });
@@ -1182,9 +1184,9 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Usuário não encontrado no banco de dados.' });
     }
 
-    // Obtém o propertyId sendo o usuário admin da propriedade ou morador de uma unidade
-    const propertyId = user.propertiesManaged?.[0]?.id || user.units?.[0]?.propertyId;
-    const propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.name || '';
+    // Obtém o propertyId sendo o usuário admin da propriedade, morador de uma unidade ou admin de vila
+    const propertyId = user.propertiesManaged?.[0]?.id || user.units?.[0]?.propertyId || user.propertiesVilaAdmin?.[0]?.id;
+    const propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.name || user.propertiesVilaAdmin?.[0]?.name || '';
     
     res.json({ ...user, propertyId, propertyName });
   } catch (err) {
