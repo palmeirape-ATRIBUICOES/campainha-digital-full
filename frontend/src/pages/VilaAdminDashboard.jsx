@@ -370,7 +370,7 @@ export default function VilaAdminDashboard() {
           padding: '0 20px', zIndex: 1000, boxShadow: '0 2px 10px rgba(0,0,0,0.15)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Logo size={20} />
+            <Logo size={36} />
             <span style={{ fontSize: '14px', fontWeight: 800 }}>{property?.name || 'Vila'}</span>
           </div>
           <button onClick={logout} style={{
@@ -425,7 +425,7 @@ export default function VilaAdminDashboard() {
         }}>
           {/* Logo + Name */}
           <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            <Logo size={28} />
+            <Logo size={80} />
             <div style={{ marginTop: '16px' }}>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>Admin de Vila</div>
               <div style={{ fontSize: '16px', color: '#FFF', fontWeight: 800, marginTop: '4px' }}>{property?.name || 'Carregando...'}</div>

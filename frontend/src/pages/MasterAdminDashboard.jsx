@@ -329,7 +329,7 @@ export default function MasterAdminDashboard() {
 
       {/* SIDEBAR */}
       <aside style={{ width: '260px', background: '#FFF', borderRight: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
-        <div style={{ padding: '28px 24px' }}><Logo size={32} /></div>
+        <div style={{ padding: '28px 24px' }}><Logo size={80} /></div>
         <nav style={{ padding: '0 12px', flex: 1 }}>
           <SidebarLink icon={Users} label="Usuários & Módulos" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
           <SidebarLink icon={Building2} label="Propriedades" active={activeTab === 'properties'} onClick={() => setActiveTab('properties')} />

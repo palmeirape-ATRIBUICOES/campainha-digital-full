@@ -2188,13 +2188,8 @@ app.post('/api/master/demo/setup', async (req, res) => {
     ];
 
     for (const u of demoUnits) {
-      const existing = await prisma.unit.findFirst({
-        where: { propertyId: vilaProperty.id, name: u.name }
-      });
-
-      // Verifica se o inviteCode já está em uso por outra unit
-      const codeInUse = await prisma.unit.findFirst({
-        where: { inviteCode: u.code, NOT: { propertyId: vilaProperty.id } }
+      const existing = await prisma.unit.findUnique({
+        where: { inviteCode: u.code }
       });
 
       if (!existing) {
@@ -2202,14 +2197,16 @@ app.post('/api/master/demo/setup', async (req, res) => {
           data: {
             propertyId: vilaProperty.id,
             name: u.name,
-            inviteCode: codeInUse ? `${u.code}-DEMO` : u.code
+            inviteCode: u.code
           }
         });
       } else {
-        // Atualiza o código se não houver conflito
         await prisma.unit.update({
           where: { id: existing.id },
-          data: { inviteCode: codeInUse ? existing.inviteCode : u.code }
+          data: {
+            name: u.name,
+            propertyId: vilaProperty.id
+          }
         });
       }
     }
