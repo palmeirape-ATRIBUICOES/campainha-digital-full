@@ -1834,6 +1834,198 @@ app.post('/api/vila/:propertyId/messages', async (req, res) => {
   }
 });
 
+// ─── Autonomia do Administrador de Vila: Gestão de Campanhas e Moradores ───
+
+// Criar Campainha (Unidade) na Vila
+app.post('/api/vila/:propertyId/units', async (req, res) => {
+  const { name } = req.body;
+  const token = req.headers['authorization'];
+  if (!token) return res.status(401).json({ error: 'Não autorizado.' });
+  if (!name?.trim()) return res.status(400).json({ error: 'Nome da campainha é obrigatório.' });
+
+  try {
+    const admin = await prisma.user.findUnique({ where: { id: token } });
+    if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+
+    const property = await prisma.property.findFirst({
+      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+    });
+    if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
+
+    // Gera inviteCode automático
+    const nextIndex = (await prisma.unit.count({ where: { propertyId: property.id } })) + 1;
+    const invitePrefix = `VILA-${property.name.replace(/\s+/g,'').toUpperCase().substring(0,6)}-C${nextIndex}`;
+    const inviteCode = invitePrefix + '-' + Math.random().toString(36).substring(2,5).toUpperCase();
+
+    const unit = await prisma.unit.create({
+      data: {
+        propertyId: property.id,
+        name: name.trim(),
+        inviteCode
+      }
+    });
+
+    // Atualiza vilaHouseCount da propriedade
+    const currentCount = await prisma.unit.count({ where: { propertyId: property.id } });
+    await prisma.property.update({
+      where: { id: property.id },
+      data: { vilaHouseCount: currentCount }
+    });
+
+    res.status(201).json(unit);
+  } catch (err) {
+    console.error('Create Vila unit error:', err);
+    res.status(500).json({ error: 'Erro ao criar campainha.', details: err.message });
+  }
+});
+
+// Editar Campainha (Unidade) na Vila
+app.put('/api/vila/:propertyId/units/:unitId', async (req, res) => {
+  const { name } = req.body;
+  const token = req.headers['authorization'];
+  if (!token) return res.status(401).json({ error: 'Não autorizado.' });
+  if (!name?.trim()) return res.status(400).json({ error: 'Nome da campainha é obrigatório.' });
+
+  try {
+    const admin = await prisma.user.findUnique({ where: { id: token } });
+    if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+
+    const property = await prisma.property.findFirst({
+      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+    });
+    if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
+
+    const updated = await prisma.unit.update({
+      where: { id: req.params.unitId },
+      data: { name: name.trim() }
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error('Update Vila unit error:', err);
+    res.status(500).json({ error: 'Erro ao atualizar campainha.', details: err.message });
+  }
+});
+
+// Excluir Campainha (Unidade) da Vila (e seus moradores vinculados)
+app.delete('/api/vila/:propertyId/units/:unitId', async (req, res) => {
+  const token = req.headers['authorization'];
+  if (!token) return res.status(401).json({ error: 'Não autorizado.' });
+
+  try {
+    const admin = await prisma.user.findUnique({ where: { id: token } });
+    if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+
+    const property = await prisma.property.findFirst({
+      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+    });
+    if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
+
+    const unit = await prisma.unit.findUnique({
+      where: { id: req.params.unitId },
+      include: { residents: true }
+    });
+    if (!unit) return res.status(404).json({ error: 'Campainha não encontrada.' });
+
+    // Exclui moradores associados à unidade
+    for (const resident of unit.residents) {
+      await prisma.user.delete({ where: { id: resident.id } }).catch(() => {});
+    }
+
+    await prisma.unit.delete({ where: { id: req.params.unitId } });
+
+    // Atualiza vilaHouseCount da propriedade
+    const currentCount = await prisma.unit.count({ where: { propertyId: property.id } });
+    await prisma.property.update({
+      where: { id: property.id },
+      data: { vilaHouseCount: currentCount }
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete Vila unit error:', err);
+    res.status(500).json({ error: 'Erro ao excluir campainha.', details: err.message });
+  }
+});
+
+// Cadastrar Morador sob uma Campainha na Vila
+app.post('/api/vila/:propertyId/units/:unitId/residents', async (req, res) => {
+  const { name, email, password, plateCode } = req.body;
+  const token = req.headers['authorization'];
+  if (!token) return res.status(401).json({ error: 'Não autorizado.' });
+  if (!name?.trim()) return res.status(400).json({ error: 'Nome do morador é obrigatório.' });
+
+  try {
+    const admin = await prisma.user.findUnique({ where: { id: token } });
+    if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+
+    const property = await prisma.property.findFirst({
+      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+    });
+    if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
+
+    const unit = await prisma.unit.findFirst({
+      where: { id: req.params.unitId, propertyId: property.id }
+    });
+    if (!unit) return res.status(404).json({ error: 'Campainha não encontrada.' });
+
+    if (email) {
+      const existing = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+      if (existing) return res.status(400).json({ error: 'Este e-mail já está cadastrado no sistema.' });
+    }
+
+    if (plateCode) {
+      const cleanPlate = plateCode.trim().toUpperCase();
+      const existingPlate = await prisma.user.findFirst({ where: { plateCode: cleanPlate } });
+      if (existingPlate) return res.status(400).json({ error: 'Esta placa já está sendo usada.' });
+    }
+
+    const generatedClientCode = generateAccessCode() + generateAccessCode();
+    const user = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: email?.trim().toLowerCase() || null,
+        password: password || Math.random().toString(36).substring(2, 8).toUpperCase(),
+        clientCode: generatedClientCode,
+        plateCode: plateCode?.trim().toUpperCase() || null,
+        isResident: true,
+        isCondoResident: true,
+        trialEndsAt: property.nextPaymentAt,
+        units: { connect: { id: unit.id } }
+      }
+    });
+
+    res.status(201).json(user);
+  } catch (err) {
+    console.error('Create Vila resident error:', err);
+    res.status(500).json({ error: 'Erro ao cadastrar morador.', details: err.message });
+  }
+});
+
+// Remover Morador de uma Campainha na Vila
+app.delete('/api/vila/:propertyId/units/:unitId/residents/:residentId', async (req, res) => {
+  const token = req.headers['authorization'];
+  if (!token) return res.status(401).json({ error: 'Não autorizado.' });
+
+  try {
+    const admin = await prisma.user.findUnique({ where: { id: token } });
+    if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+
+    const property = await prisma.property.findFirst({
+      where: { id: req.params.propertyId, vilaAdminId: admin.id }
+    });
+    if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
+
+    // Exclui o morador do banco de dados
+    await prisma.user.delete({ where: { id: req.params.residentId } });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete Vila resident error:', err);
+    res.status(500).json({ error: 'Erro ao remover morador.', details: err.message });
+  }
+});
+
 // ─── Demonstração do Sistema (Dados de Exemplo para Vendas) ──────────────────
 
 // Lista todos os usuários demo do sistema
@@ -1846,12 +2038,16 @@ app.get('/api/master/demo/users', async (req, res) => {
     const demoEmails = [
       'admindevilas@campainha.com',
       'morador@campainha.com',
+      'casa1@campainha.com',
+      'casa2@campainha.com',
+      'casa3@campainha.com'
     ];
 
     const users = await prisma.user.findMany({
       where: { email: { in: demoEmails } },
       include: {
-        propertiesVilaAdmin: { include: { units: true } }
+        propertiesVilaAdmin: { include: { units: true } },
+        units: { include: { property: true } }
       }
     });
 
@@ -1874,13 +2070,15 @@ app.post('/api/master/demo/setup', async (req, res) => {
     // ── 1. Admin de Vila Demo ────────────────────────────────────────────
     let vilaAdmin = await prisma.user.upsert({
       where: { email: 'admindevilas@campainha.com' },
-      update: { password: 'adminvilas', isVilaAdmin: true, trialEndsAt: far },
+      update: { password: 'adminvilas', isVilaAdmin: true, trialEndsAt: far, clientCode: 'VILADEMOACCESS', plateCode: 'ADM-VILA' },
       create: {
         email: 'admindevilas@campainha.com',
         password: 'adminvilas',
         name: 'Admin de Vilas (Demo)',
         isVilaAdmin: true,
-        trialEndsAt: far
+        trialEndsAt: far,
+        clientCode: 'VILADEMOACCESS',
+        plateCode: 'ADM-VILA'
       }
     });
 
@@ -1948,6 +2146,54 @@ app.post('/api/master/demo/setup', async (req, res) => {
       }
     }
 
+    // Recarrega unidades da Vila para vincular moradores corretos
+    const updatedUnits = await prisma.unit.findMany({
+      where: { propertyId: vilaProperty.id }
+    });
+
+    // ── 3.1 Residentes das Casas da Vila Demo ─────────────────────────────
+    const demoResidents = [
+      { email: 'casa1@campainha.com', password: 'casa1', name: 'Morador Casa 1', unitName: 'Campainha 1', plate: 'VILA-C1' },
+      { email: 'casa2@campainha.com', password: 'casa2', name: 'Morador Casa 2', unitName: 'Campainha 2', plate: 'VILA-C2' },
+      { email: 'casa3@campainha.com', password: 'casa3', name: 'Morador Casa 3', unitName: 'Campainha 3', plate: 'VILA-C3' }
+    ];
+
+    for (const resData of demoResidents) {
+      const unit = updatedUnits.find(u => u.name === resData.unitName);
+      if (!unit) continue;
+
+      const clientCode = generateAccessCode() + generateAccessCode();
+      const residentUser = await prisma.user.upsert({
+        where: { email: resData.email },
+        update: {
+          password: resData.password,
+          name: resData.name,
+          isCondoResident: true,
+          trialEndsAt: far,
+          plateCode: resData.plate
+        },
+        create: {
+          email: resData.email,
+          password: resData.password,
+          name: resData.name,
+          clientCode: clientCode,
+          plateCode: resData.plate,
+          isCondoResident: true,
+          trialEndsAt: far
+        }
+      });
+
+      // Vincula o morador à unidade (substitui moradores antigos na unidade)
+      await prisma.unit.update({
+        where: { id: unit.id },
+        data: {
+          residents: {
+            set: [{ id: residentUser.id }]
+          }
+        }
+      });
+    }
+
     // ── 4. Morador Padrão Demo (casa isolada) ───────────────────────────
     let morador = await prisma.user.upsert({
       where: { email: 'morador@campainha.com' },
@@ -1978,9 +2224,9 @@ app.post('/api/master/demo/setup', async (req, res) => {
         }
       });
 
-      // Cria a unit da casa demo
+      // Cria a unit da casa demo (Corrigindo caractere cirílico em MORADORDEMO)
       const unitDemo = await prisma.unit.create({
-        data: { propertyId: moradorProp.id, name: 'Casa Principal', inviteCode: 'MORАДORDEMO' }
+        data: { propertyId: moradorProp.id, name: 'Casa Principal', inviteCode: 'MORADORDEMO' }
       });
 
       // Vincula o morador à unidade
@@ -1998,7 +2244,7 @@ app.post('/api/master/demo/setup', async (req, res) => {
     // Retorna resultado
     const finalVila = await prisma.property.findUnique({
       where: { id: vilaProperty.id },
-      include: { units: true, vilaAdmin: { select: { id: true, name: true, email: true } } }
+      include: { units: { include: { residents: true } }, vilaAdmin: { select: { id: true, name: true, email: true } } }
     });
 
     results.push({

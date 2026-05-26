@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import html2canvas from 'html2canvas';
 import {
   Bell, Home, MessageSquare, Settings, LogOut, Users, Send, Megaphone,
-  ChevronRight, RefreshCw, Hash, CheckCircle2, X, AlertCircle
+  ChevronRight, RefreshCw, Hash, CheckCircle2, X, AlertCircle, Download,
+  Edit2, Trash2, UserPlus, Key, Car, Mail
 } from 'lucide-react';
 import { API } from '../config';
 import Logo from '../components/Logo';
+import PrintablePlate from '../components/PrintablePlate';
 
 export default function VilaAdminDashboard() {
   const navigate = useNavigate();
@@ -21,8 +24,29 @@ export default function VilaAdminDashboard() {
   const [vilaName, setVilaName] = useState('');
   const [houseCount, setHouseCount] = useState(1);
   const [feedback, setFeedback] = useState(null);
+  
+  // QR Code & Placa Física States
+  const [qrImage, setQrImage] = useState('');
+  const [qrLoading, setQrLoading] = useState(false);
+  const [downloadingPlate, setDownloadingPlate] = useState(false);
+
+  // CRUD Modals & States
+  const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
+  const [editingUnit, setEditingUnit] = useState(null);
+  const [newUnitName, setNewUnitName] = useState('');
+  const [unitModalError, setUnitModalError] = useState('');
+
+  const [isResidentModalOpen, setIsResidentModalOpen] = useState(false);
+  const [targetUnit, setTargetUnit] = useState(null);
+  const [newResidentName, setNewResidentName] = useState('');
+  const [newResidentEmail, setNewResidentEmail] = useState('');
+  const [newResidentPassword, setNewResidentPassword] = useState('');
+  const [newResidentPlate, setNewResidentPlate] = useState('');
+  const [residentModalError, setResidentModalError] = useState('');
+
   const socketRef = useRef(null);
   const chatEndRef = useRef(null);
+  const printRef = useRef(null);
 
   const adminId = localStorage.getItem('cd_token');
   const propertyId = localStorage.getItem('cd_vila_property_id');
@@ -70,6 +94,165 @@ export default function VilaAdminDashboard() {
   }, [propertyId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // ── Fetch QR Code ────────────────────────────────────────────────────
+  const fetchQrCode = useCallback(async () => {
+    if (!propertyId) return;
+    setQrLoading(true);
+    try {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const finalUrl = `${baseUrl}#/chamada/${propertyId}`;
+      const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(finalUrl)}&json=true`);
+      if (res.ok) {
+        const data = await res.json();
+        setQrImage(data.qrcode || '');
+      }
+    } catch (err) {
+      console.error('[Vila QR]', err);
+    } finally {
+      setQrLoading(false);
+    }
+  }, [propertyId]);
+
+  useEffect(() => {
+    fetchQrCode();
+  }, [fetchQrCode]);
+
+  // ── Download Plate ───────────────────────────────────────────────────
+  const handleDownloadPlate = async () => {
+    if (!printRef.current) return;
+    setDownloadingPlate(true);
+    try {
+      const canvas = await html2canvas(printRef.current, { scale: 3, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = imgData;
+      a.download = `Placa_Vila_${property?.name || 'Digital'}.png`;
+      a.click();
+    } catch (e) {
+      console.error('Erro ao baixar placa:', e);
+      alert('Erro ao gerar imagem da placa física.');
+    } finally {
+      setDownloadingPlate(false);
+    }
+  };
+
+  // ── Unit CRUD API actions ────────────────────────────────────────────
+  const handleAddUnit = async (e) => {
+    e.preventDefault();
+    if (!newUnitName.trim()) return;
+    setUnitModalError('');
+    try {
+      const res = await fetch(`${API}/api/vila/${propertyId}/units`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': adminId },
+        body: JSON.stringify({ name: newUnitName.trim() })
+      });
+      if (res.ok) {
+        setIsUnitModalOpen(false);
+        setNewUnitName('');
+        fetchData();
+      } else {
+        const d = await res.json();
+        setUnitModalError(d.error || 'Erro ao criar campainha.');
+      }
+    } catch {
+      setUnitModalError('Erro de conexão.');
+    }
+  };
+
+  const handleEditUnit = async (e) => {
+    e.preventDefault();
+    if (!newUnitName.trim() || !editingUnit) return;
+    setUnitModalError('');
+    try {
+      const res = await fetch(`${API}/api/vila/${propertyId}/units/${editingUnit.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': adminId },
+        body: JSON.stringify({ name: newUnitName.trim() })
+      });
+      if (res.ok) {
+        setIsUnitModalOpen(false);
+        setEditingUnit(null);
+        setNewUnitName('');
+        fetchData();
+      } else {
+        const d = await res.json();
+        setUnitModalError(d.error || 'Erro ao editar campainha.');
+      }
+    } catch {
+      setUnitModalError('Erro de conexão.');
+    }
+  };
+
+  const handleDeleteUnit = async (unitId) => {
+    if (!window.confirm('Tem certeza de que deseja excluir esta campainha? Isso também removerá todos os moradores vinculados a ela.')) return;
+    try {
+      const res = await fetch(`${API}/api/vila/${propertyId}/units/${unitId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': adminId }
+      });
+      if (res.ok) {
+        fetchData();
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Erro ao excluir campainha.');
+      }
+    } catch {
+      alert('Erro de conexão.');
+    }
+  };
+
+  // ── Resident Management API actions ──────────────────────────────────
+  const handleRegisterResident = async (e) => {
+    e.preventDefault();
+    if (!newResidentName.trim() || !targetUnit) return;
+    setResidentModalError('');
+    try {
+      const res = await fetch(`${API}/api/vila/${propertyId}/units/${targetUnit.id}/residents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': adminId },
+        body: JSON.stringify({
+          name: newResidentName.trim(),
+          email: newResidentEmail.trim() || undefined,
+          password: newResidentPassword.trim() || undefined,
+          plateCode: newResidentPlate.trim() || undefined
+        })
+      });
+      if (res.ok) {
+        setIsResidentModalOpen(false);
+        setNewResidentName('');
+        setNewResidentEmail('');
+        setNewResidentPassword('');
+        setNewResidentPlate('');
+        setTargetUnit(null);
+        fetchData();
+      } else {
+        const d = await res.json();
+        setResidentModalError(d.error || 'Erro ao cadastrar morador.');
+      }
+    } catch {
+      setResidentModalError('Erro de conexão.');
+    }
+  };
+
+  const handleRemoveResident = async (unitId, residentId) => {
+    if (!window.confirm('Tem certeza de que deseja remover este morador?')) return;
+    try {
+      const res = await fetch(`${API}/api/vila/${propertyId}/units/${unitId}/residents/${residentId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': adminId }
+      });
+      if (res.ok) {
+        fetchData();
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Erro ao remover morador.');
+      }
+    } catch {
+      alert('Erro de conexão.');
+    }
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -368,27 +551,105 @@ export default function VilaAdminDashboard() {
         {/* ── UNIDADES ── */}
         {tab === 'units' && (
           <div style={{ padding: '40px 48px' }}>
-            <h2 style={{ fontSize: '26px', fontWeight: 900, color: '#0F172A', marginBottom: '8px' }}>🔔 Campanhas da Vila</h2>
-            <p style={{ color: '#64748B', marginBottom: '32px' }}>
-              {units.length} campainha(s) configurada(s). Configure o número nas <strong>Configurações</strong>.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+              <div>
+                <h2 style={{ fontSize: '26px', fontWeight: 900, color: '#0F172A', margin: 0 }}>🔔 Campanhas da Vila</h2>
+                <p style={{ color: '#64748B', marginTop: '4px', margin: 0 }}>
+                  {units.length} campainha(s) configurada(s). Gerencie as casas e moradores abaixo.
+                </p>
+              </div>
+              <button 
+                onClick={() => { setEditingUnit(null); setNewUnitName(''); setIsUnitModalOpen(true); }}
+                style={{
+                  padding: '12px 20px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                  background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', color: '#FFF',
+                  fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px',
+                  boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
+                }}
+              >
+                <UserPlus size={16} /> Adicionar Campainha
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
               {units.map((unit, idx) => (
-                <div key={unit.id} style={{ background: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: `hsl(${(idx * 47) % 360},70%,55%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-                    <Bell size={22} color="#FFF" />
+                <div key={unit.id} style={{ background: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: `hsl(${(idx * 47) % 360},70%,55%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Bell size={22} color="#FFF" />
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button 
+                          onClick={() => { setEditingUnit(unit); setNewUnitName(unit.name); setIsUnitModalOpen(true); }}
+                          style={{ padding: '6px', background: '#F1F5F9', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#64748B' }}
+                          title="Editar Nome"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteUnit(unit.id)}
+                          style={{ padding: '6px', background: '#FEF2F2', border: 'none', borderRadius: '8px', cursor: 'pointer', color: '#EF4444' }}
+                          title="Excluir Campainha"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A' }}>{unit.name}</div>
+                    <div style={{ marginTop: '6px', padding: '4px 8px', background: '#F8FAFC', borderRadius: '6px', fontSize: '11px', color: '#94A3B8', fontFamily: 'monospace', wordBreak: 'break-all', display: 'inline-block' }}>
+                      Cód. Convite: {unit.inviteCode || '—'}
+                    </div>
+
+                    {/* Residents List */}
+                    <div style={{ marginTop: '16px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                        Moradores
+                      </div>
+                      {unit.residents && unit.residents.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {unit.residents.map(res => (
+                            <div key={res.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', background: '#F8FAFC', borderRadius: '10px', padding: '10px', border: '1px solid #EFF2F5', position: 'relative' }}>
+                              <button 
+                                onClick={() => handleRemoveResident(unit.id, res.id)}
+                                style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
+                                title="Remover Morador"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', paddingRight: '20px' }}>{res.name}</div>
+                              {res.email && (
+                                <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px', wordBreak: 'break-all' }}>
+                                  <Mail size={10} style={{ flexShrink: 0 }} /> {res.email}
+                                </div>
+                              )}
+                              <div style={{ fontSize: '10px', color: '#94A3B8', fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
+                                <div>Cód: {res.clientCode || '—'}</div>
+                                {res.plateCode && <div>Placa: {res.plateCode}</div>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '12px', color: '#94A3B8', fontStyle: 'italic', marginBottom: '8px' }}>Nenhum morador cadastrado</div>
+                      )}
+                      
+                      <button 
+                        onClick={() => { setTargetUnit(unit); setIsResidentModalOpen(true); }}
+                        style={{
+                          marginTop: '10px', width: '100%', padding: '8px', borderRadius: '8px',
+                          border: '1px dashed #CBD5E1', background: 'transparent', color: '#64748B',
+                          fontWeight: 600, fontSize: '12px', cursor: 'pointer', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', gap: '4px', transition: 'all 0.2s'
+                        }}
+                      >
+                        <UserPlus size={13} /> Cadastrar Morador
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A' }}>{unit.name}</div>
-                  <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
-                    {unit.residents?.length > 0
-                      ? `👤 ${unit.residents.map(r => r.name).join(', ')}`
-                      : '⚠️ Sem moradores'}
-                  </div>
-                  <div style={{ marginTop: '12px', padding: '8px 12px', background: '#F8FAFC', borderRadius: '8px', fontSize: '11px', color: '#94A3B8', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                    Código: {unit.inviteCode || '—'}
-                  </div>
+
                   <button onClick={() => { setSelectedUnit(unit); setTab('messages'); }} style={{
-                    marginTop: '12px', width: '100%', padding: '10px', borderRadius: '10px',
+                    marginTop: '20px', width: '100%', padding: '10px', borderRadius: '10px',
                     border: 'none', background: '#EFF6FF', color: '#3B82F6', fontWeight: 700,
                     fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                   }}>
@@ -472,18 +733,172 @@ export default function VilaAdminDashboard() {
             </form>
 
             {/* QR Code info */}
-            <div style={{ marginTop: '40px', padding: '24px', background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '12px' }}>📱 QR Code da Vila</h3>
-              <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '12px' }}>
-                O QR code da sua vila aponta para o link abaixo. Ao escanear, o visitante vê a lista de campanhas e toca na que deseja chamar.
+            <div style={{ marginTop: '40px', padding: '24px', background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', marginBottom: '4px', width: '100%', textAlign: 'left' }}>📱 QR Code Principal da Vila</h3>
+              <p style={{ fontSize: '13px', color: '#64748B', marginBottom: '8px', width: '100%', textAlign: 'left' }}>
+                Este é o QR Code de entrada da Vila. Ao escanear, o visitante verá a lista de campanhas e poderá tocar na campainha desejada.
               </p>
-              <div style={{ padding: '12px 16px', background: '#F8FAFC', borderRadius: '10px', fontFamily: 'monospace', fontSize: '12px', color: '#3B82F6', wordBreak: 'break-all' }}>
+              
+              <div style={{ padding: '16px', background: '#FFF', borderRadius: '16px', border: '2px solid #F1F5F9', display: 'flex', justifyContent: 'center' }}>
+                {qrLoading ? (
+                  <div style={{ width: '180px', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <RefreshCw size={24} className="animate-spin" color="#94A3B8" />
+                  </div>
+                ) : qrImage ? (
+                  <img src={qrImage} alt="QR Code Principal" style={{ width: '180px', height: '180px' }} />
+                ) : (
+                  <div style={{ width: '180px', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>QR Code Indisponível</div>
+                )}
+              </div>
+
+              <div style={{ padding: '12px 16px', background: '#F8FAFC', borderRadius: '10px', fontFamily: 'monospace', fontSize: '12px', color: '#3B82F6', wordBreak: 'break-all', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}>
                 {window.location.origin}{window.location.pathname}#/chamada/{propertyId}
               </div>
+
+              {/* Printable Plate invisível */}
+              <PrintablePlate ref={printRef} qrImage={qrImage} />
+
+              <button 
+                type="button"
+                onClick={handleDownloadPlate}
+                disabled={downloadingPlate || !qrImage}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '12px', 
+                  background: '#0F172A', color: '#FFF', border: 'none', 
+                  fontWeight: 700, display: 'flex', alignItems: 'center', 
+                  justifyContent: 'center', gap: '8px', cursor: 'pointer',
+                  opacity: (!qrImage || downloadingPlate) ? 0.7 : 1,
+                  boxShadow: '0 4px 12px rgba(15,23,42,0.2)'
+                }}
+              >
+                <Download size={18} /> {downloadingPlate ? 'Gerando Placa...' : 'Baixar Placa Física da Vila'}
+              </button>
             </div>
           </div>
         )}
       </main>
+
+      {/* MODAL CADASTRAR/EDITAR CAMPAINHA */}
+      {isUnitModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: '24px' }}>
+          <div style={{ background: '#FFF', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                {editingUnit ? '✏️ Editar Campainha' : '🔔 Nova Campainha / Casa'}
+              </h3>
+              <button onClick={() => setIsUnitModalOpen(false)} style={{ background: '#F1F5F9', border: 'none', padding: '6px', borderRadius: '50%', cursor: 'pointer', color: '#64748B' }}>
+                <X size={16} />
+              </button>
+            </div>
+            
+            {unitModalError && (
+              <div style={{ padding: '10px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px', color: '#991B1B', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>
+                {unitModalError}
+              </div>
+            )}
+
+            <form onSubmit={editingUnit ? handleEditUnit : handleAddUnit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Nome da Campainha</label>
+                <input 
+                  type="text" 
+                  value={newUnitName} 
+                  onChange={e => setNewUnitName(e.target.value)} 
+                  placeholder="Ex: Campainha 4 ou Casa 4" 
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }}
+                  required
+                />
+              </div>
+              <button 
+                type="submit" 
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', color: '#FFF', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+              >
+                {editingUnit ? 'Salvar Alterações' : 'Criar Campainha'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CADASTRAR MORADOR */}
+      {isResidentModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', zIndex: 2000, padding: '24px' }}>
+          <div style={{ background: '#FFF', borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                👤 Cadastrar Morador
+              </h3>
+              <button onClick={() => setIsResidentModalOpen(false)} style={{ background: '#F1F5F9', border: 'none', padding: '6px', borderRadius: '50%', cursor: 'pointer', color: '#64748B' }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ fontSize: '13px', color: '#64748B', background: '#F8FAFC', padding: '10px 14px', borderRadius: '10px', marginBottom: '16px' }}>
+              Vincular morador à <strong>{targetUnit?.name}</strong>
+            </div>
+
+            {residentModalError && (
+              <div style={{ padding: '10px 14px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px', color: '#991B1B', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>
+                {residentModalError}
+              </div>
+            )}
+
+            <form onSubmit={handleRegisterResident} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Nome Completo *</label>
+                <input 
+                  type="text" 
+                  value={newResidentName} 
+                  onChange={e => setNewResidentName(e.target.value)} 
+                  placeholder="Nome do morador" 
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>E-mail (opcional para login)</label>
+                <input 
+                  type="email" 
+                  value={newResidentEmail} 
+                  onChange={e => setNewResidentEmail(e.target.value)} 
+                  placeholder="exemplo@email.com" 
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Senha (opcional - gerada se vazia)</label>
+                <input 
+                  type="text" 
+                  value={newResidentPassword} 
+                  onChange={e => setNewResidentPassword(e.target.value)} 
+                  placeholder="Mínimo 4 caracteres" 
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Placa do Carro (opcional)</label>
+                <input 
+                  type="text" 
+                  value={newResidentPlate} 
+                  onChange={e => setNewResidentPlate(e.target.value.toUpperCase())} 
+                  placeholder="Ex: ABC1D23" 
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg,#3B82F6,#1D4ED8)', color: '#FFF', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+              >
+                Cadastrar e Vincular
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

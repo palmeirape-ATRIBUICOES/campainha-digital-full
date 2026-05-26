@@ -35,6 +35,7 @@ function RootRedirect() {
 
     // Determina para onde redirecionar com base no perfil salvo
     const isSuperAdmin  = localStorage.getItem('cd_is_super_admin') === 'true';
+    const isVilaAdmin   = localStorage.getItem('cd_vila_property_id');
     const isAdmin       = localStorage.getItem('cd_admin_role') === 'client';
     const isDoorman     = localStorage.getItem('cd_doorman_propertyId');
     const unitId        = localStorage.getItem('residentUnitId');
@@ -42,6 +43,8 @@ function RootRedirect() {
 
     if (isSuperAdmin) {
       navigate('/master-admin', { replace: true });
+    } else if (isVilaAdmin) {
+      navigate('/vila-admin', { replace: true });
     } else if (isAdmin) {
       navigate('/admin', { replace: true });
     } else if (isDoorman) {
@@ -91,6 +94,7 @@ function AuthRedirect() {
     }
 
     const isSuperAdmin  = localStorage.getItem('cd_is_super_admin') === 'true';
+    const isVilaAdmin   = localStorage.getItem('cd_vila_property_id');
     const isAdmin       = localStorage.getItem('cd_admin_role') === 'client';
     const isDoorman     = localStorage.getItem('cd_doorman_propertyId');
     const unitId        = localStorage.getItem('residentUnitId');
@@ -98,6 +102,8 @@ function AuthRedirect() {
 
     if (isSuperAdmin) {
       navigate('/master-admin', { replace: true });
+    } else if (isVilaAdmin) {
+      navigate('/vila-admin', { replace: true });
     } else if (isAdmin) {
       navigate('/admin', { replace: true });
     } else if (isDoorman) {

@@ -850,6 +850,30 @@ export default function MasterAdminDashboard() {
                           </button>
                         </div>
 
+                        {/* Código Único */}
+                        {user.clientCode && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#F8FAFC', borderRadius: '10px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', minWidth: '50px', textTransform: 'uppercase' }}>Código</span>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', flex: 1, fontFamily: 'monospace' }}>{user.clientCode}</span>
+                            <button onClick={() => { navigator.clipboard.writeText(user.clientCode); setCopiedId(`ccode-${user.id}`); setTimeout(() => setCopiedId(null), 2000); }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: copiedId === `ccode-${user.id}` ? '#10B981' : '#94A3B8' }}>
+                              {copiedId === `ccode-${user.id}` ? <Check size={14} /> : <Copy size={14} />}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Placa */}
+                        {user.plateCode && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#F8FAFC', borderRadius: '10px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', minWidth: '50px', textTransform: 'uppercase' }}>Placa</span>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', flex: 1, fontFamily: 'monospace' }}>{user.plateCode}</span>
+                            <button onClick={() => { navigator.clipboard.writeText(user.plateCode); setCopiedId(`plate-${user.id}`); setTimeout(() => setCopiedId(null), 2000); }}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: copiedId === `plate-${user.id}` ? '#10B981' : '#94A3B8' }}>
+                              {copiedId === `plate-${user.id}` ? <Check size={14} /> : <Copy size={14} />}
+                            </button>
+                          </div>
+                        )}
+
                         {/* Vila property info */}
                         {isVila && vilaProperty && (
                           <div style={{ padding: '14px', background: 'rgba(124,58,237,0.06)', borderRadius: '12px', border: '1px solid rgba(124,58,237,0.12)' }}>
@@ -870,6 +894,18 @@ export default function MasterAdminDashboard() {
                                   </button>
                                 </div>
                               ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Resident unit info */}
+                        {!isVila && user.units && user.units.length > 0 && (
+                          <div style={{ padding: '14px', background: 'rgba(59,130,246,0.06)', borderRadius: '12px', border: '1px solid rgba(59,130,246,0.12)' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 700, color: '#1D4ED8' }}>
+                              🏡 {user.units[0].property?.name || 'Propriedade'} - {user.units[0].name}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
+                              Código de Acesso (Campainha): <code style={{ color: '#1D4ED8', fontWeight: 700 }}>{user.units[0].inviteCode || '—'}</code>
                             </div>
                           </div>
                         )}
