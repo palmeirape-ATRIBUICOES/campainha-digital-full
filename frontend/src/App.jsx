@@ -12,6 +12,7 @@ import PaymentFailure from './pages/PaymentFailure';
 import MasterAdminDashboard from './pages/MasterAdminDashboard';
 import PorteiroLogin from './pages/PorteiroLogin';
 import PorteiroDashboard from './pages/PorteiroDashboard';
+import VilaAdminDashboard from './pages/VilaAdminDashboard';
 
 // ─── Proteção de rota: redireciona para login se não autenticado ──────────────
 function PrivateRoute({ children }) {
@@ -150,6 +151,7 @@ function App() {
         <Route path="/master-admin"   element={<MasterAdminDashboard />} />
         <Route path="/portaria"       element={<PorteiroDashboard />} />
         <Route path="/morador/:id"    element={<ResidentDashboard />} />
+        <Route path="/vila-admin"     element={<VilaAdminDashboard />} />
 
         {/* Públicas */}
         <Route path="/chamada/:id"    element={<VisitorCall />} />

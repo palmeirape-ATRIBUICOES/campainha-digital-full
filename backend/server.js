@@ -870,6 +870,22 @@ app.post('/api/resident/login-by-code', async (req, res) => {
 
     if (!user) return res.status(401).json({ error: 'Código inválido.' });
 
+    // Vila Admin: detecta e redireciona para painel de Vila
+    if (user.isVilaAdmin) {
+      const vilaProperty = await prisma.property.findFirst({
+        where: { vilaAdminId: user.id }
+      });
+      return res.json({
+        role: 'vila_admin',
+        token: user.id,
+        userId: user.id,
+        propertyId: vilaProperty?.id,
+        propertyName: vilaProperty?.name,
+        adminName: user.name,
+        adminEmail: user.email
+      });
+    }
+
     const property = user.propertiesManaged[0] || (user.units[0] ? user.units[0].property : null);
     const unit = user.units[0];
 
@@ -916,6 +932,20 @@ app.post('/api/resident/login', async (req, res) => {
     });
 
     if (!user) return res.status(401).json({ error: 'Credenciais incorretas.' });
+
+    // Vila Admin
+    if (user.isVilaAdmin) {
+      const vilaProperty = await prisma.property.findFirst({ where: { vilaAdminId: user.id } });
+      return res.json({
+        role: 'vila_admin',
+        token: user.id,
+        userId: user.id,
+        propertyId: vilaProperty?.id,
+        propertyName: vilaProperty?.name,
+        adminName: user.name,
+        adminEmail: user.email
+      });
+    }
 
     const property = user.propertiesManaged[0] || (user.units[0] ? user.units[0].property : null);
     const unit = user.units[0];
@@ -1041,15 +1071,16 @@ app.get('/api/master/properties', authenticate, async (req, res) => {
 // Ativar/Desativar módulos de um usuário
 app.post('/api/master/users/:id/modules', authenticate, async (req, res) => {
   if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
-  const { isAdmin, isDoorman, isResident, isSuperAdmin, isReseller, isHouseResident, isCondoResident } = req.body;
+  const { isAdmin, isDoorman, isResident, isSuperAdmin, isReseller, isHouseResident, isCondoResident, isVilaAdmin } = req.body;
   
   const updated = await prisma.user.update({
     where: { id: req.params.id },
-    data: { isAdmin, isDoorman, isResident, isSuperAdmin, isReseller, isHouseResident, isCondoResident }
+    data: { isAdmin, isDoorman, isResident, isSuperAdmin, isReseller, isHouseResident, isCondoResident, isVilaAdmin }
   });
   
   res.json(updated);
 });
+
 
 // Dar 1 mês grátis (promoção)
 app.post('/api/master/users/:id/promo', authenticate, async (req, res) => {
@@ -1660,6 +1691,148 @@ app.get('/api/visitors/property/:propertyId', async (req, res) => {
   }
 });
 
+// ─── Vila (Conjunto de Casas) ─────────────────────────────────────────────────
+
+// Busca info da Vila para o QR Code (inclui units para mostrar campanhas)
+app.get('/api/vila/:propertyId', async (req, res) => {
+  try {
+    const property = await prisma.property.findUnique({
+      where: { id: req.params.propertyId },
+      include: {
+        units: {
+          include: { residents: { select: { id: true, name: true } } },
+          orderBy: { name: 'asc' }
+        },
+        vilaAdmin: { select: { id: true, name: true, email: true } }
+      }
+    });
+    if (!property) return res.status(404).json({ error: 'Vila não encontrada.' });
+    res.json(property);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar Vila.', details: err.message });
+  }
+});
+
+// Admin de Vila: atualizar configurações + sincronizar unidades (campanhas)
+app.put('/api/vila/:propertyId/settings', async (req, res) => {
+  const { name, vilaHouseCount } = req.body;
+  const token = req.headers['authorization'];
+  if (!token) return res.status(401).json({ error: 'Não autorizado.' });
+
+  try {
+    const admin = await prisma.user.findUnique({ where: { id: token } });
+    if (!admin?.isVilaAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+
+    const property = await prisma.property.findFirst({
+      where: { id: req.params.propertyId, vilaAdminId: admin.id },
+      include: { units: true }
+    });
+    if (!property) return res.status(404).json({ error: 'Vila não encontrada ou sem permissão.' });
+
+    const count = parseInt(vilaHouseCount) || property.vilaHouseCount;
+    const currentCount = property.units.length;
+
+    // Sincroniza unidades: cria as que faltam, remove as excedentes (sem moradores)
+    if (count > currentCount) {
+      for (let i = currentCount + 1; i <= count; i++) {
+        const inviteCode = `VILA-${property.name.replace(/\s+/g,'').toUpperCase().substring(0,6)}-C${i}`;
+        await prisma.unit.create({
+          data: {
+            propertyId: property.id,
+            name: `Campainha ${i}`,
+            inviteCode: inviteCode + '-' + Math.random().toString(36).substring(2,5).toUpperCase()
+          }
+        });
+      }
+    } else if (count < currentCount) {
+      // Remove units excedentes sem moradores (da última para a primeira)
+      const toRemove = property.units
+        .sort((a, b) => b.name.localeCompare(a.name))
+        .slice(0, currentCount - count);
+      for (const unit of toRemove) {
+        const hasResidents = await prisma.user.count({ where: { units: { some: { id: unit.id } } } });
+        if (hasResidents === 0) {
+          await prisma.unit.delete({ where: { id: unit.id } });
+        }
+      }
+    }
+
+    const updated = await prisma.property.update({
+      where: { id: property.id },
+      data: { name: name || property.name, vilaHouseCount: count },
+      include: { units: { orderBy: { name: 'asc' } } }
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar Vila.', details: err.message });
+  }
+});
+
+// Vila Admin: vincular admin a uma Vila (usado pelo MasterAdmin)
+app.post('/api/master/vila/:propertyId/set-admin', async (req, res) => {
+  const { userId } = req.body;
+  const token = req.headers['authorization'];
+  try {
+    const master = await prisma.user.findUnique({ where: { id: token } });
+    if (!master?.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+    await prisma.property.update({
+      where: { id: req.params.propertyId },
+      data: { vilaAdminId: userId, isVila: true }
+    });
+    await prisma.user.update({ where: { id: userId }, data: { isVilaAdmin: true } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro.', details: err.message });
+  }
+});
+
+// Vila: listar mensagens (filtradas por unitId ou todas para o admin)
+app.get('/api/vila/:propertyId/messages', async (req, res) => {
+  const { unitId } = req.query;
+  try {
+    const where = { propertyId: req.params.propertyId };
+    if (unitId) {
+      // Morador: vê mensagens para sua unit + broadcasts (unitId === null)
+      where.OR = [{ unitId: unitId }, { unitId: null }];
+    }
+    const messages = await prisma.vilaMessage.findMany({
+      where,
+      orderBy: { createdAt: 'asc' },
+      take: 200
+    });
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar mensagens da Vila.', details: err.message });
+  }
+});
+
+// Vila: enviar mensagem (admin → individual/broadcast OU morador → admin)
+app.post('/api/vila/:propertyId/messages', async (req, res) => {
+  const { senderId, senderName, content, unitId, isFromAdmin } = req.body;
+  if (!senderId || !content?.trim()) {
+    return res.status(400).json({ error: 'senderId e content são obrigatórios.' });
+  }
+  try {
+    const msg = await prisma.vilaMessage.create({
+      data: {
+        propertyId: req.params.propertyId,
+        senderId,
+        senderName: senderName || 'Usuário',
+        content: content.trim(),
+        unitId: unitId || null,       // null = broadcast
+        isFromAdmin: !!isFromAdmin
+      }
+    });
+    // Notifica via socket em tempo real
+    io.to(`vila_${req.params.propertyId}`).emit('vila_message', msg);
+    if (unitId) {
+      io.to(`user_${unitId}`).emit('vila_message', msg);
+    }
+    res.status(201).json(msg);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao enviar mensagem.', details: err.message });
+  }
+});
 
 // ─── Mensagens Internas Família (Morador Principal ↔ Dependentes) ─────────────
 

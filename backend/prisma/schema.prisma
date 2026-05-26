@@ -33,9 +33,13 @@ model User {
   // Morador dependente (criado pelo morador principal)
   isDependent     Boolean   @default(false)
   parentUserId    String?   // ID do morador principal que criou este dependente
+
+  // Admin de Vila
+  isVilaAdmin     Boolean   @default(false)
   
   propertiesManaged Property[] @relation("PropertyAdmin")
   propertiesDoorman Property[] @relation("PropertyDoorman")
+  propertiesVilaAdmin Property[] @relation("PropertyVilaAdmin")
   units             Unit[]     @relation("UnitResidents")
   
   doorbellEnabled   Boolean   @default(true)
@@ -108,12 +112,19 @@ model Property {
   createdAt       DateTime  @default(now())
   nextPaymentAt   DateTime
   
+  // ─── Vila (conjunto de casas com um único QR code) ──────────────────────
+  isVila          Boolean   @default(false)
+  vilaHouseCount  Int       @default(0)    // Número de casas definido pelo admin
+  vilaAdminId     String?
+  vilaAdmin       User?     @relation("PropertyVilaAdmin", fields: [vilaAdminId], references: [id])
+
   units           Unit[]
   messages        Message[]
   visitors        Visitor[]
   mailboxMessages MailboxMessage[]
   alerts          UnitAlert[]
   connections     InternalConnection[]
+  vilaMessages    VilaMessage[]
 }
 
 model Unit {
@@ -218,3 +229,18 @@ model VisitorCode {
   expiresAt   DateTime
   createdAt   DateTime @default(now())
 }
+
+// Mensagens da Vila: Admin ↔ Moradores (individual ou broadcast)
+model VilaMessage {
+  id          String   @id @default(uuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  senderId    String
+  senderName  String
+  unitId      String?  // null = broadcast para todos; non-null = mensagem individual
+  isFromAdmin Boolean  @default(false)
+  content     String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+

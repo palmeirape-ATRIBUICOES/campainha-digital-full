@@ -436,6 +436,52 @@ export default function VisitorCall() {
               <Bell size={48} />
               TOCAR CAMPAINHA
             </button>
+          ) : property.isVila ? (
+            /* ── MODO VILA: lista de campanhas com visual diferenciado ── */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                  🏘️ Selecione a campanha
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '55vh', overflowY: 'auto', paddingRight: '4px' }}>
+                {property.units.map((unit, idx) => (
+                  <button
+                    key={unit.id}
+                    id={`btn-vila-unit-${unit.id}`}
+                    onClick={() => handleCall(unit)}
+                    style={{
+                      width: '100%', padding: '18px 20px', borderRadius: '18px',
+                      border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px',
+                      background: 'rgba(255,255,255,0.07)',
+                      backdropFilter: 'blur(12px)',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.3)'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,229,255,0.12)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
+                  >
+                    <div style={{
+                      width: '48px', height: '48px', borderRadius: '14px', flexShrink: 0,
+                      background: `hsl(${(idx * 47) % 360},70%,50%)`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 4px 14px hsl(${(idx * 47) % 360},70%,40%,0.5)`
+                    }}>
+                      <Bell size={22} color="#FFF" />
+                    </div>
+                    <div style={{ textAlign: 'left', flex: 1 }}>
+                      <div style={{ fontSize: '17px', fontWeight: 800, color: '#FFF' }}>{unit.name}</div>
+                      {unit.residents?.length > 0 && (
+                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                          {unit.residents.map(r => r.name).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                    <ChevronRight size={20} color="var(--primary)" />
+                  </button>
+                ))}
+              </div>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <p style={{ fontWeight: 700, fontSize: '16px', textAlign: 'center', color: 'var(--text-muted)' }}>Para quem é a visita?</p>

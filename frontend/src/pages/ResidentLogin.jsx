@@ -106,7 +106,15 @@ export default function ResidentLogin() {
       const data = await res.json();
       
       if (res.ok) {
-        if (data.role === 'admin') {
+        if (data.role === 'vila_admin') {
+          // Admin de Vila
+          localStorage.setItem('cd_token', data.token);
+          localStorage.setItem('cd_user_id', data.userId);
+          localStorage.setItem('cd_vila_property_id', data.propertyId || '');
+          localStorage.setItem('cd_vila_admin_name', data.adminName || '');
+          localStorage.setItem('cd_login_type', 'email');
+          navigate('/vila-admin');
+        } else if (data.role === 'admin') {
           // Admin do condomínio logando por email/senha
           localStorage.setItem('cd_admin_email', data.adminEmail || identifier);
           localStorage.setItem('cd_admin_role', 'client');
@@ -127,6 +135,7 @@ export default function ResidentLogin() {
     } catch { setError('Erro de conexão. Verifique sua internet.'); }
     finally { setLoading(false); }
   };
+
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
