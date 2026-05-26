@@ -315,12 +315,29 @@ export default function ResidentDashboard() {
 
     // Fetch broadcast messages
     const fetchMessages = async () => {
-      if (!savedPropId) return;
+      const currentPropId = savedPropId || localStorage.getItem('residentPropertyId');
+      if (!currentPropId) return;
       try {
-        const res = await fetch(`${API}/api/properties/${savedPropId}/messages`);
+        const isVila = localStorage.getItem('residentIsVila') === 'true';
+        const url = isVila
+          ? `${API}/api/vila/${currentPropId}/messages?unitId=${savedUnitId || localStorage.getItem('residentUnitId') || ''}`
+          : `${API}/api/properties/${currentPropId}/messages`;
+
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          setBroadcastMessages(data);
+          if (isVila) {
+            const formatted = data.map(m => ({
+              id: m.id,
+              title: m.unitId ? `✉️ Mensagem de ${m.senderName}` : `📢 Aviso de ${m.senderName}`,
+              body: m.content,
+              createdAt: m.createdAt,
+              priority: m.unitId ? 'normal' : 'urgent'
+            }));
+            setBroadcastMessages([...formatted].reverse());
+          } else {
+            setBroadcastMessages(data);
+          }
           const readIds = JSON.parse(localStorage.getItem('cd_read_msgs') || '[]');
           setUnreadCount(data.filter(m => !readIds.includes(m.id)).length);
         }
@@ -354,6 +371,10 @@ export default function ResidentDashboard() {
             setPropertyName(data.propertyName);
             localStorage.setItem('residentPropertyName', data.propertyName);
           }
+          if (data.isVila !== undefined) {
+            localStorage.setItem('residentIsVila', data.isVila ? 'true' : 'false');
+          }
+          fetchMessages();
           setUserContact(data.email || data.phone || data.clientCode || data.plateCode || '');
 
           // AUTO-DETECT para sessões existentes sem cd_login_type:
@@ -446,6 +467,25 @@ export default function ResidentDashboard() {
       setUnreadCount(prev => prev + 1);
       if ('Notification' in window && Notification.permission === 'granted') {
         try { new Notification(`📢 ${msg.title}`, { body: msg.body, icon: '/logo.png' }); } catch {}
+      }
+    });
+
+    // Receber mensagem da Vila (Vila Admin)
+    s.on('vila_message', (msg) => {
+      const formattedMsg = {
+        id: msg.id,
+        title: msg.unitId ? `✉️ Mensagem de ${msg.senderName}` : `📢 Aviso de ${msg.senderName}`,
+        body: msg.content,
+        priority: msg.unitId ? 'normal' : 'urgent',
+        createdAt: msg.createdAt
+      };
+      setBroadcastMessages(prev => {
+        if (prev.some(m => m.id === msg.id)) return prev;
+        return [formattedMsg, ...prev];
+      });
+      setUnreadCount(prev => prev + 1);
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification(formattedMsg.title, { body: formattedMsg.body, icon: '/logo.png' }); } catch {}
       }
     });
 
@@ -931,7 +971,7 @@ export default function ResidentDashboard() {
           <button onClick={() => {
             [
               'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
-              'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+              'residentIsVila', 'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
               'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
               'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
               'cd_admin_name', 'cd_admin_password', 'cd_property_type'

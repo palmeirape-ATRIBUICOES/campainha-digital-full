@@ -900,6 +900,7 @@ app.post('/api/resident/login-by-code', async (req, res) => {
       userId: user.id,
       propertyId: property?.id,
       propertyName: property?.name,
+      isVila: property?.isVila || false,
       unitId: unit?.id,
       unitName: user.name,
       accessCode: user.clientCode || user.plateCode,
@@ -968,6 +969,7 @@ app.post('/api/resident/login', async (req, res) => {
       userId: user.id,
       propertyId: property?.id,
       propertyName: property?.name,
+      isVila: property?.isVila || false,
       unitId: unit?.id,
       unitName: user.name,
       accessCode: user.clientCode || user.plateCode,
@@ -1186,9 +1188,9 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
         clientCode: true,
         plateCode: true,
         trialEndsAt: true,
-        propertiesManaged: { select: { id: true, name: true } },
-        propertiesVilaAdmin: { select: { id: true, name: true } },
-        units: { select: { id: true, name: true, propertyId: true, property: { select: { name: true } } } }
+        propertiesManaged: { select: { id: true, name: true, isVila: true } },
+        propertiesVilaAdmin: { select: { id: true, name: true, isVila: true } },
+        units: { select: { id: true, name: true, propertyId: true, property: { select: { name: true, isVila: true } } } }
       }
     });
     
@@ -1199,8 +1201,9 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
     // Obtém o propertyId sendo o usuário admin da propriedade, morador de uma unidade ou admin de vila
     const propertyId = user.propertiesManaged?.[0]?.id || user.units?.[0]?.propertyId || user.propertiesVilaAdmin?.[0]?.id;
     const propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.name || user.propertiesVilaAdmin?.[0]?.name || '';
+    const isVila = user.propertiesManaged?.[0]?.isVila || user.propertiesVilaAdmin?.[0]?.isVila || user.units?.[0]?.property?.isVila || false;
     
-    res.json({ ...user, propertyId, propertyName });
+    res.json({ ...user, propertyId, propertyName, isVila });
   } catch (err) {
     console.error('Settings error:', err);
     res.status(500).json({ error: 'Erro ao carregar configs' });

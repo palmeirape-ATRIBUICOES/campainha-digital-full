@@ -42,6 +42,7 @@ export default function ResidentLogin() {
     localStorage.setItem('residentName', data.unitName || 'Morador');
     localStorage.setItem('residentPropertyName', data.propertyName || '');
     localStorage.setItem('residentPropertyId', data.propertyId || '');
+    localStorage.setItem('residentIsVila', data.isVila ? 'true' : 'false');
     // Se o login for por código, o código já está no state, se for por email, vem no data
     localStorage.setItem('residentAccessCode', data.accessCode || accessCode || '');
     localStorage.setItem('cd_is_house_resident', data.isHouseResident ? 'true' : 'false');
