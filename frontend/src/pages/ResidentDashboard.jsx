@@ -684,6 +684,12 @@ export default function ResidentDashboard() {
       const hashPart = window.location.hash;
       const queryPart = hashPart.includes('?') ? hashPart.split('?')[1] : '';
       const params = new URLSearchParams(queryPart);
+      
+      const tabParam = params.get('tab');
+      if (tabParam) {
+        setTab(tabParam);
+      }
+
       const hasCallParam = params.get('call') === 'true';
       const paramVisitorSocket = params.get('visitorSocketId');
 

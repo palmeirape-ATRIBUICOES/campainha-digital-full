@@ -1857,6 +1857,103 @@ app.post('/api/vila/:propertyId/messages', async (req, res) => {
     if (unitId) {
       io.to(`user_${unitId}`).emit('vila_message', msg);
     }
+
+    // Envia Push Notifications em segundo plano para não bloquear a resposta HTTP
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    (async () => {
+      try {
+        if (isFromAdmin) {
+          if (!unitId) {
+            // AVISO GERAL (Broadcast) - Notifica todos os moradores
+            const residents = await prisma.user.findMany({
+              where: {
+                isResident: true,
+                units: {
+                  some: {
+                    propertyId: req.params.propertyId
+                  }
+                }
+              },
+              include: {
+                units: {
+                  where: {
+                    propertyId: req.params.propertyId
+                  }
+                }
+              }
+            });
+
+            console.log(`[Push Vila] Enviando Aviso Geral para ${residents.length} morador(es)`);
+            for (const r of residents) {
+              if (r.id === senderId) continue;
+              const rUnitId = r.units?.[0]?.id || '';
+              sendPushToUser(r.id, {
+                title: `📢 Aviso de ${senderName || 'Administração'}`,
+                body: content.trim(),
+                icon: `${baseUrl}/logo.png`,
+                badge: `${baseUrl}/badge.png`,
+                tag: `vila-broadcast-${msg.id}`,
+                data: {
+                  url: `/#/morador/${rUnitId}?tab=messages`
+                }
+              }).catch(e => console.error(`[Push Vila] Erro ao enviar push para morador ${r.id}:`, e.message));
+            }
+          } else {
+            // MENSAGEM PRIVADA do Admin para Unidade
+            const residents = await prisma.user.findMany({
+              where: {
+                isResident: true,
+                units: {
+                  some: {
+                    id: unitId
+                  }
+                }
+              }
+            });
+
+            console.log(`[Push Vila] Enviando mensagem privada para unidade ${unitId} (${residents.length} morador(es))`);
+            for (const r of residents) {
+              if (r.id === senderId) continue;
+              sendPushToUser(r.id, {
+                title: `✉️ Mensagem de ${senderName || 'Administração'}`,
+                body: content.trim(),
+                icon: `${baseUrl}/logo.png`,
+                badge: `${baseUrl}/badge.png`,
+                tag: `vila-msg-${msg.id}`,
+                data: {
+                  url: `/#/morador/${unitId}?tab=messages`
+                }
+              }).catch(e => console.error(`[Push Vila] Erro ao enviar push para morador ${r.id}:`, e.message));
+            }
+          }
+        } else {
+          // MENSAGEM DO MORADOR PARA O ADMIN
+          const property = await prisma.property.findUnique({
+            where: { id: req.params.propertyId },
+            select: { vilaAdminId: true, adminId: true }
+          });
+          
+          const adminsToNotify = [property?.vilaAdminId, property?.adminId].filter(Boolean);
+          console.log(`[Push Vila] Enviando mensagem do morador para os administradores: ${adminsToNotify.join(', ')}`);
+          for (const adminIdToNotify of adminsToNotify) {
+            if (adminIdToNotify === senderId) continue;
+            sendPushToUser(adminIdToNotify, {
+              title: `✉️ Mensagem de ${senderName || 'Morador'}`,
+              body: content.trim(),
+              icon: `${baseUrl}/logo.png`,
+              badge: `${baseUrl}/badge.png`,
+              tag: `vila-msg-${msg.id}`,
+              data: {
+                url: `/#/vila-admin?tab=messages`
+              }
+            }).catch(e => console.error(`[Push Vila] Erro ao enviar push para admin ${adminIdToNotify}:`, e.message));
+          }
+        }
+      } catch (pushErr) {
+        console.error('[Push Vila] Falha no processamento de notificações push:', pushErr);
+      }
+    })();
+
     res.status(201).json(msg);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao enviar mensagem.', details: err.message });
