@@ -880,24 +880,54 @@ export default function ResidentDashboard() {
     try {
       const propId = propertyId || localStorage.getItem('residentPropertyId');
       const token = localStorage.getItem('cd_token');
-      const res = await fetch(`${API}/api/properties/${propId}/mailbox`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': token 
-        },
-        body: JSON.stringify({
-          subject: supportSubject,
-          body: supportBody,
-          unitId: id
-        })
-      });
-      if (res.ok) {
-        alert('Mensagem enviada com sucesso para a administração!');
-        setSupportSubject('');
-        setSupportBody('');
+      
+      const isVila = localStorage.getItem('residentIsVila') === 'true';
+      if (isVila) {
+        const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
+        const currentUserId = localStorage.getItem('cd_user_id');
+        const contentText = `[CAIXA POSTAL] Assunto: ${supportSubject.trim()}\n\nMensagem: ${supportBody.trim()}`;
+
+        const res = await fetch(`${API}/api/vila/${propId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            senderId: currentUserId,
+            senderName: unitName || 'Morador',
+            content: contentText,
+            unitId: currentUnitId,
+            isFromAdmin: false
+          })
+        });
+
+        if (res.ok) {
+          const msg = await res.json();
+          setRawVilaMessages(prev => [...prev, msg]);
+          alert('✅ Sua mensagem foi enviada com sucesso para o Administrador da Vila!');
+          setSupportSubject('');
+          setSupportBody('');
+        } else {
+          alert('Erro ao enviar mensagem.');
+        }
       } else {
-        alert('Erro ao enviar mensagem.');
+        const res = await fetch(`${API}/api/properties/${propId}/mailbox`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': token 
+          },
+          body: JSON.stringify({
+            subject: supportSubject,
+            body: supportBody,
+            unitId: id
+          })
+        });
+        if (res.ok) {
+          alert('Mensagem enviada com sucesso para a administração!');
+          setSupportSubject('');
+          setSupportBody('');
+        } else {
+          alert('Erro ao enviar mensagem.');
+        }
       }
     } catch (err) {
       console.error(err);
