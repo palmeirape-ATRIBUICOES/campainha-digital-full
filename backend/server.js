@@ -1610,6 +1610,13 @@ app.post('/api/properties/:propertyId/units/:unitId/residents', async (req, res)
     const unit = await prisma.unit.findUnique({ where: { id: req.params.unitId } });
     if (!unit) return res.status(404).json({ error: 'Unidade não encontrada.' });
 
+    const residentCount = await prisma.user.count({
+      where: { units: { some: { id: req.params.unitId } } }
+    });
+    if (residentCount >= 5) {
+      return res.status(400).json({ error: 'Limite máximo de 5 moradores por unidade atingido.' });
+    }
+
     // Gera um código único amigável e legível: ex: 101-MARIA-X9A
     const cleanUnit = unit.name.replace(/\s+/g, '').toUpperCase();
     const cleanName = name.trim().split(' ')[0].toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -1646,6 +1653,10 @@ app.post('/api/units/:unitId/residents', async (req, res) => {
       include: { residents: true }
     });
     if (!unit) return res.status(404).json({ error: 'Unidade não encontrada.' });
+
+    if (unit.residents && unit.residents.length >= 5) {
+      return res.status(400).json({ error: 'Limite máximo de 5 moradores por unidade atingido.' });
+    }
 
     // Identifica o morador principal para herdar as flags dele
     const primaryResident = requesterId
@@ -2157,6 +2168,13 @@ app.post('/api/vila/:propertyId/units/:unitId/residents', async (req, res) => {
       where: { id: req.params.unitId, propertyId: property.id }
     });
     if (!unit) return res.status(404).json({ error: 'Campainha não encontrada.' });
+
+    const residentCount = await prisma.user.count({
+      where: { units: { some: { id: req.params.unitId } } }
+    });
+    if (residentCount >= 5) {
+      return res.status(400).json({ error: 'Limite máximo de 5 moradores por unidade atingido.' });
+    }
 
     if (email) {
       const existing = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });

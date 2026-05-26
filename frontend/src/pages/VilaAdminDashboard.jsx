@@ -297,6 +297,11 @@ export default function VilaAdminDashboard() {
     setResidentModalError('');
 
     const isEdit = !!editingResident;
+    if (!isEdit && (targetUnit.residents || []).length >= 5) {
+      setResidentModalError('Limite máximo de 5 moradores por unidade atingido.');
+      return;
+    }
+
     const url = isEdit
       ? `${API}/api/vila/${propertyId}/units/${targetUnit.id}/residents/${editingResident.id}`
       : `${API}/api/vila/${propertyId}/units/${targetUnit.id}/residents`;
@@ -849,17 +854,27 @@ export default function VilaAdminDashboard() {
                         <div style={{ fontSize: '12px', color: '#94A3B8', fontStyle: 'italic', marginBottom: '8px' }}>Nenhum morador cadastrado</div>
                       )}
                       
-                      <button 
-                        onClick={() => { setTargetUnit(unit); setEditingResident(null); setIsResidentModalOpen(true); }}
-                        style={{
+                      {(unit.residents || []).length >= 5 ? (
+                        <div style={{
                           marginTop: '10px', width: '100%', padding: '8px', borderRadius: '8px',
-                          border: '1px dashed #CBD5E1', background: 'transparent', color: '#64748B',
-                          fontWeight: 600, fontSize: '12px', cursor: 'pointer', display: 'flex',
-                          alignItems: 'center', justifyContent: 'center', gap: '4px', transition: 'all 0.2s'
-                        }}
-                      >
-                        <UserPlus size={13} /> Cadastrar Morador
-                      </button>
+                          border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#EF4444',
+                          fontWeight: 600, fontSize: '11px', textAlign: 'center'
+                        }}>
+                          ⚠️ Limite de 5 moradores atingido.
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => { setTargetUnit(unit); setEditingResident(null); setIsResidentModalOpen(true); }}
+                          style={{
+                            marginTop: '10px', width: '100%', padding: '8px', borderRadius: '8px',
+                            border: '1px dashed #CBD5E1', background: 'transparent', color: '#64748B',
+                            fontWeight: 600, fontSize: '12px', cursor: 'pointer', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', gap: '4px', transition: 'all 0.2s'
+                          }}
+                        >
+                          <UserPlus size={13} /> Cadastrar Morador
+                        </button>
+                      )}
                     </div>
                   </div>
 

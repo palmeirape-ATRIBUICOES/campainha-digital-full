@@ -63,6 +63,10 @@ export default function ResidentsPanel({ unitId, propertyId }) {
   const handleAddResident = async (e) => {
     e.preventDefault();
     if (!newResidentName.trim()) return;
+    if (residents.length >= 5) {
+      alert('Limite máximo de 5 moradores atingido.');
+      return;
+    }
     setSubmitting(true);
     try {
       const requesterId = localStorage.getItem('cd_user_id') || '';
@@ -118,31 +122,53 @@ export default function ResidentsPanel({ unitId, propertyId }) {
       </div>
 
       {/* Formulário de Cadastro */}
-      <form onSubmit={handleAddResident} className="glass-panel" style={{ padding: '20px', marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px', color: 'var(--text-main)' }}>➕ CADASTRAR NOVO MORADOR (DEPENDENTE)</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>NOME DO MORADOR</label>
-            <input
-              type="text"
-              placeholder="Ex: Ana Filha, Maria Mãe, etc."
-              className="input-glass"
-              value={newResidentName}
-              onChange={e => setNewResidentName(e.target.value)}
-              required
-              style={{ width: '100%' }}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="btn-primary"
-            style={{ width: '100%', padding: '14px', fontSize: '14px', fontWeight: 700 }}
-          >
-            {submitting ? 'Cadastrando...' : 'Criar Código de Acesso'}
-          </button>
+      {residents.length >= 5 ? (
+        <div style={{
+          background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)',
+          border: '1px solid #FCA5A5',
+          borderRadius: '16px',
+          padding: '20px',
+          marginBottom: '24px',
+          boxShadow: '0 4px 12px rgba(239, 68, 68, 0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px',
+          textAlign: 'center'
+        }}>
+          <span style={{ fontSize: '24px' }}>⚠️</span>
+          <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#991B1B', margin: 0 }}>LIMITE DE MORADORES ATINGIDO</h4>
+          <p style={{ fontSize: '12px', color: '#B91C1C', margin: 0, lineHeight: 1.4 }}>
+            Esta unidade atingiu o limite máximo de <strong>5 moradores cadastrados</strong> no sistema. Para adicionar um novo, remova um dos moradores ativos abaixo.
+          </p>
         </div>
-      </form>
+      ) : (
+        <form onSubmit={handleAddResident} className="glass-panel" style={{ padding: '20px', marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px', color: 'var(--text-main)' }}>➕ CADASTRAR NOVO MORADOR (DEPENDENTE)</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>NOME DO MORADOR</label>
+              <input
+                type="text"
+                placeholder="Ex: Ana Filha, Maria Mãe, etc."
+                className="input-glass"
+                value={newResidentName}
+                onChange={e => setNewResidentName(e.target.value)}
+                required
+                style={{ width: '100%' }}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="btn-primary"
+              style={{ width: '100%', padding: '14px', fontSize: '14px', fontWeight: 700 }}
+            >
+              {submitting ? 'Cadastrando...' : 'Criar Código de Acesso'}
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Lista de Moradores Cadastrados */}
       <div>

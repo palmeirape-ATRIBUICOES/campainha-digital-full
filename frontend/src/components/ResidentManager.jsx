@@ -21,6 +21,12 @@ export default function ResidentManager({ propertyId, property, adminEmail, onRe
     const name = newResidentNames[unitId] || '';
     if (!name.trim()) return;
 
+    const u = units.find(unit => unit.id === unitId);
+    if (u && (u.residents || []).length >= 5) {
+      alert('Limite máximo de 5 moradores atingido para esta unidade.');
+      return;
+    }
+
     try {
       const res = await fetch(`${API}/api/properties/${propertyId}/units/${unitId}/residents`, {
         method: 'POST',
@@ -171,26 +177,41 @@ export default function ResidentManager({ propertyId, property, adminEmail, onRe
                   </div>
 
                   {/* Formulário para Adicionar Novo Morador */}
-                  <div style={{ background:'var(--bg-deep)', padding:'12px 16px', borderRadius:'12px', border:'1px solid var(--border-subtle)' }}>
-                    <span style={{ fontSize:'11px', fontWeight:700, color:'var(--text-muted)', display:'block', marginBottom:'8px' }}>➕ CADASTRAR NOVO MORADOR NESTA UNIDADE</span>
-                    <div style={{ display:'flex', gap:'8px' }}>
-                      <input
-                        type="text"
-                        placeholder="Nome do morador (ex: Maria Mãe)"
-                        className="input-glass"
-                        value={newResidentNames[u.id] || ''}
-                        onChange={e => setNewResidentNames(prev => ({ ...prev, [u.id]: e.target.value }))}
-                        style={{ flex:1, padding:'8px 12px', fontSize:'13px', borderRadius:'8px' }}
-                      />
-                      <button
-                        onClick={() => handleAddResident(u.id)}
-                        className="btn-primary"
-                        style={{ padding:'8px 16px', fontSize:'13px', borderRadius:'8px', fontWeight:700 }}
-                      >
-                        Cadastrar
-                      </button>
+                  {residentsList.length >= 5 ? (
+                    <div style={{
+                      background: 'rgba(239, 68, 68, 0.05)',
+                      border: '1px solid rgba(239, 68, 68, 0.1)',
+                      borderRadius: '12px',
+                      padding: '12px 16px',
+                      color: '#EF4444',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      textAlign: 'center'
+                    }}>
+                      ⚠️ Limite máximo de 5 moradores por unidade atingido.
                     </div>
-                  </div>
+                  ) : (
+                    <div style={{ background:'var(--bg-deep)', padding:'12px 16px', borderRadius:'12px', border:'1px solid var(--border-subtle)' }}>
+                      <span style={{ fontSize:'11px', fontWeight:700, color:'var(--text-muted)', display:'block', marginBottom:'8px' }}>➕ CADASTRAR NOVO MORADOR NESTA UNIDADE</span>
+                      <div style={{ display:'flex', gap:'8px' }}>
+                        <input
+                          type="text"
+                          placeholder="Nome do morador (ex: Maria Mãe)"
+                          className="input-glass"
+                          value={newResidentNames[u.id] || ''}
+                          onChange={e => setNewResidentNames(prev => ({ ...prev, [u.id]: e.target.value }))}
+                          style={{ flex:1, padding:'8px 12px', fontSize:'13px', borderRadius:'8px' }}
+                        />
+                        <button
+                          onClick={() => handleAddResident(u.id)}
+                          className="btn-primary"
+                          style={{ padding:'8px 16px', fontSize:'13px', borderRadius:'8px', fontWeight:700 }}
+                        >
+                          Cadastrar
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
