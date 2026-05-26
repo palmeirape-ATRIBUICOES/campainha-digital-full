@@ -53,7 +53,20 @@ export default function ResidentDashboard() {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    if (messagesSubTab === 'chat') {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [rawVilaMessages, messagesSubTab]);
+
   const [tab, setTab] = useState('home'); // home | history | messages
+  const [messagesSubTab, setMessagesSubTab] = useState('board'); // 'board' | 'chat'
+  const [rawVilaMessages, setRawVilaMessages] = useState([]);
+  const [newReplyMsg, setNewReplyMsg] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+  const chatEndRef = useRef(null);
+  const residentIsVila = localStorage.getItem('residentIsVila') === 'true';
+
   const [showMenu, setShowMenu] = useState(false);
   const [call, setCall] = useState(null);
   const [status, setStatus] = useState('idle'); // idle|ringing|active|monitoring
@@ -327,6 +340,7 @@ export default function ResidentDashboard() {
         if (res.ok) {
           const data = await res.json();
           if (isVila) {
+            setRawVilaMessages(data);
             const formatted = data.map(m => ({
               id: m.id,
               title: m.unitId ? `✉️ Mensagem de ${m.senderName}` : `📢 Aviso de ${m.senderName}`,
@@ -472,6 +486,10 @@ export default function ResidentDashboard() {
 
     // Receber mensagem da Vila (Vila Admin)
     s.on('vila_message', (msg) => {
+      setRawVilaMessages(prev => {
+        if (prev.some(m => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
       const formattedMsg = {
         id: msg.id,
         title: msg.unitId ? `✉️ Mensagem de ${msg.senderName}` : `📢 Aviso de ${msg.senderName}`,
@@ -1619,31 +1637,231 @@ export default function ResidentDashboard() {
       )}
 
       {tab === 'messages' && (
-        <div style={{ padding: '20px 24px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>📢 Avisos do Condomínio</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '16px' }}>{broadcastMessages.length} mensagen{broadcastMessages.length !== 1 ? 's' : ''}</p>
-          {broadcastMessages.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
-              <Mail size={40} style={{ opacity: 0.2, marginBottom: '12px' }}/>
-              <p style={{ fontWeight: 600 }}>Nenhum aviso recebido</p>
+        residentIsVila ? (
+          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
+            {/* Sub-tab Selector */}
+            <div style={{ display: 'flex', background: '#F1F5F9', padding: '4px', borderRadius: '14px', marginBottom: '16px', flexShrink: 0 }}>
+              <button 
+                onClick={() => setMessagesSubTab('board')} 
+                style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: messagesSubTab === 'board' ? '#FFF' : 'transparent', color: messagesSubTab === 'board' ? '#0F172A' : '#64748B', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                📢 Quadro de Avisos
+              </button>
+              <button 
+                onClick={() => setMessagesSubTab('chat')} 
+                style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: messagesSubTab === 'chat' ? '#FFF' : 'transparent', color: messagesSubTab === 'chat' ? '#0F172A' : '#64748B', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                💬 Chat com o Admin
+              </button>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {broadcastMessages.map(m => (
-                <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239,68,68,0.3)' : '#E2E8F0'}`, borderRadius: '14px', padding: '14px 16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {m.priority === 'urgent' && <span style={{ color: '#EF4444' }}>🚨</span>}
-                      {m.title}
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#94A3B8' }}>{new Date(m.createdAt).toLocaleDateString('pt-BR')}</span>
+
+            {messagesSubTab === 'board' ? (
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div>
+                    <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>Quadro de Avisos</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>
+                      {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id)).length} mensagem(ns) ativa(s)
+                    </p>
                   </div>
-                  <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.6 }}>{m.body}</p>
+                  {broadcastMessages.some(m => !JSON.parse(localStorage.getItem('cd_read_msgs') || '[]').includes(m.id)) && (
+                    <button 
+                      onClick={markMessagesRead} 
+                      style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#EFF6FF', color: '#1D4ED8', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Ler todas
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+
+                {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id)).length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
+                    <Mail size={40} style={{ opacity: 0.2, marginBottom: '12px' }}/>
+                    <p style={{ fontWeight: 600 }}>Nenhum aviso recebido</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {broadcastMessages
+                      .filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id))
+                      .map(m => {
+                        const isRead = JSON.parse(localStorage.getItem('cd_read_msgs') || '[]').includes(m.id);
+                        return (
+                          <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239,68,68,0.3)' : '#E2E8F0'}`, borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', position: 'relative' }}>
+                            {!isRead && (
+                              <div style={{ position: 'absolute', top: '22px', left: '8px', width: '6px', height: '6px', borderRadius: '50%', background: '#3B82F6' }} />
+                            )}
+                            
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', paddingLeft: isRead ? '0' : '8px' }}>
+                              <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>
+                                {m.title}
+                              </span>
+                              <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
+                                {new Date(m.createdAt).toLocaleDateString('pt-BR')} {new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            
+                            <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 12px 0', lineHeight: 1.6, paddingLeft: isRead ? '0' : '8px' }}>{m.body}</p>
+                            
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+                              {!isRead && (
+                                <button 
+                                  onClick={() => {
+                                    const readIds = JSON.parse(localStorage.getItem('cd_read_msgs') || '[]');
+                                    localStorage.setItem('cd_read_msgs', JSON.stringify([...readIds, m.id]));
+                                    setUnreadCount(prev => Math.max(0, prev - 1));
+                                  }}
+                                  style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#F1F5F9', color: '#475569', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  ✓ Lida
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => {
+                                  const deletedIds = JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]');
+                                  localStorage.setItem('cd_deleted_msgs', JSON.stringify([...deletedIds, m.id]));
+                                  if (!isRead) {
+                                    setUnreadCount(prev => Math.max(0, prev - 1));
+                                  }
+                                  setBroadcastMessages(prev => prev.filter(item => item.id !== m.id));
+                                }}
+                                style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#FFF1F2', color: '#E11D48', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                🗑️ Apagar
+                              </button>
+                              {m.priority !== 'urgent' && (
+                                <button 
+                                  onClick={() => setMessagesSubTab('chat')}
+                                  style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#E0F2FE', color: '#0369A1', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  💬 Responder
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+                <div style={{ padding: '12px 16px', background: '#FFF', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981' }} />
+                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B' }}>Conversa Direta com Admin da Vila</span>
+                </div>
+                
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {rawVilaMessages.filter(m => m.unitId !== null).length === 0 ? (
+                    <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', paddingTop: '40px' }}>
+                      Nenhuma mensagem individual trocada com o admin ainda.
+                    </div>
+                  ) : (
+                    rawVilaMessages
+                      .filter(m => m.unitId !== null)
+                      .map(m => {
+                        const isMine = !m.isFromAdmin;
+                        return (
+                          <div key={m.id} style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start' }}>
+                            <div style={{
+                              maxWidth: '75%',
+                              padding: '10px 14px',
+                              borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                              background: isMine ? 'linear-gradient(135deg,#3B82F6,#1D4ED8)' : '#FFF',
+                              color: isMine ? '#FFF' : '#1E293B',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              boxShadow: isMine ? '0 4px 12px rgba(59,130,246,0.15)' : '0 2px 8px rgba(0,0,0,0.04)',
+                              border: isMine ? 'none' : '1px solid #E2E8F0'
+                            }}>
+                              <p style={{ margin: '0 0 4px 0', lineHeight: 1.4 }}>{m.content}</p>
+                              <span style={{ fontSize: '9px', opacity: 0.6, display: 'block', textAlign: 'right' }}>
+                                {new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                <form 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!newReplyMsg.trim() || sendingReply) return;
+                    setSendingReply(true);
+                    try {
+                      const currentPropId = savedPropId || localStorage.getItem('residentPropertyId');
+                      const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
+                      const currentUserId = localStorage.getItem('cd_user_id');
+                      
+                      const res = await fetch(`${API}/api/vila/${currentPropId}/messages`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          senderId: currentUserId,
+                          senderName: unitName || 'Morador',
+                          content: newReplyMsg.trim(),
+                          unitId: currentUnitId,
+                          isFromAdmin: false
+                        })
+                      });
+                      if (res.ok) {
+                        const msg = await res.json();
+                        setRawVilaMessages(prev => [...prev, msg]);
+                        setNewReplyMsg('');
+                      }
+                    } catch (err) {
+                      console.error(err);
+                    }
+                    setSendingReply(false);
+                  }} 
+                  style={{ display: 'flex', gap: '8px', padding: '12px 16px', background: '#FFF', borderTop: '1px solid #E2E8F0', flexShrink: 0 }}
+                >
+                  <input
+                    value={newReplyMsg}
+                    onChange={e => setNewReplyMsg(e.target.value)}
+                    placeholder="Escreva uma resposta para o administrador..."
+                    style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '13px', outline: 'none', background: '#F8FAFC' }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newReplyMsg.trim() || sendingReply}
+                    style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', background: newReplyMsg.trim() ? '#3B82F6' : '#E2E8F0', color: newReplyMsg.trim() ? '#FFF' : '#94A3B8', cursor: newReplyMsg.trim() ? 'pointer' : 'default', fontWeight: 700, fontSize: '13px' }}
+                  >
+                    Enviar
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ padding: '20px 24px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>📢 Avisos do Condomínio</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '16px' }}>{broadcastMessages.length} mensagen{broadcastMessages.length !== 1 ? 's' : ''}</p>
+            {broadcastMessages.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
+                <Mail size={40} style={{ opacity: 0.2, marginBottom: '12px' }}/>
+                <p style={{ fontWeight: 600 }}>Nenhum aviso recebido</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {broadcastMessages.map(m => (
+                  <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239,68,68,0.3)' : '#E2E8F0'}`, borderRadius: '14px', padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {m.priority === 'urgent' && <span style={{ color: '#EF4444' }}>🚨</span>}
+                        {m.title}
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#94A3B8' }}>{new Date(m.createdAt).toLocaleDateString('pt-BR')}</span>
+                    </div>
+                    <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.6 }}>{m.body}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
       )}
       
       {tab === 'intercom' && (
