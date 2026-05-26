@@ -1834,6 +1834,193 @@ app.post('/api/vila/:propertyId/messages', async (req, res) => {
   }
 });
 
+// ─── Demonstração do Sistema (Dados de Exemplo para Vendas) ──────────────────
+
+// Lista todos os usuários demo do sistema
+app.get('/api/master/demo/users', async (req, res) => {
+  const token = req.headers['authorization'];
+  try {
+    const master = await prisma.user.findUnique({ where: { id: token } });
+    if (!master?.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+
+    const demoEmails = [
+      'admindevilas@campainha.com',
+      'morador@campainha.com',
+    ];
+
+    const users = await prisma.user.findMany({
+      where: { email: { in: demoEmails } },
+      include: {
+        propertiesVilaAdmin: { include: { units: true } }
+      }
+    });
+
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao listar demos.', details: err.message });
+  }
+});
+
+// Cria / reseta todos os usuários demo (idempotente)
+app.post('/api/master/demo/setup', async (req, res) => {
+  const token = req.headers['authorization'];
+  try {
+    const master = await prisma.user.findUnique({ where: { id: token } });
+    if (!master?.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+
+    const far = new Date('2099-12-31');
+    const results = [];
+
+    // ── 1. Admin de Vila Demo ────────────────────────────────────────────
+    let vilaAdmin = await prisma.user.upsert({
+      where: { email: 'admindevilas@campainha.com' },
+      update: { password: 'adminvilas', isVilaAdmin: true, trialEndsAt: far },
+      create: {
+        email: 'admindevilas@campainha.com',
+        password: 'adminvilas',
+        name: 'Admin de Vilas (Demo)',
+        isVilaAdmin: true,
+        trialEndsAt: far
+      }
+    });
+
+    // ── 2. Propriedade Vila Demo ─────────────────────────────────────────
+    let vilaProperty = await prisma.property.findFirst({
+      where: { vilaAdminId: vilaAdmin.id },
+      include: { units: true }
+    });
+
+    if (!vilaProperty) {
+      vilaProperty = await prisma.property.create({
+        data: {
+          name: 'Vila Demonstração',
+          type: 'village',
+          isVila: true,
+          vilaHouseCount: 3,
+          vilaAdminId: vilaAdmin.id,
+          nextPaymentAt: far,
+          plan: 'PREMIUM',
+          clientName: 'Admin Demo',
+          clientPhone: '(00) 00000-0000'
+        },
+        include: { units: true }
+      });
+    } else {
+      // Garante flags corretas
+      vilaProperty = await prisma.property.update({
+        where: { id: vilaProperty.id },
+        data: { isVila: true, vilaHouseCount: 3, name: 'Vila Demonstração' },
+        include: { units: true }
+      });
+    }
+
+    // ── 3. Unidades (Campanhas) da Vila Demo ─────────────────────────────
+    const demoUnits = [
+      { name: 'Campainha 1', code: 'CASADEVILA1' },
+      { name: 'Campainha 2', code: 'CASADEVILA2' },
+      { name: 'Campainha 3', code: 'CASADEVILA3' }
+    ];
+
+    for (const u of demoUnits) {
+      const existing = await prisma.unit.findFirst({
+        where: { propertyId: vilaProperty.id, name: u.name }
+      });
+
+      // Verifica se o inviteCode já está em uso por outra unit
+      const codeInUse = await prisma.unit.findFirst({
+        where: { inviteCode: u.code, NOT: { propertyId: vilaProperty.id } }
+      });
+
+      if (!existing) {
+        await prisma.unit.create({
+          data: {
+            propertyId: vilaProperty.id,
+            name: u.name,
+            inviteCode: codeInUse ? `${u.code}-DEMO` : u.code
+          }
+        });
+      } else {
+        // Atualiza o código se não houver conflito
+        await prisma.unit.update({
+          where: { id: existing.id },
+          data: { inviteCode: codeInUse ? existing.inviteCode : u.code }
+        });
+      }
+    }
+
+    // ── 4. Morador Padrão Demo (casa isolada) ───────────────────────────
+    let morador = await prisma.user.upsert({
+      where: { email: 'morador@campainha.com' },
+      update: { password: 'morador123', isHouseResident: true, trialEndsAt: far },
+      create: {
+        email: 'morador@campainha.com',
+        password: 'morador123',
+        name: 'Morador Padrão (Demo)',
+        isHouseResident: true,
+        trialEndsAt: far
+      }
+    });
+
+    // Garante que o morador demo tem uma property demo
+    let moradorProp = await prisma.property.findFirst({
+      where: { adminId: morador.id, type: 'house' }
+    });
+
+    if (!moradorProp) {
+      moradorProp = await prisma.property.create({
+        data: {
+          name: 'Casa Demo',
+          type: 'house',
+          adminId: morador.id,
+          nextPaymentAt: far,
+          plan: 'BASIC',
+          clientName: 'Morador Demo'
+        }
+      });
+
+      // Cria a unit da casa demo
+      const unitDemo = await prisma.unit.create({
+        data: { propertyId: moradorProp.id, name: 'Casa Principal', inviteCode: 'MORАДORDEMO' }
+      });
+
+      // Vincula o morador à unidade
+      await prisma.unit.update({
+        where: { id: unitDemo.id },
+        data: { residents: { connect: { id: morador.id } } }
+      });
+
+      await prisma.user.update({
+        where: { id: morador.id },
+        data: { isHouseResident: true }
+      });
+    }
+
+    // Retorna resultado
+    const finalVila = await prisma.property.findUnique({
+      where: { id: vilaProperty.id },
+      include: { units: true, vilaAdmin: { select: { id: true, name: true, email: true } } }
+    });
+
+    results.push({
+      type: 'vila_admin',
+      email: 'admindevilas@campainha.com',
+      password: 'adminvilas',
+      property: finalVila
+    });
+
+    results.push({
+      type: 'morador',
+      email: 'morador@campainha.com',
+      password: 'morador123'
+    });
+
+    res.json({ success: true, created: results });
+  } catch (err) {
+    console.error('[Demo Setup]', err);
+    res.status(500).json({ error: 'Erro ao criar dados demo.', details: err.message });
+  }
+});
+
 // ─── Mensagens Internas Família (Morador Principal ↔ Dependentes) ─────────────
 
 // Enviar mensagem (principal → dependente ou dependente → principal)

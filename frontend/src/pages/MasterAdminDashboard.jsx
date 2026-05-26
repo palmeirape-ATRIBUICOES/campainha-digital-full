@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Building2, Gift, History, Settings2, LogOut, ChevronRight, RefreshCw, Search, ToggleRight, ToggleLeft, QrCode, Copy, Check, Download, X, Hash, Layers } from 'lucide-react';
+import { Users, Building2, Gift, History, Settings2, LogOut, ChevronRight, RefreshCw, Search, ToggleRight, ToggleLeft, QrCode, Copy, Check, Download, X, Hash, Layers, Sparkles, Bell, Eye, EyeOff, Home, Zap } from 'lucide-react';
 import Logo from '../components/Logo';
 import PlateProductionPanel from '../components/PlateProductionPanel';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,13 @@ export default function MasterAdminDashboard() {
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [subTab, setSubTab] = useState('houses'); // 'houses' | 'condos'
 
+  // Demo state
+  const [demoUsers, setDemoUsers] = useState([]);
+  const [loadingDemo, setLoadingDemo] = useState(false);
+  const [settingUpDemo, setSettingUpDemo] = useState(false);
+  const [demoFeedback, setDemoFeedback] = useState(null);
+  const [showDemoPassMap, setShowDemoPassMap] = useState({});
+
   const fetchProperties = async () => {
     setLoadingProperties(true);
     try {
@@ -43,6 +50,9 @@ export default function MasterAdminDashboard() {
   useEffect(() => {
     if (activeTab === 'properties') {
       fetchProperties();
+    }
+    if (activeTab === 'demo') {
+      fetchDemoUsers();
     }
   }, [activeTab]);
 
@@ -68,6 +78,37 @@ export default function MasterAdminDashboard() {
     } catch (err) {
       console.error('[Settings] Erro ao buscar:', err);
     }
+  };
+
+  const fetchDemoUsers = async () => {
+    setLoadingDemo(true);
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/master/demo/users`, { headers: { 'Authorization': token } });
+      if (res.ok) setDemoUsers(await res.json());
+    } catch (err) { console.error('[Demo]', err); }
+    setLoadingDemo(false);
+  };
+
+  const setupDemo = async () => {
+    setSettingUpDemo(true);
+    setDemoFeedback(null);
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/master/demo/setup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDemoFeedback({ type: 'success', text: 'Dados de demonstração criados/atualizados com sucesso!' });
+        fetchDemoUsers();
+      } else {
+        setDemoFeedback({ type: 'error', text: data.error || 'Erro ao configurar demo.' });
+      }
+    } catch { setDemoFeedback({ type: 'error', text: 'Erro de conexão.' }); }
+    setSettingUpDemo(false);
+    setTimeout(() => setDemoFeedback(null), 5000);
   };
 
   const handleSaveSettings = async (e) => {
@@ -293,6 +334,7 @@ export default function MasterAdminDashboard() {
           <SidebarLink icon={Users} label="Usuários & Módulos" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
           <SidebarLink icon={Building2} label="Propriedades" active={activeTab === 'properties'} onClick={() => setActiveTab('properties')} />
           <SidebarLink icon={QrCode} label="Produção de Placas" active={activeTab === 'production'} onClick={() => setActiveTab('production')} />
+          <SidebarLink icon={Sparkles} label="Demonstração" active={activeTab === 'demo'} onClick={() => setActiveTab('demo')} />
           <SidebarLink icon={Gift} label="Promoções" active={activeTab === 'promos'} onClick={() => setActiveTab('promos')} />
           <SidebarLink icon={History} label="Logs" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
           <SidebarLink icon={Settings2} label="Configurações" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
@@ -693,11 +735,164 @@ export default function MasterAdminDashboard() {
           </div>
         )}
 
+        {activeTab === 'demo' && (
+          <div>
+            {/* Header */}
+            <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h2 style={{ fontSize: '26px', fontWeight: 900, color: '#0F172A', margin: 0 }}>✨ Usuários de Demonstração</h2>
+                <p style={{ color: '#64748B', fontSize: '14px', marginTop: '6px' }}>
+                  Contas pré-configuradas para apresentação comercial. Sempre disponíveis, trial até 2099.
+                </p>
+              </div>
+              <button
+                onClick={setupDemo}
+                disabled={settingUpDemo}
+                style={{
+                  padding: '12px 24px', borderRadius: '14px', border: 'none', cursor: 'pointer',
+                  background: 'linear-gradient(135deg,#7C3AED,#5B21B6)', color: '#FFF',
+                  fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px',
+                  boxShadow: '0 4px 14px rgba(124,58,237,0.3)', opacity: settingUpDemo ? 0.7 : 1
+                }}
+              >
+                <Zap size={16} />
+                {settingUpDemo ? 'Configurando...' : 'Criar / Resetar Dados Demo'}
+              </button>
+            </div>
+
+            {/* Feedback */}
+            {demoFeedback && (
+              <div style={{
+                padding: '14px 18px', borderRadius: '14px', marginBottom: '24px',
+                background: demoFeedback.type === 'success' ? '#F0FDF4' : '#FEF2F2',
+                border: `1px solid ${demoFeedback.type === 'success' ? '#86EFAC' : '#FECACA'}`,
+                color: demoFeedback.type === 'success' ? '#166534' : '#991B1B',
+                fontWeight: 600, fontSize: '14px'
+              }}>
+                {demoFeedback.type === 'success' ? '✅' : '❌'} {demoFeedback.text}
+              </div>
+            )}
+
+            {/* Demo users */}
+            {loadingDemo ? (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#94A3B8' }}>Carregando dados de demonstração...</div>
+            ) : demoUsers.length === 0 ? (
+              <div style={{ background: '#FFF', borderRadius: '20px', border: '2px dashed #E2E8F0', padding: '60px', textAlign: 'center' }}>
+                <Sparkles size={40} color="#C4B5FD" style={{ marginBottom: '16px' }} />
+                <p style={{ fontSize: '16px', fontWeight: 700, color: '#6B7280', margin: 0 }}>Nenhum dado de demonstração configurado ainda.</p>
+                <p style={{ fontSize: '14px', color: '#9CA3AF', marginTop: '8px' }}>Clique em "Criar / Resetar Dados Demo" para configurar.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: '20px' }}>
+                {demoUsers.map(user => {
+                  const isVila = user.isVilaAdmin;
+                  const vilaProperty = user.propertiesVilaAdmin?.[0];
+                  const showPass = showDemoPassMap[user.id];
+
+                  return (
+                    <div key={user.id} style={{
+                      background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.04)', overflow: 'hidden'
+                    }}>
+                      {/* Card Header */}
+                      <div style={{
+                        padding: '20px 24px',
+                        background: isVila
+                          ? 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(91,33,182,0.04))'
+                          : 'linear-gradient(135deg,rgba(59,130,246,0.08),rgba(29,78,216,0.04))',
+                        borderBottom: '1px solid #F1F5F9',
+                        display: 'flex', alignItems: 'center', gap: '14px'
+                      }}>
+                        <div style={{
+                          width: '48px', height: '48px', borderRadius: '14px', flexShrink: 0,
+                          background: isVila ? 'linear-gradient(135deg,#7C3AED,#5B21B6)' : 'linear-gradient(135deg,#3B82F6,#1D4ED8)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          {isVila ? <Bell size={22} color="#FFF" /> : <Home size={22} color="#FFF" />}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A' }}>{user.name}</div>
+                          <span style={{
+                            fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px',
+                            background: isVila ? 'rgba(124,58,237,0.12)' : 'rgba(59,130,246,0.12)',
+                            color: isVila ? '#6D28D9' : '#1D4ED8'
+                          }}>
+                            {isVila ? '🏘️ Admin de Vila' : '🏠 Morador de Casa'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Credentials */}
+                      <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {/* Email */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#F8FAFC', borderRadius: '10px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', minWidth: '50px', textTransform: 'uppercase' }}>Email</span>
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A', flex: 1 }}>{user.email}</span>
+                          <button onClick={() => { navigator.clipboard.writeText(user.email); setCopiedId(`email-${user.id}`); setTimeout(() => setCopiedId(null), 2000); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: copiedId === `email-${user.id}` ? '#10B981' : '#94A3B8' }}>
+                            {copiedId === `email-${user.id}` ? <Check size={14} /> : <Copy size={14} />}
+                          </button>
+                        </div>
+
+                        {/* Password */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#F8FAFC', borderRadius: '10px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', minWidth: '50px', textTransform: 'uppercase' }}>Senha</span>
+                          <span style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', flex: 1, fontFamily: 'monospace', letterSpacing: showPass ? '2px' : '4px' }}>
+                            {showPass ? user.password : '••••••••'}
+                          </span>
+                          <button onClick={() => setShowDemoPassMap(p => ({ ...p, [user.id]: !p[user.id] }))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', marginRight: '4px' }}>
+                            {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                          <button onClick={() => { navigator.clipboard.writeText(user.password); setCopiedId(`pass-${user.id}`); setTimeout(() => setCopiedId(null), 2000); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: copiedId === `pass-${user.id}` ? '#10B981' : '#94A3B8' }}>
+                            {copiedId === `pass-${user.id}` ? <Check size={14} /> : <Copy size={14} />}
+                          </button>
+                        </div>
+
+                        {/* Vila property info */}
+                        {isVila && vilaProperty && (
+                          <div style={{ padding: '14px', background: 'rgba(124,58,237,0.06)', borderRadius: '12px', border: '1px solid rgba(124,58,237,0.12)' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 700, color: '#6D28D9', marginBottom: '10px' }}>🏘️ {vilaProperty.name}</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {vilaProperty.units?.map((unit, i) => (
+                                <div key={unit.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', background: '#FFF', borderRadius: '8px' }}>
+                                  <div style={{ width: '24px', height: '24px', borderRadius: '7px', background: `hsl(${i * 80},60%,55%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Bell size={12} color="#FFF" />
+                                  </div>
+                                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A', flex: 1 }}>{unit.name}</span>
+                                  <code style={{ fontSize: '11px', fontWeight: 700, color: '#7C3AED', background: 'rgba(124,58,237,0.08)', padding: '2px 8px', borderRadius: '6px' }}>
+                                    {unit.inviteCode || '—'}
+                                  </code>
+                                  <button onClick={() => { navigator.clipboard.writeText(unit.inviteCode || ''); setCopiedId(`code-${unit.id}`); setTimeout(() => setCopiedId(null), 2000); }}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: copiedId === `code-${unit.id}` ? '#10B981' : '#94A3B8' }}>
+                                    {copiedId === `code-${unit.id}` ? <Check size={12} /> : <Copy size={12} />}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Trial info */}
+                        <div style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          ✅ Trial ativo até 31/12/2099
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'logs' && (
           <div style={{ background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '60px', textAlign: 'center' }}>
             <p style={{ color: '#94A3B8', fontSize: '16px' }}>Logs de atividades do sistema em construção.</p>
           </div>
         )}
+
       </main>
 
       {/* QR CODE MODAL */}
