@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Phone, Search, Building2, MessageSquare, Send, Volume2 } from 'lucide-react';
 import { API } from '../../config';
 
-export default function IntercomPanel({ propertyId, unitId, socketRef, unitName }) {
+export default function IntercomPanel({ propertyId, unitId, socketRef, unitName, onCall }) {
   const [block, setBlock] = useState('');
   const [number, setNumber] = useState('');
   const [results, setResults] = useState([]);
@@ -60,6 +60,10 @@ export default function IntercomPanel({ propertyId, unitId, socketRef, unitName 
   };
 
   const call = (neighbor) => {
+    if (onCall) {
+      onCall(neighbor);
+      return;
+    }
     if (!socketRef?.current) return;
     socketRef.current.emit('initiate_call', {
       unitId: neighbor.id, propertyId,

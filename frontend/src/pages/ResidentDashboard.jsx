@@ -518,6 +518,30 @@ export default function ResidentDashboard() {
     s.on('webrtc_ice_candidate', async ({ candidate }) => {
       if (pcRef.current && candidate) try { await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
     });
+    
+    // Listeners para o morador quando ele é o chamador (Interfone com Vizinho)
+    s.on('call_answered', ({ residentSocketId }) => {
+      console.log('[Intercom] Outbound call answered by:', residentSocketId);
+      setVisitorSocketId(residentSocketId);
+      setStatus('active');
+    });
+
+    s.on('webrtc_ready', async ({ residentSocketId }) => {
+      console.log('[Intercom] Target is ready, starting WebRTC outbound...');
+      await startOutboundWebRTC(residentSocketId);
+    });
+
+    s.on('webrtc_answer', async ({ answer }) => {
+      console.log('[Intercom] WebRTC answer received from target');
+      if (pcRef.current && pcRef.current.signalingState !== 'stable') {
+        try {
+          await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+        } catch (e) {
+          console.error('[WebRTC] Erro ao aplicar remote description (answer):', e);
+        }
+      }
+    });
+
     // BUG FIX: call_ended deve chamar stopRing() para resetar doorbellStartedRef
     // sem isso, a próxima chamada não toca som
     s.on('call_ended', () => {
@@ -776,16 +800,73 @@ export default function ResidentDashboard() {
     setNeighborSearching(false);
   };
 
-  const handleIntercomCall = (neighbor) => {
+  const startOutboundWebRTC = useCallback(async (targetSocketId) => {
+    if (!localStreamRef.current) {
+      console.warn('[WebRTC] Sem stream local para iniciar a conexão');
+      return;
+    }
+    const iceConfig = await fetchIceConfig();
+    console.log('[ICE] Caller using', iceConfig.iceServers.length, 'ICE servers');
+    const pc = new RTCPeerConnection(iceConfig);
+    pcRef.current = pc;
+
+    localStreamRef.current.getTracks().forEach(track => {
+      pc.addTrack(track, localStreamRef.current);
+    });
+
+    pc.ontrack = (event) => {
+      if (remoteVideoRef.current && event.streams[0]) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+        remoteVideoRef.current.play().catch(e => console.warn('[Video] play failed:', e));
+      }
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && socketRef.current) {
+        socketRef.current.emit('webrtc_ice_candidate', {
+          target: targetSocketId,
+          candidate: event.candidate
+        });
+      }
+    };
+
+    try {
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true
+      });
+      await pc.setLocalDescription(offer);
+
+      socketRef.current.emit('webrtc_offer', {
+        target: targetSocketId,
+        offer: pc.localDescription
+      });
+    } catch (err) {
+      console.error('[WebRTC] Erro ao criar offer para vizinho:', err);
+    }
+  }, []);
+
+  const handleIntercomCall = async (neighbor) => {
     if (!socketRef.current || !propertyId) return;
-    setStatus('active');
+    
+    setStatus('calling');
+    setCall({ callerName: neighbor.name || 'Vizinho', propertyId });
+    setVisitorSocketId(null);
+    setTab('home');
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      localStreamRef.current = stream;
+    } catch (e) {
+      console.warn('[Intercom Media] Sem acesso ao microfone:', e.message);
+    }
+
     socketRef.current.emit('initiate_call', {
       unitId: neighbor.id,
       propertyId: propertyId,
       callerName: unitName,
       photoBase64: null
     });
-    setVisitorSocketId(null);
   };
 
   const markMessagesRead = () => {
@@ -1161,6 +1242,12 @@ export default function ResidentDashboard() {
       onClick={handleUserInteraction}
       onTouchStart={handleUserInteraction}
     >
+      <style>{`
+        @keyframes pulse-blue {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+          100% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+        }
+      `}</style>
 
       {/* OVERLAY DE BLOQUEIO POR EXPIRAÇÃO DO TRIAL */}
       {isTrialExpired && (
@@ -1690,6 +1777,41 @@ export default function ResidentDashboard() {
             </div>
           )}
 
+          {/* OUTGOING CALL (INTERCOM CALLING) */}
+          {status === 'calling' && call && (
+            <div style={{ padding: '16px 24px', textAlign: 'center' }}>
+              <div style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '16px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', justifyContent: 'center' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3B82F6', animation: 'pulse 1s infinite' }} />
+                <span style={{ color: '#3B82F6', fontWeight: 800, fontSize: '13px', letterSpacing: '1px' }}>CHAMANDO VIZINHO</span>
+              </div>
+
+              {/* Animação / Ícone de telefone pulsando */}
+              <div style={{ display: 'flex', justifyContent: 'center', margin: '40px 0' }}>
+                <div style={{
+                  width: '96px', height: '96px', borderRadius: '50%',
+                  background: 'rgba(59, 130, 246, 0.1)', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  animation: 'pulse-blue 1.5s infinite', border: '2px solid rgba(59, 130, 246, 0.3)'
+                }}>
+                  <Phone size={40} color="#3B82F6" />
+                </div>
+              </div>
+
+              {/* Título e Status */}
+              <div style={{ marginBottom: '40px' }}>
+                <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: '0 0 8px' }}>
+                  {call.callerName}
+                </h3>
+                <p style={{ fontSize: '14px', color: '#64748B', fontWeight: 600 }}>Aguardando o morador atender...</p>
+              </div>
+
+              {/* Botão de desligar */}
+              <button onClick={handleEnd} style={{ width: '100%', padding: '16px', borderRadius: '14px', border: 'none', background: '#EF4444', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 8px 24px rgba(239,68,68,0.35)' }}>
+                <PhoneOff size={22} /> Cancelar Chamada
+              </button>
+            </div>
+          )}
+
           {/* RINGING */}
           {status === 'ringing' && call && (
             <div style={{ padding: '16px 24px' }}>
@@ -2098,7 +2220,7 @@ export default function ResidentDashboard() {
       {tab === 'intercom' && (
         <div style={{ padding: '20px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px' }}>Interfone Digital</h2>
-          {propertyId && <IntercomPanel propertyId={propertyId} unitId={id} socketRef={socketRef} unitName={unitName}/>}
+          {propertyId && <IntercomPanel propertyId={propertyId} unitId={id} socketRef={socketRef} unitName={unitName} onCall={handleIntercomCall}/>}
         </div>
       )}
 
