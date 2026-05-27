@@ -833,7 +833,7 @@ export default function AdminPanel() {
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', borderRight: '1px solid var(--border-subtle)', paddingRight: '12px' }}>
-            <span>👤 {localStorage.getItem('cd_admin_name') || localStorage.getItem('cd_admin_email') || 'Admin'}</span>
+            <span>👤 {localStorage.getItem('cd_admin_email') || localStorage.getItem('cd_admin_name') || 'Admin'}</span>
           </div>
 
           <button onClick={() => {

@@ -341,7 +341,7 @@ export default function MasterAdminDashboard() {
         </nav>
         <div style={{ padding: '20px', borderTop: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, paddingLeft: '4px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-            👤 Logado como: <strong style={{ color: '#0F172A' }}>{localStorage.getItem('cd_user_contact') || 'Master Admin'}</strong>
+            👤 Logado como: <strong style={{ color: '#0F172A' }}>{localStorage.getItem('cd_admin_email') || localStorage.getItem('cd_user_contact') || 'Master Admin'}</strong>
           </div>
           <button onClick={() => {
             [

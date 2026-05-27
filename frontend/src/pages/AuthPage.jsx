@@ -263,6 +263,7 @@ export default function AuthPage() {
 
         if (data.user.isSuperAdmin) {
           localStorage.setItem('cd_is_super_admin', 'true');
+          localStorage.setItem('cd_admin_email', data.user.email || identifier || '');
           navigate('/master-admin');
         } else if (data.user.isVilaAdmin) {
           localStorage.removeItem('cd_is_super_admin');
@@ -270,6 +271,8 @@ export default function AuthPage() {
           localStorage.setItem('cd_user_id', data.user.id);
           localStorage.setItem('cd_vila_property_id', data.user.propertyId || '');
           localStorage.setItem('cd_vila_admin_name', data.user.name || '');
+          localStorage.setItem('cd_vila_admin_email', data.user.email || identifier || '');
+          localStorage.setItem('cd_admin_email', data.user.email || identifier || '');
           navigate('/vila-admin');
         } else if (data.user.isAdmin) {
           localStorage.removeItem('cd_is_super_admin');

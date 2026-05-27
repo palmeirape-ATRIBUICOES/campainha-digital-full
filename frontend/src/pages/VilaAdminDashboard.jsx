@@ -62,6 +62,7 @@ export default function VilaAdminDashboard() {
   const adminId = localStorage.getItem('cd_token');
   const [propertyId, setPropertyId] = useState(() => localStorage.getItem('cd_vila_property_id') || '');
   const adminName = localStorage.getItem('cd_vila_admin_name') || 'Admin';
+  const adminEmail = localStorage.getItem('cd_vila_admin_email') || localStorage.getItem('cd_admin_email') || localStorage.getItem('cd_user_contact') || 'Admin';
 
   const [newVilaNameInput, setNewVilaNameInput] = useState('');
   const [creatingVila, setCreatingVila] = useState(false);
@@ -522,7 +523,7 @@ export default function VilaAdminDashboard() {
               {creatingVila ? 'Criando...' : 'Criar Vila'}
             </button>
             <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600, textAlign: 'center', marginBottom: '8px' }}>
-              👤 Logado como: {adminName}
+              👤 Logado como: {adminEmail}
             </div>
             <button
               type="button"
@@ -553,8 +554,8 @@ export default function VilaAdminDashboard() {
             <span style={{ fontSize: '14px', fontWeight: 800 }}>{property?.name || 'Vila'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              👤 {adminName}
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={adminEmail}>
+              👤 {adminEmail}
             </span>
             <button onClick={logout} style={{
               padding: '6px 12px', borderRadius: '8px', border: 'none',
@@ -646,8 +647,8 @@ export default function VilaAdminDashboard() {
           </nav>
 
           <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: 600, paddingLeft: '4px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={adminName}>
-              👤 Logado: <span style={{ color: '#FFF', fontWeight: 800 }}>{adminName}</span>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: 600, paddingLeft: '4px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={adminEmail}>
+              👤 Logado: <span style={{ color: '#FFF', fontWeight: 800 }}>{adminEmail}</span>
             </div>
             <button onClick={logout} style={{
               width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
