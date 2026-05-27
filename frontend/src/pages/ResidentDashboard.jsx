@@ -418,7 +418,11 @@ export default function ResidentDashboard() {
           }
           if (data.clientCode) setAccessCode(data.clientCode);
           else if (data.plateCode) setAccessCode(data.plateCode);
-          if (data.name) setUnitName(data.name);
+          const uName = data.unitName || data.propertyName || data.name || '';
+          if (uName) {
+            setUnitName(uName);
+            localStorage.setItem('cd_unit_name', uName);
+          }
           if (data.trialEndsAt) setTrialEndsAt(data.trialEndsAt);
           if (data.propertyId) {
             setPropertyId(data.propertyId);

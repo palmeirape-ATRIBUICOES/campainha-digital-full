@@ -179,9 +179,10 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
         setClientCode(data.clientCode || '');
         setPlateCode(data.plateCode || '');
         
-        if (data.propertyName) {
-          setUnitName(data.propertyName);
-          localStorage.setItem('cd_unit_name', data.propertyName);
+        const uName = data.unitName || data.propertyName || '';
+        if (uName) {
+          setUnitName(uName);
+          localStorage.setItem('cd_unit_name', uName);
         }
         
         if (data.plateCode) {

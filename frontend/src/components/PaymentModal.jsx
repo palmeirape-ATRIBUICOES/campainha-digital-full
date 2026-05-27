@@ -24,6 +24,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
   const [copied, setCopied] = useState(false);
   const [planPrice, setPlanPrice] = useState('39.90');
   const [simulating, setSimulating] = useState(false);
+  const [initialTrialEndsAt, setInitialTrialEndsAt] = useState(undefined);
 
   const handleSimulatePayment = async () => {
     setSimulating(true);
@@ -47,6 +48,24 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
       setSimulating(false);
     }
   };
+
+  useEffect(() => {
+    const fetchInitialStatus = async () => {
+      const uid = userId || localStorage.getItem('cd_user_id') || '';
+      if (!uid) return;
+      try {
+        const res = await fetch(`${API}/api/payment/status/${uid}`);
+        if (res.ok) {
+          const data = await res.json();
+          setInitialTrialEndsAt(data.trialEndsAt || null);
+        }
+      } catch (err) {
+        console.error('[PaymentModal] Erro ao buscar status inicial:', err);
+        setInitialTrialEndsAt(null);
+      }
+    };
+    fetchInitialStatus();
+  }, [userId]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -93,10 +112,9 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
     const email = userEmail || localStorage.getItem('cd_user_contact') || '';
     const uid = userId || localStorage.getItem('cd_user_id') || '';
 
-    if (!email) {
-      setPixError('E-mail não encontrado. Faça login novamente.');
-      setPixLoading(false);
-      return;
+    let emailToUse = email.trim().toLowerCase();
+    if (!emailToUse || !emailToUse.includes('@')) {
+      emailToUse = `${uid || 'cliente'}@campainhadigital.com`;
     }
 
     setPixLoading(true);
@@ -108,7 +126,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
       let res = await fetch(`${API}/api/payment/pix`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, userId: uid })
+        body: JSON.stringify({ email: emailToUse, userId: uid })
       });
 
       // Se a rota não existir no servidor (404), faz fallback para /api/payment/process
@@ -118,7 +136,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             payment_method_id: 'pix',
-            payer: { email },
+            payer: { email: emailToUse },
             external_reference: uid
           })
         });
@@ -153,7 +171,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
 
   // Polling automático para verificar aprovação do PIX
   useEffect(() => {
-    if (!pixData) return;
+    if (!pixData || initialTrialEndsAt === undefined) return;
 
     const uid = userId || localStorage.getItem('cd_user_id') || '';
     if (!uid) return;
@@ -163,7 +181,23 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
         const res = await fetch(`${API}/api/payment/status/${uid}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.isPremium) {
+          
+          let approved = false;
+          if (!initialTrialEndsAt) {
+            // Se não tinha trial ou estava expirado, basta que o novo status seja premium
+            if (data.isPremium) approved = true;
+          } else {
+            // Se já tinha trial ativo, o trialEndsAt deve ter mudado e aumentado (estendido)
+            if (data.trialEndsAt && data.trialEndsAt !== initialTrialEndsAt) {
+              const prev = new Date(initialTrialEndsAt);
+              const curr = new Date(data.trialEndsAt);
+              if (curr > prev) {
+                approved = true;
+              }
+            }
+          }
+
+          if (approved) {
             clearInterval(interval);
             setResult({ status: 'approved' });
           }
@@ -174,7 +208,7 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
     }, 3000); // Consulta a cada 3 segundos
 
     return () => clearInterval(interval);
-  }, [pixData, userId]);
+  }, [pixData, userId, initialTrialEndsAt]);
 
   const handleRetry = () => {
     setRetryCount(c => c + 1);

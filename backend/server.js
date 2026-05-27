@@ -678,7 +678,10 @@ app.post('/api/payment/pix', async (req, res) => {
     const { email, userId, cpf } = req.body;
     const activePrice = await getPlanPrice();
 
-    if (!email) return res.status(400).json({ error: 'E-mail é obrigatório.' });
+    let cleanEmail = email ? email.trim().toLowerCase() : '';
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      cleanEmail = `${userId || 'cliente'}@campainhadigital.com`;
+    }
 
     // Busca o nome do usuário no banco para enviar ao Mercado Pago
     let firstName = 'Cliente';
@@ -702,7 +705,7 @@ app.post('/api/payment/pix', async (req, res) => {
       description: 'Campainha Digital - Plano Anual Premium',
       payment_method_id: 'pix',
       payer: {
-        email,
+        email: cleanEmail,
         first_name: firstName,
         last_name: lastName,
         identification: {
@@ -1259,18 +1262,20 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
     }
 
     // Obtém o propertyId sendo o usuário admin da propriedade, morador de uma unidade ou admin de vila
-    let propertyId, propertyName, isVila;
+    let propertyId, propertyName, isVila, unitName;
     if (user.isVilaAdmin) {
       propertyId = user.propertiesVilaAdmin?.[0]?.id || null;
       propertyName = user.propertiesVilaAdmin?.[0]?.name || '';
       isVila = true;
+      unitName = '';
     } else {
       propertyId = user.propertiesManaged?.[0]?.id || user.units?.[0]?.propertyId || null;
-      propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.property?.name || '';
       isVila = user.propertiesManaged?.[0]?.isVila || user.units?.[0]?.property?.isVila || false;
+      propertyName = user.propertiesManaged?.[0]?.name || user.units?.[0]?.property?.name || '';
+      unitName = user.units?.[0]?.name || '';
     }
     
-    res.json({ ...user, propertyId, propertyName, isVila });
+    res.json({ ...user, propertyId, propertyName, isVila, unitName });
   } catch (err) {
     console.error('Settings error:', err);
     res.status(500).json({ error: 'Erro ao carregar configs' });
