@@ -43,6 +43,7 @@ model User {
   units             Unit[]     @relation("UnitResidents")
   
   doorbellEnabled   Boolean   @default(true)
+  intercomEnabled   Boolean   @default(true)
   quietModeStart    String?   
   quietModeEnd      String?   
   

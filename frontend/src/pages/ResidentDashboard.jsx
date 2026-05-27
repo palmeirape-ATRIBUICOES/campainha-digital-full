@@ -1046,7 +1046,7 @@ export default function ResidentDashboard() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', marginBottom: '8px' }}>FUNCIONALIDADES</p>
           
-          {!isHouseResident && (
+          {(!isHouseResident || residentIsVila) && (
             <button onClick={() => { setTab('intercom'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'intercom' ? '#F0F9FF' : 'transparent', color: tab === 'intercom' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
               <Building2 size={20} color={tab === 'intercom' ? '#0369A1' : '#64748B'} /> Interfone Digital
             </button>

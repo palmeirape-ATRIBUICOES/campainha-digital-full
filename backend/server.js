@@ -1213,6 +1213,7 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
         phone: true,
         isVilaAdmin: true,
         doorbellEnabled: true,
+        intercomEnabled: true,
         quietModeStart: true,
         quietModeEnd: true,
         clientCode: true,
@@ -1250,9 +1251,12 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
 
 app.put('/api/user/settings', authenticate, async (req, res) => {
   try {
-    const { doorbellEnabled, quietModeStart, quietModeEnd, generateClientCode, propertyName } = req.body;
+    const { doorbellEnabled, intercomEnabled, quietModeStart, quietModeEnd, generateClientCode, propertyName } = req.body;
     
     let data = { doorbellEnabled, quietModeStart, quietModeEnd };
+    if (intercomEnabled !== undefined) {
+      data.intercomEnabled = !!intercomEnabled;
+    }
     
     if (generateClientCode) {
       data.clientCode = generateAccessCode() + generateAccessCode();
@@ -2186,7 +2190,7 @@ app.delete('/api/vila/:propertyId/units/:unitId', async (req, res) => {
 
 // Cadastrar Morador sob uma Campainha na Vila
 app.post('/api/vila/:propertyId/units/:unitId/residents', async (req, res) => {
-  const { name, email, password, plateCode } = req.body;
+  const { name, email, password, plateCode, isDoorman } = req.body;
   const token = req.headers['authorization'];
   if (!token) return res.status(401).json({ error: 'Não autorizado.' });
   if (!name?.trim()) return res.status(400).json({ error: 'Nome do morador é obrigatório.' });
@@ -2239,6 +2243,7 @@ app.post('/api/vila/:propertyId/units/:unitId/residents', async (req, res) => {
         plateCode: plateCode?.trim().toUpperCase() || null,
         isResident: true,
         isCondoResident: true,
+        isDoorman: !!isDoorman,
         trialEndsAt: property.nextPaymentAt,
         units: { connect: { id: unit.id } }
       }
@@ -2283,7 +2288,7 @@ app.delete('/api/vila/:propertyId/units/:unitId/residents/:residentId', async (r
 
 // Editar Morador de uma Campainha na Vila
 app.put('/api/vila/:propertyId/units/:unitId/residents/:residentId', async (req, res) => {
-  const { name, email, password, plateCode } = req.body;
+  const { name, email, password, plateCode, isDoorman } = req.body;
   const token = req.headers['authorization'];
   if (!token) return res.status(401).json({ error: 'Não autorizado.' });
   if (!name?.trim()) return res.status(400).json({ error: 'Nome do morador é obrigatório.' });
@@ -2336,6 +2341,10 @@ app.put('/api/vila/:propertyId/units/:unitId/residents/:residentId', async (req,
       email: email?.trim().toLowerCase() || null,
       plateCode: plateCode?.trim().toUpperCase() || null
     };
+
+    if (isDoorman !== undefined) {
+      updateData.isDoorman = !!isDoorman;
+    }
 
     if (password?.trim()) {
       updateData.password = password.trim();
@@ -3126,6 +3135,58 @@ app.get('/api/properties/:propertyId/online-status', async (req, res) => {
   }
 });
 
+// Retornar status do interfone (porteiro cadastrado e vizinhos disponíveis)
+app.get('/api/properties/:propertyId/intercom-status', async (req, res) => {
+  const { propertyId } = req.params;
+  const { excludeUnitId } = req.query;
+  try {
+    const doormanCount = await prisma.user.count({
+      where: {
+        isDoorman: true,
+        units: {
+          some: {
+            propertyId
+          }
+        }
+      }
+    });
+
+    const units = await prisma.unit.findMany({
+      where: {
+        propertyId,
+        NOT: excludeUnitId ? { id: excludeUnitId } : undefined,
+        residents: {
+          some: {
+            intercomEnabled: true
+          }
+        }
+      },
+      include: {
+        residents: {
+          where: {
+            intercomEnabled: true
+          },
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+
+    res.json({
+      hasDoorman: doormanCount > 0,
+      availableUnits: units
+    });
+  } catch (err) {
+    console.error('Error fetching intercom status:', err);
+    res.status(500).json({ error: 'Erro ao buscar status do interfone.' });
+  }
+});
+
 // Listar códigos de visitantes da unidade
 app.get('/api/units/:unitId/visitor-codes', async (req, res) => {
   try {
@@ -3271,6 +3332,27 @@ io.on('connection', (socket) => {
     activeSockets.get(userId).add(socket.id);
     socket.join(`user_${userId}`);
     console.log(`[WS] Usuário ${userId} registrado no socket ${socket.id}`);
+  });
+
+  socket.on('register_doorman', ({ propertyId }) => {
+    socket.join(`doorman_${propertyId}`);
+    console.log(`[WS] Porteiro registrado para propriedade ${propertyId} no socket ${socket.id}`);
+  });
+
+  socket.on('resident_call_doorman', ({ propertyId, unitId, callerName }) => {
+    console.log(`[WS Call] Morador chamando portaria: unitId=${unitId}, propertyId=${propertyId}`);
+    io.to(`doorman_${propertyId}`).emit('incoming_resident_call', { callerName, unitId });
+  });
+
+  socket.on('resident_message_doorman', ({ propertyId, unitId, message, senderName, authorizeEntry }) => {
+    console.log(`[WS Msg] Morador mandando mensagem para portaria: unitId=${unitId}, msg=${message}`);
+    io.to(`doorman_${propertyId}`).emit('resident_message', { 
+      message, 
+      senderName, 
+      timestamp: new Date(), 
+      authorizeEntry: !!authorizeEntry, 
+      unitId 
+    });
   });
 
   socket.on('join_room', ({ room }) => {

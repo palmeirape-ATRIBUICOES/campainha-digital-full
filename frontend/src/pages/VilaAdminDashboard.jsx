@@ -48,6 +48,7 @@ export default function VilaAdminDashboard() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [chatActiveMobile, setChatActiveMobile] = useState(false);
   const [editingResident, setEditingResident] = useState(null);
+  const [newResidentIsDoorman, setNewResidentIsDoorman] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -281,6 +282,7 @@ export default function VilaAdminDashboard() {
     setNewResidentEmail(resident.email || '');
     setNewResidentPassword('');
     setNewResidentPlate(resident.plateCode || '');
+    setNewResidentIsDoorman(resident.isDoorman || false);
     setResidentModalError('');
     setIsResidentModalOpen(true);
   };
@@ -292,6 +294,7 @@ export default function VilaAdminDashboard() {
     setNewResidentEmail('');
     setNewResidentPassword('');
     setNewResidentPlate('');
+    setNewResidentIsDoorman(false);
     setResidentModalError('');
     setTargetUnit(null);
   };
@@ -321,7 +324,8 @@ export default function VilaAdminDashboard() {
           name: newResidentName.trim(),
           email: newResidentEmail.trim() || undefined,
           password: newResidentPassword.trim() || undefined,
-          plateCode: newResidentPlate.trim() || undefined
+          plateCode: newResidentPlate.trim() || undefined,
+          isDoorman: newResidentIsDoorman
         })
       });
       if (res.ok) {
@@ -932,7 +936,12 @@ export default function VilaAdminDashboard() {
                                   <Trash2 size={13} />
                                 </button>
                               </div>
-                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', paddingRight: '40px' }}>{res.name}</div>
+                              <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', paddingRight: '40px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {res.name}
+                                {res.isDoorman && (
+                                  <span style={{ fontSize: '9px', background: '#F59E0B', color: '#FFF', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>Porteiro</span>
+                                )}
+                              </div>
                               {res.email && (
                                 <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px', wordBreak: 'break-all' }}>
                                   <Mail size={10} style={{ flexShrink: 0 }} /> {res.email}
@@ -1214,6 +1223,17 @@ export default function VilaAdminDashboard() {
                   placeholder="Ex: ABC1D23" 
                   style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }}
                 />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  id="newResidentIsDoorman"
+                  checked={newResidentIsDoorman} 
+                  onChange={e => setNewResidentIsDoorman(e.target.checked)} 
+                  style={{ width: '16px', height: '16px', accentColor: '#3B82F6', cursor: 'pointer' }}
+                />
+                <label htmlFor="newResidentIsDoorman" style={{ fontSize: '13px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>Definir como Porteiro (Doorman)</label>
               </div>
 
               <button 

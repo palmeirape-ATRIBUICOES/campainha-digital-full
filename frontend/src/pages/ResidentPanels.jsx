@@ -145,6 +145,7 @@ export function HistoryPanel({ unitId, propertyId }) {
 
 export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyId }) {
   const [enabled, setEnabled] = useState(true);
+  const [intercomEnabled, setIntercomEnabled] = useState(true);
   const [quietStart, setQuietStart] = useState('22:00');
   const [quietEnd, setQuietEnd] = useState('07:00');
   const [inviteCode, setInviteCode] = useState('ABCD-123'); // Exemplo
@@ -172,6 +173,7 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
       if (res.ok) {
         const data = await res.json();
         setEnabled(data.doorbellEnabled);
+        setIntercomEnabled(data.intercomEnabled ?? true);
         setQuietStart(data.quietModeStart || '22:00');
         setQuietEnd(data.quietModeEnd || '07:00');
         setClientCode(data.clientCode || '');
@@ -293,6 +295,7 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
         headers: { 'Content-Type': 'application/json', 'Authorization': token },
         body: JSON.stringify({ 
           doorbellEnabled: enabled, 
+          intercomEnabled: intercomEnabled,
           quietModeStart: quietStart, 
           quietModeEnd: quietEnd,
           propertyName: unitName
@@ -336,6 +339,21 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
               style={{ background: enabled ? '#10B981' : '#F1F5F9', border: 'none', width: '50px', height: '26px', borderRadius: '20px', position: 'relative', cursor: 'pointer', transition: 'all 0.3s' }}
             >
               <div style={{ position: 'absolute', top: '3px', left: enabled ? '27px' : '3px', width: '20px', height: '20px', borderRadius: '50%', background: '#FFF', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', transition: 'all 0.3s' }} />
+            </button>
+          </div>
+
+          <div style={{ height: '1px', background: '#F1F5F9' }} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <span style={{ fontWeight: 700, fontSize: '15px' }}>Interfone de Vizinhos</span>
+              <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>Disponível para receber chamadas de vizinhos</p>
+            </div>
+            <button 
+              onClick={() => setIntercomEnabled(!intercomEnabled)}
+              style={{ background: intercomEnabled ? '#10B981' : '#F1F5F9', border: 'none', width: '50px', height: '26px', borderRadius: '20px', position: 'relative', cursor: 'pointer', transition: 'all 0.3s' }}
+            >
+              <div style={{ position: 'absolute', top: '3px', left: intercomEnabled ? '27px' : '3px', width: '20px', height: '20px', borderRadius: '50%', background: '#FFF', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', transition: 'all 0.3s' }} />
             </button>
           </div>
 
