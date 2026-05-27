@@ -521,6 +521,9 @@ export default function VilaAdminDashboard() {
             >
               {creatingVila ? 'Criando...' : 'Criar Vila'}
             </button>
+            <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600, textAlign: 'center', marginBottom: '8px' }}>
+              👤 Logado como: {adminName}
+            </div>
             <button
               type="button"
               onClick={logout}
@@ -549,13 +552,18 @@ export default function VilaAdminDashboard() {
             <Logo size={36} />
             <span style={{ fontSize: '14px', fontWeight: 800 }}>{property?.name || 'Vila'}</span>
           </div>
-          <button onClick={logout} style={{
-            padding: '6px 12px', borderRadius: '8px', border: 'none',
-            background: 'rgba(239,68,68,0.2)', color: '#FCA5A5', fontWeight: 700,
-            fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
-          }}>
-            <LogOut size={12} /> Sair
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              👤 {adminName}
+            </span>
+            <button onClick={logout} style={{
+              padding: '6px 12px', borderRadius: '8px', border: 'none',
+              background: 'rgba(239,68,68,0.2)', color: '#FCA5A5', fontWeight: 700,
+              fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+            }}>
+              <LogOut size={12} /> Sair
+            </button>
+          </div>
         </header>
       )}
 
@@ -637,7 +645,10 @@ export default function VilaAdminDashboard() {
             ))}
           </nav>
 
-          <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: 600, paddingLeft: '4px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={adminName}>
+              👤 Logado: <span style={{ color: '#FFF', fontWeight: 800 }}>{adminName}</span>
+            </div>
             <button onClick={logout} style={{
               width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
               background: 'rgba(239,68,68,0.15)', color: '#FCA5A5', fontWeight: 700,

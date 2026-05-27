@@ -832,6 +832,10 @@ export default function AdminPanel() {
             {darkMode ? <><Sun size={16} color="#F59E0B" /> Modo Claro</> : <><Moon size={16} color="#3B82F6" /> Modo Noturno</>}
           </button>
 
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', borderRight: '1px solid var(--border-subtle)', paddingRight: '12px' }}>
+            <span>👤 {localStorage.getItem('cd_admin_name') || localStorage.getItem('cd_admin_email') || 'Admin'}</span>
+          </div>
+
           <button onClick={() => {
             [
               'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',

@@ -339,7 +339,10 @@ export default function MasterAdminDashboard() {
           <SidebarLink icon={History} label="Logs" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
           <SidebarLink icon={Settings2} label="Configurações" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         </nav>
-        <div style={{ padding: '20px', borderTop: '1px solid #F1F5F9' }}>
+        <div style={{ padding: '20px', borderTop: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, paddingLeft: '4px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            👤 Logado como: <strong style={{ color: '#0F172A' }}>{localStorage.getItem('cd_user_contact') || 'Master Admin'}</strong>
+          </div>
           <button onClick={() => {
             [
               'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
