@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Bell, CheckCircle, ShieldCheck, MapPin, ChevronRight, Mic, Video, PhoneOff, WifiOff, KeyRound, Navigation, AlertTriangle, LocateFixed } from 'lucide-react';
 import Logo from '../components/Logo';
@@ -36,7 +36,15 @@ async function fetchIceConfig() {
 
 export default function VisitorCall() {
   const { id } = useParams(); // propertyId
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const targetUnitId = queryParams.get('unitId');
+
   const [property, setProperty]     = useState(null);
+
+  const targetUnit = (targetUnitId && property && property.units)
+    ? property.units.find(u => u.id === targetUnitId)
+    : null;
   const [callingUnit, setCallingUnit] = useState(null);
   const [countdown, setCountdown]   = useState(0);
   const [status, setStatus]         = useState('idle');
@@ -426,7 +434,20 @@ export default function VisitorCall() {
               </div>
             </div>
           )}
-          {(property.type === 'individual' || property.type === 'house' || (property.units && property.units.length <= 1)) ? (
+          {targetUnit ? (
+            <button
+              id="btn-tocar-campainha"
+              className="btn-primary"
+              style={{ width: '100%', padding: '32px 24px', fontSize: '20px', borderRadius: '24px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', boxShadow: '0 12px 40px rgba(0, 229, 255, 0.3)' }}
+              onClick={() => handleCall(targetUnit)}
+            >
+              <Bell size={48} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontWeight: 800 }}>TOCAR CAMPAINHA</span>
+                <span style={{ fontSize: '14px', opacity: 0.8, fontWeight: 600 }}>Unidade: {targetUnit.name}</span>
+              </div>
+            </button>
+          ) : (property.type === 'individual' || property.type === 'house' || (property.units && property.units.length <= 1)) ? (
             <button
               id="btn-tocar-campainha"
               className="btn-primary"

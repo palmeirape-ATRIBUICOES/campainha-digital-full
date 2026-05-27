@@ -425,6 +425,9 @@ export default function ResidentDashboard() {
           if (data.isVila !== undefined) {
             localStorage.setItem('residentIsVila', data.isVila ? 'true' : 'false');
           }
+          if (data.units?.[0]?.id) {
+            localStorage.setItem('residentUnitId', data.units[0].id);
+          }
           fetchMessages();
           setUserContact(data.email || data.phone || data.clientCode || data.plateCode || '');
 
@@ -1125,6 +1128,14 @@ export default function ResidentDashboard() {
     }
   };
 
+  const currentPropId = propertyId || savedPropId || localStorage.getItem('residentPropertyId');
+  const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
+  const isVilaUser = residentIsVila || localStorage.getItem('residentIsVila') === 'true';
+
+  const qrCodeUrl = (isVilaUser && currentUnitId)
+    ? `${window.location.origin + window.location.pathname}#/chamada/${currentPropId}?unitId=${currentUnitId}`
+    : `${window.location.origin + window.location.pathname}#/chamada/${currentPropId}`;
+
   return (
     <div 
       style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', paddingBottom: '72px' }} 
@@ -1320,7 +1331,7 @@ export default function ResidentDashboard() {
                   
                   <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '20px', display: 'flex', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
                     <img 
-                      src={`${API}/api/qrcode?text=${encodeURIComponent(`${window.location.origin + window.location.pathname}#/chamada/${propertyId}`)}`} 
+                      src={`${API}/api/qrcode?text=${encodeURIComponent(qrCodeUrl)}`} 
                       alt="QR Code Campainha Digital" 
                       style={{ width: '180px', height: '180px', display: 'block', borderRadius: '12px' }} 
                     />
@@ -1329,7 +1340,7 @@ export default function ResidentDashboard() {
                   <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
                     <button 
                       onClick={() => {
-                        const url = `${window.location.origin + window.location.pathname}#/chamada/${propertyId}`;
+                        const url = qrCodeUrl;
                         const shareText = `Toque a minha Campainha Digital online quando chegar:\n👉 ${url}`;
                         if (navigator.share) {
                           navigator.share({
@@ -1347,7 +1358,7 @@ export default function ResidentDashboard() {
                     </button>
                     <button 
                       onClick={() => {
-                        const url = `${API}/api/qrcode?text=${encodeURIComponent(`${window.location.origin + window.location.pathname}#/chamada/${propertyId}`)}`;
+                        const url = `${API}/api/qrcode?text=${encodeURIComponent(qrCodeUrl)}`;
                         const a = document.createElement('a');
                         a.href = url;
                         a.download = `Campainha_Digital_${unitName}.png`;
