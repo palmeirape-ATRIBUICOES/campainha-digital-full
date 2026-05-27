@@ -3265,7 +3265,10 @@ io.on('connection', (socket) => {
 
   socket.on('register_user', ({ userId }) => {
     socket.userId = userId;
-    activeSockets.set(userId, socket.id);
+    if (!activeSockets.has(userId)) {
+      activeSockets.set(userId, new Set());
+    }
+    activeSockets.get(userId).add(socket.id);
     socket.join(`user_${userId}`);
     console.log(`[WS] Usuário ${userId} registrado no socket ${socket.id}`);
   });
@@ -3500,8 +3503,12 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('[WS] desconectado:', socket.id);
-    if (socket.userId) {
-      activeSockets.delete(socket.userId);
+    if (socket.userId && activeSockets.has(socket.userId)) {
+      const sockets = activeSockets.get(socket.userId);
+      sockets.delete(socket.id);
+      if (sockets.size === 0) {
+        activeSockets.delete(socket.userId);
+      }
     }
   });
 });

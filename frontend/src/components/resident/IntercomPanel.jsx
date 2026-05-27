@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Phone, Search, Building2, MessageSquare, Send, Volume2 } from 'lucide-react';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { API } from '../../config';
 
 export default function IntercomPanel({ propertyId, unitId, socketRef, unitName }) {
   const [block, setBlock] = useState('');
