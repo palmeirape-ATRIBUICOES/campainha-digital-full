@@ -5,7 +5,7 @@ import html2canvas from 'html2canvas';
 import {
   Bell, Home, MessageSquare, Settings, LogOut, Users, Send, Megaphone,
   ChevronRight, RefreshCw, Hash, CheckCircle2, X, AlertCircle, Download,
-  Edit2, Trash2, UserPlus, Key, Car, Mail
+  Edit2, Trash2, UserPlus, Key, Car, Mail, MessageCircle
 } from 'lucide-react';
 import { API } from '../config';
 import Logo from '../components/Logo';
@@ -13,7 +13,8 @@ import PrintablePlate from '../components/PrintablePlate';
 
 export default function VilaAdminDashboard() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState('messages');
+  const [tab, setTab] = useState('home');
+  const [showMenu, setShowMenu] = useState(false);
   const [property, setProperty] = useState(null);
   const [units, setUnits] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -542,136 +543,188 @@ export default function VilaAdminDashboard() {
     );
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: '100vh', fontFamily: 'Inter, sans-serif', background: '#F0F4F8' }}>
-
-      {/* MOBILE HEADER */}
-      {isMobile && (
-        <header style={{
-          position: 'fixed', top: 0, left: 0, right: 0, height: '60px',
-          background: 'linear-gradient(135deg, #0F2027 0%, #1a3a4a 100%)',
-          color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 20px', zIndex: 1000, boxShadow: '0 2px 10px rgba(0,0,0,0.15)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Logo size={36} />
-            <span style={{ fontSize: '14px', fontWeight: 800 }}>{property?.name || 'Vila'}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={adminEmail}>
-              👤 {adminEmail}
-            </span>
-            <button onClick={logout} style={{
-              padding: '6px 12px', borderRadius: '8px', border: 'none',
-              background: 'rgba(239,68,68,0.2)', color: '#FCA5A5', fontWeight: 700,
-              fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
-            }}>
-              <LogOut size={12} /> Sair
-            </button>
-          </div>
-        </header>
-      )}
-
-      {/* MOBILE BOTTOM NAVIGATION */}
-      {isMobile && (
-        <nav style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, height: '64px',
-          background: '#FFF', borderTop: '1px solid #E2E8F0', display: 'flex',
-          justifyContent: 'space-around', alignItems: 'center', zIndex: 1000,
-          boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
-        }}>
+  const HamburgerMenu = () => (
+    <>
+      <div 
+        onClick={() => setShowMenu(false)}
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 2000, opacity: showMenu ? 1 : 0, visibility: showMenu ? 'visible' : 'hidden', transition: 'all 0.3s' }} 
+      />
+      <div style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '280px', background: '#FFF', zIndex: 2001, transform: showMenu ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)', padding: '32px 24px', display: 'flex', flexDirection: 'column', boxShadow: '8px 0 32px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+          <Logo size={32} />
+          <button onClick={() => setShowMenu(false)} style={{ background: '#F1F5F9', border: 'none', padding: '8px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} color="#64748B" /></button>
+        </div>
+        
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', marginBottom: '8px' }}>FUNCIONALIDADES</p>
+          
           {[
-            { id: 'messages', icon: MessageSquare, label: 'Mensagens', badge: totalUnread },
-            { id: 'units', icon: Home, label: 'Campainhas', badge: units.length },
-            { id: 'settings', icon: Settings, label: 'Ajustes' }
+            { id: 'home', icon: <Home size={20} />, label: 'Início' },
+            { id: 'messages', icon: <MessageSquare size={20} />, label: 'Mensagens', badge: totalUnread },
+            { id: 'units', icon: <Bell size={20} />, label: 'Campainhas', badge: units.length },
+            { id: 'settings', icon: <Settings size={20} />, label: 'Configurações' }
           ].map(item => (
-            <button key={item.id} onClick={() => setTab(item.id)} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              border: 'none', background: 'transparent', cursor: 'pointer',
-              color: tab === item.id ? '#3B82F6' : '#64748B', fontWeight: 700, fontSize: '11px',
-              padding: '6px', width: '80px', position: 'relative', transition: 'color 0.2s'
-            }}>
-              <item.icon size={20} style={{ marginBottom: '4px' }} />
-              {item.label}
+            <button key={item.id} onClick={() => { setTab(item.id); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === item.id ? '#F0F9FF' : 'transparent', color: tab === item.id ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left', position: 'relative', width: '100%' }}>
+              <div style={{ color: tab === item.id ? '#0369A1' : '#64748B', display: 'flex', alignItems: 'center' }}>{item.icon}</div>
+              <span>{item.label}</span>
               {item.badge > 0 && (
-                <span style={{
-                  position: 'absolute', top: '2px', right: '16px', background: '#F97316',
-                  color: '#FFF', fontSize: '9px', fontWeight: 800, padding: '2px 5px',
-                  borderRadius: '10px', minWidth: '15px', textAlign: 'center'
-                }}>{item.badge}</span>
+                <span style={{ marginLeft: 'auto', background: item.id === 'messages' ? '#F97316' : '#EFF6FF', color: item.id === 'messages' ? '#FFF' : '#3B82F6', fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '10px' }}>{item.badge}</span>
               )}
             </button>
           ))}
-        </nav>
-      )}
+        </div>
 
-      {/* SIDEBAR */}
-      {!isMobile && (
-        <aside style={{
-          width: '260px', background: 'linear-gradient(180deg, #0F2027 0%, #1a3a4a 100%)',
-          display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh',
-          boxShadow: '4px 0 24px rgba(0,0,0,0.2)'
-        }}>
-          {/* Logo + Name */}
-          <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            <Logo size={80} />
-            <div style={{ marginTop: '16px' }}>
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}>Admin de Vila</div>
-              <div style={{ fontSize: '16px', color: '#FFF', fontWeight: 800, marginTop: '4px' }}>{property?.name || 'Carregando...'}</div>
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{adminName}</div>
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {adminEmail && (
+            <div style={{ padding: '12px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Logado como:</span>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', wordBreak: 'break-all' }}>{adminEmail}</span>
+            </div>
+          )}
+
+          <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: 'rgba(239, 68, 68, 0.08)', color: '#EF4444', fontWeight: 700, fontSize: '15px', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+            <LogOut size={20} /> Sair
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'Inter, sans-serif', background: '#F0F4F8' }}>
+      <HamburgerMenu />
+
+      {/* HEADER BAR */}
+      <header style={{
+        position: 'sticky',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '70px',
+        background: '#FFF',
+        borderBottom: '1px solid #E2E8F0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 24px',
+        zIndex: 900
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button onClick={() => setShowMenu(true)} style={{ background: '#0F172A', color: '#FFF', border: 'none', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '20px' }}>
+              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+              <div style={{ height: '2px', width: '60%', background: '#FFF', borderRadius: '2px' }} />
+            </div>
+          </button>
+          <div>
+            <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#0F172A' }}>{property?.name || 'Vila'}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }} />
+              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Painel Administrativo da Vila</span>
             </div>
           </div>
+        </div>
 
-          {/* Nav */}
-          <nav style={{ padding: '16px 12px', flex: 1 }}>
-            {[
-              { id: 'messages', icon: MessageSquare, label: 'Mensagens', badge: totalUnread },
-              { id: 'units', icon: Home, label: 'Campainhas', badge: units.length },
-              { id: 'settings', icon: Settings, label: 'Configurações' }
-            ].map(item => (
-              <button key={item.id} onClick={() => setTab(item.id)} style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
-                padding: '12px 16px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                background: tab === item.id ? 'rgba(255,255,255,0.12)' : 'transparent',
-                color: tab === item.id ? '#FFF' : 'rgba(255,255,255,0.5)',
-                fontWeight: 700, fontSize: '14px', marginBottom: '4px',
-                transition: 'all 0.2s', textAlign: 'left', position: 'relative'
-              }}>
-                <item.icon size={18} />
-                {item.label}
-                {item.badge > 0 && (
-                  <span style={{
-                    marginLeft: 'auto', background: item.id === 'messages' ? '#F97316' : 'rgba(255,255,255,0.15)',
-                    color: '#FFF', fontSize: '11px', fontWeight: 800, padding: '2px 7px',
-                    borderRadius: '20px', minWidth: '20px', textAlign: 'center'
-                  }}>{item.badge}</span>
-                )}
-              </button>
-            ))}
-          </nav>
-
-          <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: 600, paddingLeft: '4px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={adminEmail}>
-              👤 Logado: <span style={{ color: '#FFF', fontWeight: 800 }}>{adminEmail}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {!isMobile && adminEmail && (
+            <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
+              👤 Logado: <span style={{ color: '#0F172A', fontWeight: 700 }}>{adminEmail}</span>
             </div>
-            <button onClick={logout} style={{
-              width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
-              background: 'rgba(239,68,68,0.15)', color: '#FCA5A5', fontWeight: 700,
-              fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: '8px'
-            }}>
-              <LogOut size={16} /> Sair
-            </button>
-          </div>
-        </aside>
-      )}
+          )}
+        </div>
+      </header>
 
-      {/* MAIN */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', paddingTop: isMobile ? '60px' : '0', paddingBottom: isMobile ? '64px' : '0' }}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+
+        {/* ── INÍCIO ── */}
+        {tab === 'home' && (
+          <div style={{ padding: isMobile ? '20px' : '40px 48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+            <div style={{ width: '100%', maxWidth: '600px', textAlign: 'center' }}>
+              <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A', margin: 0 }}>🏠 Painel da Vila Digital</h2>
+              <p style={{ color: '#64748B', marginTop: '6px', margin: 0 }}>
+                Gerencie sua vila, campainhas e comunique-se em tempo real.
+              </p>
+            </div>
+
+            {/* QR Code Principal da Vila */}
+            {propertyId && (
+              <div style={{ width: '100%', maxWidth: '440px', background: '#FFF', borderRadius: '24px', padding: '28px', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: 0, textTransform: 'uppercase' }}>QR CODE PRINCIPAL DA VILA</p>
+                  <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>
+                    Este é o QR Code de entrada da Vila. Os visitantes escaneiam para ver a lista de campainhas.
+                  </span>
+                </div>
+                
+                <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '20px', display: 'flex', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
+                  {qrLoading ? (
+                    <div style={{ width: '180px', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <RefreshCw size={24} className="animate-spin" color="#94A3B8" />
+                    </div>
+                  ) : qrImage ? (
+                    <img 
+                      src={qrImage} 
+                      alt="QR Code Principal da Vila" 
+                      style={{ width: '180px', height: '180px', display: 'block', borderRadius: '12px' }} 
+                    />
+                  ) : (
+                    <div style={{ width: '180px', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>QR Code Indisponível</div>
+                  )}
+                </div>
+
+                <div style={{ padding: '12px 16px', background: '#F8FAFC', borderRadius: '10px', fontFamily: 'monospace', fontSize: '12px', color: '#3B82F6', wordBreak: 'break-all', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}>
+                  {window.location.origin}{window.location.pathname}#/chamada/{propertyId}
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                  <button 
+                    onClick={() => {
+                      const url = `${window.location.origin}${window.location.pathname}#/chamada/${propertyId}`;
+                      const shareText = `Escaneie para tocar as campainhas da Vila:\n👉 ${url}`;
+                      if (navigator.share) {
+                        navigator.share({
+                          title: `Campainhas - ${property?.name || 'Vila'}`,
+                          text: shareText,
+                          url: url
+                        }).catch(() => {});
+                      } else {
+                        window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+                      }
+                    }}
+                    style={{ flex: 1, padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)', border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}
+                  >
+                    <MessageCircle size={16} /> Compartilhar
+                  </button>
+                  <button 
+                    onClick={handleDownloadPlate}
+                    disabled={downloadingPlate || !qrImage}
+                    style={{ padding: '12px 16px', borderRadius: '14px', background: '#0F172A', border: 'none', color: '#FFF', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    title="Baixar Placa"
+                  >
+                    <Download size={16} /> Baixar Placa
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Quick stats / summary card */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', width: '100%', maxWidth: '600px', marginTop: '16px' }}>
+              <div onClick={() => setTab('units')} style={{ background: '#FFF', padding: '20px', borderRadius: '20px', border: '1px solid #E2E8F0', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '6px', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8' }}>CAMPAINHAS</span>
+                <span style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A' }}>{units.length}</span>
+              </div>
+              <div onClick={() => setTab('messages')} style={{ background: '#FFF', padding: '20px', borderRadius: '20px', border: '1px solid #E2E8F0', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '6px', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8' }}>MENSAGENS NÃO LIDAS</span>
+                <span style={{ fontSize: '28px', fontWeight: 900, color: totalUnread > 0 ? '#F97316' : '#10B981' }}>{totalUnread}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── MENSAGENS ── */}
         {tab === 'messages' && (
-          <div style={{ display: 'flex', flex: 1, height: isMobile ? 'calc(100vh - 124px)' : '100vh' }}>
+          <div style={{ display: 'flex', flex: 1, height: 'calc(100vh - 70px)' }}>
 
             {/* Unit list */}
             {(!isMobile || !chatActiveMobile) && (
@@ -1089,8 +1142,7 @@ export default function VilaAdminDashboard() {
                 {window.location.origin}{window.location.pathname}#/chamada/{propertyId}
               </div>
 
-              {/* Printable Plate invisível */}
-              <PrintablePlate ref={printRef} qrImage={qrImage} />
+              {/* Printable Plate invisível removido (declarado globalmente abaixo) */}
 
               <button 
                 type="button"
@@ -1246,6 +1298,11 @@ export default function VilaAdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Printable Plate invisível para download do QR Code */}
+      <div style={{ display: 'none' }}>
+        <PrintablePlate ref={printRef} qrImage={qrImage} />
+      </div>
     </div>
   );
 }
