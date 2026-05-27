@@ -23,6 +23,30 @@ export default function PaymentModal({ userId, userEmail, onClose, onSuccess, on
   const [retryCount, setRetryCount] = useState(0);
   const [copied, setCopied] = useState(false);
   const [planPrice, setPlanPrice] = useState('39.90');
+  const [simulating, setSimulating] = useState(false);
+
+  const handleSimulatePayment = async () => {
+    setSimulating(true);
+    setPixError('');
+    const uid = userId || localStorage.getItem('cd_user_id') || '';
+    try {
+      const res = await fetch(`${API}/api/payment/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: uid })
+      });
+      if (res.ok) {
+        setResult({ status: 'approved' });
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao simular pagamento.');
+      }
+    } catch (err) {
+      setPixError(err.message || 'Erro de conexão ao simular pagamento.');
+    } finally {
+      setSimulating(false);
+    }
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {

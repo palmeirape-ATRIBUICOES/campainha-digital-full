@@ -106,6 +106,15 @@ export default function ResidentDashboard() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [planPrice, setPlanPrice] = useState('39.90');
 
+  useEffect(() => {
+    if (trialEndsAt) {
+      const expiry = new Date(trialEndsAt);
+      if (expiry < new Date()) {
+        setShowPaymentModal(true);
+      }
+    }
+  }, [trialEndsAt]);
+
   const handleUpgrade = () => {
     setShowPaymentModal(true);
   };
@@ -1077,6 +1086,10 @@ export default function ResidentDashboard() {
           <button onClick={() => { setTab('settings'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'settings' ? '#F8FAFC' : 'transparent', color: '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
             <Settings size={20} color="#64748B" /> Configurações
           </button>
+
+          <button onClick={() => { setShowPaymentModal(true); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', color: '#B45309', fontWeight: 700, fontSize: '15px', cursor: 'pointer', textAlign: 'left', border: '1px solid #FCD34D', marginTop: '8px' }}>
+            <span>👑 Torne-se Pro</span>
+          </button>
         </div>
 
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1104,12 +1117,14 @@ export default function ResidentDashboard() {
     </>
   );
 
-  // Condominium contract-based approach: subscription/trials completely bypassed (always active, no payment prompt)
-  const trialEndsDate = null;
-  const isTrialExpired = false;
-  const isTrialExpiringSoon = false;
-  const formattedExpiryDate = '';
-  const daysRemaining = 0;
+  // Condominium contract-based approach: subscription/trials dynamic check
+  const trialEndsDate = trialEndsAt ? new Date(trialEndsAt) : null;
+  const isTrialExpired = trialEndsDate ? trialEndsDate < new Date() : false;
+  const daysRemaining = trialEndsDate 
+    ? Math.ceil((trialEndsDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+    : 0;
+  const isTrialExpiringSoon = trialEndsDate && daysRemaining >= 0 && daysRemaining <= 3 && !isTrialExpired;
+  const formattedExpiryDate = trialEndsDate ? trialEndsDate.toLocaleDateString('pt-BR') : '';
 
   if (!savedUnitId && !token) {
     return null;
@@ -1142,6 +1157,82 @@ export default function ResidentDashboard() {
       onClick={handleUserInteraction}
       onTouchStart={handleUserInteraction}
     >
+
+      {/* OVERLAY DE BLOQUEIO POR EXPIRAÇÃO DO TRIAL */}
+      {isTrialExpired && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(15,23,42,0.92)',
+          backdropFilter: 'blur(12px)',
+          zIndex: 9998,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '24px', fontFamily: "'Inter', sans-serif"
+        }}>
+          <div style={{
+            background: '#FFF', borderRadius: '24px', padding: '36px 32px',
+            width: '100%', maxWidth: '400px', textAlign: 'center',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            display: 'flex', flexDirection: 'column', gap: '24px'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)',
+                border: '2px solid #FCA5A5',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 8px 20px rgba(239, 68, 68, 0.15)'
+              }}>
+                <span style={{ fontSize: '28px' }}>⛔</span>
+              </div>
+              <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: 0 }}>Período de Testes Expirado</h3>
+              <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6, margin: 0 }}>
+                Sua campainha digital está inativa. O período de 15 dias grátis terminou em <strong>{formattedExpiryDate}</strong>.
+              </p>
+            </div>
+
+            <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Plano Anual Premium</span>
+              <span style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>R$ {planPrice.replace('.', ',')}/ano</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '14px',
+                  background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                  color: '#fff', border: 'none', fontWeight: 800, fontSize: '15px',
+                  cursor: 'pointer', boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                }}
+              >
+                💳 Ativar Assinatura Pro
+              </button>
+
+              <button
+                onClick={() => {
+                  [
+                    'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+                    'residentIsVila', 'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+                    'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+                    'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+                    'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+                  ].forEach(k => localStorage.removeItem(k));
+                  navigate('/');
+                }}
+                style={{
+                  width: '100%', padding: '12px', borderRadius: '12px',
+                  background: '#F1F5F9', color: '#475569', border: 'none',
+                  fontWeight: 700, fontSize: '13px', cursor: 'pointer'
+                }}
+              >
+                Sair da Conta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header (Premium Sticky) */}
       <div style={{ 

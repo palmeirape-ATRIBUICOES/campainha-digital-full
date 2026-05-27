@@ -10,11 +10,27 @@ import {
 import { API } from '../config';
 import Logo from '../components/Logo';
 import PrintablePlate from '../components/PrintablePlate';
+import PaymentModal from '../components/PaymentModal';
 
 export default function VilaAdminDashboard() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('home');
   const [showMenu, setShowMenu] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [trialEndsAt, setTrialEndsAt] = useState(null);
+
+  const trialEndsDate = trialEndsAt ? new Date(trialEndsAt) : null;
+  const isTrialExpired = trialEndsDate ? trialEndsDate < new Date() : false;
+  const formattedExpiryDate = trialEndsDate ? trialEndsDate.toLocaleDateString('pt-BR') : '';
+
+  useEffect(() => {
+    if (trialEndsAt) {
+      const expiry = new Date(trialEndsAt);
+      if (expiry < new Date()) {
+        setShowPaymentModal(true);
+      }
+    }
+  }, [trialEndsAt]);
   const [property, setProperty] = useState(null);
   const [units, setUnits] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -140,6 +156,9 @@ export default function VilaAdminDashboard() {
         setUnits(p.units || []);
         setVilaName(p.name || '');
         setHouseCount(p.vilaHouseCount || p.units?.length || 1);
+        if (p.vilaAdmin?.trialEndsAt) {
+          setTrialEndsAt(p.vilaAdmin.trialEndsAt);
+        }
       }
       if (msgRes.ok) setMessages(await msgRes.json());
     } catch (err) { console.error('[Vila]', err); }
@@ -572,6 +591,10 @@ export default function VilaAdminDashboard() {
               )}
             </button>
           ))}
+
+          <button onClick={() => { setShowPaymentModal(true); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', color: '#B45309', fontWeight: 700, fontSize: '15px', cursor: 'pointer', textAlign: 'left', border: '1px solid #FCD34D', marginTop: '8px', width: '100%' }}>
+            <span>👑 Assinatura Vila Pro</span>
+          </button>
         </div>
 
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -593,6 +616,73 @@ export default function VilaAdminDashboard() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'Inter, sans-serif', background: '#F0F4F8' }}>
       <HamburgerMenu />
+
+      {/* OVERLAY DE BLOQUEIO POR EXPIRAÇÃO DO TRIAL DO VILA ADMIN */}
+      {isTrialExpired && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(15,23,42,0.92)',
+          backdropFilter: 'blur(12px)',
+          zIndex: 9998,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '24px', fontFamily: "'Inter', sans-serif"
+        }}>
+          <div style={{
+            background: '#FFF', borderRadius: '24px', padding: '36px 32px',
+            width: '100%', maxWidth: '400px', textAlign: 'center',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            display: 'flex', flexDirection: 'column', gap: '24px'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)',
+                border: '2px solid #FCA5A5',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 8px 20px rgba(239, 68, 68, 0.15)'
+              }}>
+                <span style={{ fontSize: '28px' }}>⛔</span>
+              </div>
+              <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: 0 }}>Vila Pro Expirada</h3>
+              <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6, margin: 0 }}>
+                O período de testes ou a licença anual da sua vila expirou em <strong>{formattedExpiryDate}</strong>. Ative a assinatura anual para liberar o gerenciamento das campainhas e avisos.
+              </p>
+            </div>
+
+            <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Assinatura Anual Vila Pro</span>
+              <span style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>R$ 39,90/ano</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '14px',
+                  background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                  color: '#fff', border: 'none', fontWeight: 800, fontSize: '15px',
+                  cursor: 'pointer', boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                }}
+              >
+                💳 Ativar Licença Vila Pro
+              </button>
+
+              <button
+                onClick={logout}
+                style={{
+                  width: '100%', padding: '12px', borderRadius: '12px',
+                  background: '#F1F5F9', color: '#475569', border: 'none',
+                  fontWeight: 700, fontSize: '13px', cursor: 'pointer'
+                }}
+              >
+                Sair da Conta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* HEADER BAR */}
       <header style={{
@@ -1303,6 +1393,18 @@ export default function VilaAdminDashboard() {
       <div style={{ display: 'none' }}>
         <PrintablePlate ref={printRef} qrImage={qrImage} />
       </div>
+
+      {showPaymentModal && (
+        <PaymentModal
+          userId={adminId}
+          userEmail={adminEmail}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={() => {
+            setShowPaymentModal(false);
+            fetchData();
+          }}
+        />
+      )}
     </div>
   );
 }
