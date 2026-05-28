@@ -126,6 +126,17 @@ export default function ResidentDashboard() {
   const [supportSending, setSupportSending]   = useState(false);
   const [dispatchAlertLoading, setDispatchAlertLoading] = useState(false);
   const [openGateLoading, setOpenGateLoading] = useState(false);
+  const [entryNotification, setEntryNotification] = useState(null);
+
+  // Auto-close doorman release notification after 12 seconds
+  useEffect(() => {
+    if (entryNotification) {
+      const timer = setTimeout(() => {
+        setEntryNotification(null);
+      }, 12000);
+      return () => clearTimeout(timer);
+    }
+  }, [entryNotification]);
 
   const audioRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -623,6 +634,55 @@ export default function ResidentDashboard() {
       if ('Notification' in window && Notification.permission === 'granted') {
         try { new Notification(`📋 Portaria`, { body: msg.message, icon: '/logo.png' }); } catch {}
       }
+    });
+
+    // Receber aviso de liberação em tempo real (visitante pré-autorizado validado)
+    s.on('visitor_arrived', (data) => {
+      console.log('[Socket] visitor_arrived recebido:', data);
+      setEntryNotification({
+        type: 'visitor',
+        title: '🔑 Entrada Liberada (Código Validado)',
+        message: `O porteiro validou o código e liberou a entrada de ${data.visitorName || 'visitante'}.`,
+        timestamp: data.timestamp || new Date()
+      });
+
+      // Tocar som de notificação
+      try {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav');
+        audio.volume = 0.5;
+        audio.play().catch(() => {});
+      } catch {}
+
+      // Se houver chamada em andamento (ou tocando), encerra ela
+      stopRing();
+      setStatus('idle');
+      setCall(null);
+      stopAll();
+    });
+
+    // Receber aviso de liberação manual pela portaria
+    s.on('doorman_authorized_entry', (data) => {
+      console.log('[Socket] doorman_authorized_entry recebido:', data);
+      const isPackage = data.type === 'package';
+      setEntryNotification({
+        type: data.type || 'visitor',
+        title: isPackage ? '📦 Encomenda / Entrega Liberada!' : '🔑 Entrada Liberada pela Portaria!',
+        message: data.description || data.title || 'A portaria autorizou e liberou o acesso.',
+        timestamp: data.timestamp || new Date()
+      });
+
+      // Tocar som de notificação
+      try {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav');
+        audio.volume = 0.5;
+        audio.play().catch(() => {});
+      } catch {}
+
+      // Se houver chamada em andamento (ou tocando), encerra ela
+      stopRing();
+      setStatus('idle');
+      setCall(null);
+      stopAll();
     });
 
 
@@ -1302,6 +1362,18 @@ export default function ResidentDashboard() {
         @keyframes pulse-blue {
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
           100% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+        }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scale-up {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
         }
       `}</style>
 
@@ -2352,6 +2424,117 @@ export default function ResidentDashboard() {
             setShowPaymentModal(false);
           }}
         />
+      )}
+
+      {entryNotification && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 9999,
+          background: 'rgba(15, 23, 42, 0.4)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+          animation: 'fade-in 0.3s ease-out'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(243, 244, 246, 0.9) 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.4)',
+            borderRadius: '24px',
+            padding: '32px 24px',
+            maxWidth: '420px',
+            width: '100%',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+            textAlign: 'center',
+            backdropFilter: 'blur(16px)',
+            transform: 'scale(1)',
+            animation: 'scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            color: '#1E293B'
+          }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '20px',
+              background: entryNotification.type === 'package' ? '#FEF3C7' : '#DCFCE7',
+              color: entryNotification.type === 'package' ? '#D97706' : '#16A34A',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              boxShadow: '0 8px 16px rgba(0,0,0,0.06)',
+              animation: 'bounce 2s infinite'
+            }}>
+              {entryNotification.type === 'package' ? (
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+              ) : (
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              )}
+            </div>
+
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: 900,
+              color: '#0F172A',
+              margin: '0 0 8px',
+              letterSpacing: '-0.5px'
+            }}>
+              {entryNotification.title}
+            </h3>
+
+            <p style={{
+              fontSize: '14px',
+              color: '#475569',
+              lineHeight: 1.6,
+              margin: '0 0 24px',
+              fontWeight: 500
+            }}>
+              {entryNotification.message}
+            </p>
+
+            <button
+              onClick={() => setEntryNotification(null)}
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '14px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
+                color: '#fff',
+                fontWeight: 800,
+                fontSize: '15px',
+                cursor: 'pointer',
+                boxShadow: '0 8px 16px rgba(79, 70, 229, 0.25)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 12px 20px rgba(79, 70, 229, 0.35)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = '0 8px 16px rgba(79, 70, 229, 0.25)';
+              }}
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

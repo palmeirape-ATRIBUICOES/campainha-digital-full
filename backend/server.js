@@ -2847,11 +2847,47 @@ app.delete('/api/properties/:propertyId/alerts/:alertId', async (req, res) => {
     const { alertId } = req.params;
     const updated = await prisma.unitAlert.update({
       where: { id: alertId },
-      data: { active: false }
+      data: { active: false },
+      include: {
+        unit: {
+          include: {
+            residents: true
+          }
+        }
+      }
     });
+    
+    // Avisa em tempo real via Socket.io para limpar o alerta na portaria
     io.emit('clear_unit_alert', { propertyId: req.params.propertyId, unitId: updated.unitId, alertId });
+
+    // Notifica em tempo real os moradores da unidade que a portaria liberou o acesso
+    io.to(`user_${updated.unitId}`).emit('doorman_authorized_entry', {
+      alertId,
+      type: updated.type,
+      title: updated.title,
+      description: updated.description,
+      timestamp: new Date()
+    });
+
+    // Dispara notificações Push em background para cada morador da unidade
+    if (updated.unit && updated.unit.residents) {
+      const title = updated.type === 'package' ? '📦 Encomenda / Entrega Liberada!' : '🔑 Entrada Liberada pela Portaria!';
+      const body = updated.description || updated.title || 'A portaria autorizou e liberou o acesso.';
+      updated.unit.residents.forEach(resident => {
+        sendPushToUser(resident.id, {
+          title,
+          body,
+          tag: 'doorman-authorized',
+          vibrate: [300, 100, 300]
+        }).catch(err => {
+          console.error(`Erro ao enviar push de liberação para usuário ${resident.id}:`, err.message);
+        });
+      });
+    }
+
     res.json({ success: true });
   } catch (err) {
+    console.error('Error in DELETE /alerts/:alertId:', err);
     res.status(500).json({ error: 'Erro ao limpar alerta.' });
   }
 });
