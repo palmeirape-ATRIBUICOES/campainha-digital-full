@@ -903,12 +903,33 @@ export default function ResidentDashboard() {
   };
 
   const handleAnswer = async (withCamera = false) => {
-    stopRing(); setStatus('active'); setCamOn(withCamera);
+    stopRing();
+    
+    // Se estiver no modo de monitoramento (oculto), fecha a conexão antiga para evitar conflito de hardware
+    if (status === 'monitoring') {
+      console.log('[WebRTC] Transição de Monitor -> Falar: limpando conexão antiga');
+      if (pcRef.current) {
+        try { pcRef.current.close(); } catch {}
+        pcRef.current = null;
+      }
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = null;
+      }
+    }
+    
+    setStatus('active');
+    setCamOn(withCamera);
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withCamera });
       localStreamRef.current = stream;
-      if (withCamera && localVideoRef.current) { localVideoRef.current.srcObject = stream; localVideoRef.current.play().catch(() => {}); }
-    } catch (e) { console.warn('[Media]', e); }
+      if (withCamera && localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => {});
+      }
+    } catch (e) {
+      console.warn('[Media] Falha ao capturar mídia local:', e);
+    }
     
     // Se a chamada for da Portaria (que não tem WebRTC configurado na web), não espere a oferta WebRTC.
     if (call?.callerName === 'Portaria') {
@@ -916,10 +937,14 @@ export default function ResidentDashboard() {
       return;
     }
 
-    // Primeiro notifica o visitante que a chamada foi atendida
-    socketRef.current.emit('answer_call', { visitorSocketId: call.visitorSocketId, mode: 'active', unitId: id });
-    // Depois sinaliza que a mídia local está pronta e pode criar a offer
-    socketRef.current.emit('webrtc_ready', { target: call.visitorSocketId });
+    const targetSocket = call?.visitorSocketId || visitorSocketId;
+    if (socketRef.current && targetSocket) {
+      console.log('[Socket] Enviando answer_call e webrtc_ready para:', targetSocket);
+      // Primeiro notifica o visitante que a chamada foi atendida
+      socketRef.current.emit('answer_call', { visitorSocketId: targetSocket, mode: 'active', unitId: id });
+      // Depois sinaliza que a mídia local está pronta e pode criar a offer
+      socketRef.current.emit('webrtc_ready', { target: targetSocket });
+    }
   };
 
   const handleEnd = () => {

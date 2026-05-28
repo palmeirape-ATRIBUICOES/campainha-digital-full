@@ -80,8 +80,17 @@ export default function VisitorCall() {
     // Em modo monitor: visitante vê "Chamando..." — NÃO revela que está sendo visto
     socket.on('call_answered', ({ residentSocketId, mode, unitId }) => {
       setResidentSocket(residentSocketId);
-      // modo monitor: visitante continua vendo a tela de "chamando" (não sabe que está sendo monitorado)
       if (mode !== 'monitor') {
+        // Se o morador estava monitorando (oculto) e agora mudou para conversa ativa ("Falar"),
+        // precisamos resetar a conexão WebRTC antiga para iniciar uma limpa com áudio
+        if (webrtcStartedRef.current) {
+          console.log('[WebRTC] Transição de Monitor -> Ativo detectada no visitante. Reiniciando PeerConnection...');
+          if (pcRef.current) {
+            try { pcRef.current.close(); } catch {}
+            pcRef.current = null;
+          }
+          webrtcStartedRef.current = false;
+        }
         setStatus('answered');
         setCountdown(0);
       }
