@@ -15,7 +15,52 @@ export default function IntercomPanel({ propertyId, unitId, socketRef, unitName,
   const [hasDoorman, setHasDoorman] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Intercom enabled setting toggle
+  const [intercomEnabled, setIntercomEnabled] = useState(true);
+  const [updatingIntercom, setUpdatingIntercom] = useState(false);
+
   const isVila = localStorage.getItem('residentIsVila') === 'true';
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const token = localStorage.getItem('cd_token');
+        if (!token) return;
+        const res = await fetch(`${API}/api/user/settings`, {
+          headers: { 'Authorization': token }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setIntercomEnabled(data.intercomEnabled ?? true);
+        }
+      } catch (e) {
+        console.error('Failed to fetch intercom settings:', e);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const toggleIntercom = async () => {
+    setUpdatingIntercom(true);
+    const newValue = !intercomEnabled;
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/user/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ intercomEnabled: newValue })
+      });
+      if (res.ok) {
+        setIntercomEnabled(newValue);
+      } else {
+        alert('Erro ao atualizar configuração.');
+      }
+    } catch {
+      alert('Erro ao conectar ao servidor.');
+    } finally {
+      setUpdatingIntercom(false);
+    }
+  };
 
   useEffect(() => {
     if (propertyId) {
@@ -78,6 +123,36 @@ export default function IntercomPanel({ propertyId, unitId, socketRef, unitName,
       <h4 style={{ fontWeight: 800, fontSize: '13px', color: '#1E293B', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
         <Phone size={14} color="#3B82F6"/> Interfone Digital
       </h4>
+
+      {/* Toggle para receber ou não chamadas de vizinhos */}
+      <div style={{
+        background: '#FFF', border: '1px solid #E2E8F0', borderRadius: '12px',
+        padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, paddingRight: '8px' }}>
+          <span style={{ fontWeight: 700, fontSize: '12px', color: '#1E293B' }}>Permitir chamadas de vizinhos</span>
+          <span style={{ fontSize: '10px', color: '#64748B' }}>Permitir que outros apartamentos liguem para você</span>
+        </div>
+        <button
+          onClick={toggleIntercom}
+          disabled={updatingIntercom}
+          style={{
+            background: intercomEnabled ? '#10B981' : '#E2E8F0',
+            border: 'none', width: '46px', height: '24px', borderRadius: '20px',
+            position: 'relative', cursor: 'pointer', transition: 'all 0.3s',
+            opacity: updatingIntercom ? 0.6 : 1, flexShrink: 0
+          }}
+        >
+          <div style={{
+            position: 'absolute', top: '2px',
+            left: intercomEnabled ? '24px' : '2px',
+            width: '20px', height: '20px', borderRadius: '50%',
+            background: '#FFF', boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            transition: 'all 0.3s'
+          }} />
+        </button>
+      </div>
 
       {isVila ? (
         // --- Vila Mode: list available neighbors directly ---

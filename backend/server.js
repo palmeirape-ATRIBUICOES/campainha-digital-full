@@ -3180,6 +3180,140 @@ app.get('/api/properties/:propertyId/online-status', async (req, res) => {
   }
 });
 
+// Buscar mensagens de comunicados de uma propriedade
+app.get('/api/properties/:propertyId/messages', async (req, res) => {
+  const { propertyId } = req.params;
+  try {
+    const messages = await prisma.message.findMany({
+      where: { propertyId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(messages);
+  } catch (err) {
+    console.error('Error fetching property messages:', err);
+    res.status(500).json({ error: 'Erro ao buscar comunicados.' });
+  }
+});
+
+// Criar comunicado geral do condomínio e enviar push/socket
+app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
+  const { propertyId } = req.params;
+  const { adminEmail, title, body, priority } = req.body;
+  
+  if (!body || !body.trim()) {
+    return res.status(400).json({ error: 'O corpo da mensagem é obrigatório.' });
+  }
+  
+  try {
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId }
+    });
+    if (!property) {
+      return res.status(404).json({ error: 'Propriedade não encontrada.' });
+    }
+    
+    const msg = await prisma.message.create({
+      data: {
+        id: crypto.randomUUID(),
+        propertyId,
+        title: title || 'Aviso do Condomínio',
+        body: body.trim(),
+        priority: priority || 'normal',
+        senderId: adminEmail || 'Admin'
+      }
+    });
+    
+    // Emitir via socket para a sala da propriedade
+    io.to(`vila_${propertyId}`).emit('broadcast_message', msg);
+    
+    // Buscar todos os moradores ativos do condomínio para mandar notificação push
+    const units = await prisma.unit.findMany({
+      where: { propertyId },
+      include: { residents: true }
+    });
+    
+    const residentIds = new Set();
+    for (const unit of units) {
+      for (const resident of unit.residents) {
+        if (!resident.trialEndsAt || new Date(resident.trialEndsAt) >= new Date()) {
+          residentIds.add(resident.id);
+        }
+      }
+    }
+    
+    const payload = {
+      title: `📢 ${title || 'Aviso do Condomínio'}`,
+      body: body.trim(),
+      data: {
+        url: `/#/morador/${propertyId}?tab=messages`
+      }
+    };
+    
+    // Executa o disparo em background sem travar o request HTTP
+    Promise.all([...residentIds].map(residentId => sendPushToUser(residentId, payload)))
+      .catch(err => console.error('[Broadcast Push] Erro ao enviar pushes:', err));
+      
+    res.json(msg);
+  } catch (err) {
+    console.error('Error creating property broadcast:', err);
+    res.status(500).json({ error: 'Erro ao enviar comunicado.' });
+  }
+});
+
+// Buscar unidades para interfonar (aba interfone digital)
+app.get('/api/properties/:propertyId/search-unit', async (req, res) => {
+  const { propertyId } = req.params;
+  const { block, number } = req.query;
+  
+  try {
+    const whereClause = {
+      propertyId,
+      residents: {
+        some: {
+          intercomEnabled: true
+        }
+      }
+    };
+    
+    if (block && block.trim()) {
+      whereClause.block = {
+        equals: block.trim(),
+        mode: 'insensitive'
+      };
+    }
+    
+    if (number && number.trim()) {
+      whereClause.number = {
+        equals: number.trim(),
+        mode: 'insensitive'
+      };
+    }
+    
+    const units = await prisma.unit.findMany({
+      where: whereClause,
+      include: {
+        residents: {
+          where: {
+            intercomEnabled: true
+          },
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+    
+    res.json(units);
+  } catch (err) {
+    console.error('Error searching unit:', err);
+    res.status(500).json({ error: 'Erro ao buscar unidade.' });
+  }
+});
+
 // Retornar status do interfone (porteiro cadastrado e vizinhos disponíveis)
 app.get('/api/properties/:propertyId/intercom-status', async (req, res) => {
   const { propertyId } = req.params;
@@ -3407,7 +3541,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  const handleIncomingCall = async ({ unitId, propertyId, photoBase64, callerName, visitorLat, visitorLng }) => {
+  const handleIncomingCall = async ({ unitId, propertyId, photoBase64, callerName, visitorLat, visitorLng, targetUserId }) => {
     console.log(`\n[WS Call] ===== NOVA CHAMADA =====`);
     console.log(`[WS Call] unitId: ${unitId}`);
     console.log(`[WS Call] propertyId: ${propertyId}`);
@@ -3468,16 +3602,32 @@ io.on('connection', (socket) => {
     }
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Filtra moradores que ainda possuem a assinatura ativa
-    const activeResidents = unit.residents.filter(resident => {
+    // Filtra moradores que ainda possuem a assinatura ativa e coincidem com o targetUserId se fornecido
+    let activeResidents = unit.residents.filter(resident => {
+      if (targetUserId && resident.id !== targetUserId) return false;
       if (!resident.trialEndsAt) return true; // Conta vitalícia (legada/super admin)
       return new Date(resident.trialEndsAt) >= new Date();
     });
 
     if (activeResidents.length === 0) {
-      console.log(`[WS Call] Chamada recusada! Unidade ${unit.name} com licença expirada.`);
-      socket.emit('call_failed', { reason: 'license_expired', message: 'A campainha digital desta residência está inativa. O período de teste expirou.' });
+      console.log(`[WS Call] Chamada recusada! Unidade ${unit.name} com licença expirada ou morador alvo inativo.`);
+      socket.emit('call_failed', { reason: 'license_expired', message: 'A campainha digital desta residência ou morador está inativa.' });
       return;
+    }
+
+    // Se for chamada de vizinho para vizinho (socket.userId está definido), 
+    // verificamos se os moradores da unidade destino aceitam chamadas (intercomEnabled)
+    if (socket.userId) {
+      const acceptingResidents = activeResidents.filter(r => r.intercomEnabled !== false);
+      if (acceptingResidents.length === 0) {
+        console.log(`[WS Call] Chamada recusada! Unidade ${unit.name} desativou o interfone entre vizinhos.`);
+        socket.emit('call_failed', { 
+          reason: 'intercom_disabled', 
+          message: 'Esta unidade desativou o recebimento de chamadas de outros apartamentos.' 
+        });
+        return;
+      }
+      activeResidents = acceptingResidents;
     }
 
     // Salvar visita no banco de dados

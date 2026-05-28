@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, Send, Zap, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import Logo from '../components/Logo';
 import UnitManager from '../components/UnitManager';
 import BroadcastPanel from '../components/BroadcastPanel';
@@ -105,6 +106,29 @@ export default function AdminPanel() {
   const [iaMessage, setIaMessage] = useState('');
   const [activeControlBlock, setActiveControlBlock] = useState(null);
   const [lastBlockAlertCount, setLastBlockAlertCount] = useState(0);
+  const [selectedUnitDetails, setSelectedUnitDetails] = useState(null);
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    if (isDemoMode || !selectedProperty) {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      return;
+    }
+    
+    const s = io(API, { transports: ['websocket', 'polling'], reconnection: true });
+    socketRef.current = s;
+    
+    s.emit('register_doorman', { propertyId: selectedProperty });
+    console.log('[AdminPanel] Socket conectado para propriedade:', selectedProperty);
+    
+    return () => {
+      s.disconnect();
+      socketRef.current = null;
+    };
+  }, [selectedProperty, isDemoMode]);
 
   useEffect(() => {
     if (!activeControlBlock || !selectedProperty) {
@@ -1568,12 +1592,20 @@ export default function AdminPanel() {
                             <HoverHelp key={u.id} text={hasAlert ? `${mainAlert.title}: ${mainAlert.description || ''} (Clique para simular ou resolver)` : `Status: ${isOnline ? 'Online' : 'Offline'} (${onlineResidentsCount} moradores online)`}>
                               <div
                                 onClick={() => {
-                                  if (isDemoMode && hasAlert) {
+                                  if (hasAlert) {
                                     setSelectedMessage(mainAlert);
-                                  } else if (isDemoMode) {
-                                    setSimulatedUnit(u);
-                                  } else if (hasAlert) {
-                                    setSelectedMessage(mainAlert);
+                                  } else {
+                                    if (isDemoMode && (!u.residents || u.residents.length === 0)) {
+                                      const mockUnit = {
+                                        ...u,
+                                        residents: [
+                                          { id: 'demo-res-1', name: 'analice', clientCode: 'B1-1001-ANALICE-IMW' }
+                                        ]
+                                      };
+                                      setSelectedUnitDetails(mockUnit);
+                                    } else {
+                                      setSelectedUnitDetails(u);
+                                    }
                                   }
                                 }}
                                 style={{
@@ -1627,13 +1659,17 @@ export default function AdminPanel() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (socketRef.current) {
+                                    if (isDemoMode) {
+                                      alert('📞 Chamada simulada iniciada para a unidade!');
+                                    } else if (socketRef.current) {
                                       socketRef.current.emit('doorman_call', {
                                         unitId: u.id,
                                         propertyId: u.propertyId,
                                         callerName: 'Portaria'
                                       });
                                       alert('📞 Interfonando para a unidade...');
+                                    } else {
+                                      alert('Erro: Conexão em tempo real não estabelecida.');
                                     }
                                   }}
                                   style={{
@@ -2245,6 +2281,130 @@ export default function AdminPanel() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {selectedUnitDetails && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: '#0F172A', color: '#E2E8F0', borderRadius: '24px', maxWidth: '440px', width: '100%', padding: '32px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', border: '1px solid #1E293B', position: 'relative' }}>
+            <button onClick={() => setSelectedUnitDetails(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}><X size={20} /></button>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(0,229,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Building2 size={24} color="#00E5FF" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#FFF' }}>{selectedUnitDetails.name}</h3>
+                <p style={{ fontSize: '12px', color: '#94A3B8', margin: '2px 0 0' }}>
+                  {selectedUnitDetails.block && `Bloco ${selectedUnitDetails.block} `}
+                  {selectedUnitDetails.street && `${selectedUnitDetails.street} `}
+                  {selectedUnitDetails.number && `Nº ${selectedUnitDetails.number}`}
+                </p>
+              </div>
+            </div>
+
+            {/* Código Geral da Unidade */}
+            <div style={{ background: '#090D16', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', border: '1px solid #1E293B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Código Geral da Unidade</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#00E5FF', marginTop: '2px' }}>{selectedUnitDetails.inviteCode || 'N/A'}</div>
+              </div>
+              {selectedUnitDetails.inviteCode && <CopyButton text={selectedUnitDetails.inviteCode} />}
+            </div>
+
+            {/* Moradores Cadastrados */}
+            <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Moradores Cadastrados</h4>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto', marginBottom: '24px', paddingRight: '4px' }}>
+              {(selectedUnitDetails.residents || []).length === 0 ? (
+                <div style={{ padding: '16px', background: '#090D16', borderRadius: '12px', textAlign: 'center', color: '#94A3B8', fontSize: '12px' }}>
+                  Nenhum morador cadastrado nesta unidade.
+                </div>
+              ) : (
+                (selectedUnitDetails.residents || []).map(resident => {
+                  const isOnline = onlineStatus[resident.id] === 'online' || isDemoMode;
+                  return (
+                    <div key={resident.id} style={{ background: '#090D16', borderRadius: '12px', padding: '12px 14px', border: '1px solid #1E293B', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '13px', color: '#FFF' }}>{resident.name}</span>
+                          <span style={{
+                            width: '6px', height: '6px', borderRadius: '50%',
+                            background: isOnline ? '#10B981' : '#94A3B8',
+                            boxShadow: isOnline ? '0 0 6px #10B981' : 'none'
+                          }} />
+                        </div>
+                        {resident.clientCode && (
+                          <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                            Código: <strong style={{ color: '#00E5FF' }}>{resident.clientCode}</strong>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {resident.clientCode && <CopyButton text={resident.clientCode} />}
+                        <button
+                          onClick={() => {
+                            if (isDemoMode) {
+                              alert(`📞 Ligação simulada para o morador ${resident.name} iniciada!`);
+                            } else if (socketRef.current) {
+                              socketRef.current.emit('doorman_call', {
+                                unitId: selectedUnitDetails.id,
+                                propertyId: selectedUnitDetails.propertyId,
+                                callerName: 'Portaria',
+                                targetUserId: resident.id
+                              });
+                              alert(`📞 Interfonando para ${resident.name}...`);
+                            } else {
+                              alert('Erro: Painel não conectado ao servidor em tempo real.');
+                            }
+                          }}
+                          style={{
+                            background: 'linear-gradient(135deg,#3B82F6,#2563EB)',
+                            color: '#FFF', border: 'none', borderRadius: '8px',
+                            padding: '6px 12px', fontSize: '11px', fontWeight: 700,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center',
+                            gap: '4px', whiteSpace: 'nowrap'
+                          }}
+                        >
+                          📞 Ligar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  if (isDemoMode) {
+                    alert('📞 Chamada simulada iniciada para toda a unidade!');
+                  } else if (socketRef.current) {
+                    socketRef.current.emit('doorman_call', {
+                      unitId: selectedUnitDetails.id,
+                      propertyId: selectedUnitDetails.propertyId,
+                      callerName: 'Portaria'
+                    });
+                    alert('📞 Chamando todos os moradores da unidade...');
+                  } else {
+                    alert('Erro: Painel não conectado ao servidor.');
+                  }
+                }}
+                style={{ flex: 1, background: 'linear-gradient(135deg,#10B981,#059669)', color: '#FFF', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                📞 INTERFONAR UNIDADE (TODOS)
+              </button>
+              
+              <button
+                onClick={() => setSelectedUnitDetails(null)}
+                style={{ background: 'rgba(255,255,255,0.05)', color: '#94A3B8', border: '1px solid #1E293B', padding: '12px 18px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}
