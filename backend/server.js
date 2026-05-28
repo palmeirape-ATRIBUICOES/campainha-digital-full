@@ -3659,14 +3659,39 @@ io.on('connection', (socket) => {
       baseUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
     }
 
+    const callId = `${socket.id}-${Date.now()}`;
+
+    // 1. Notifica via Socket.io (Uma única vez por chamada geral ou direcionada)
+    if (targetUserId) {
+      console.log(`[WS Call] 📡 Emitindo chamada direcionada para user_${targetUserId} (callId: ${callId})`);
+      io.to(`user_${targetUserId}`).emit('incoming_call', {
+        callId,
+        visitorSocketId: socket.id,
+        photo: photoBase64,
+        callerName: callerName || 'Visitante',
+        timestamp: visit.timestamp,
+        visitId: visit.id,
+        propertyId
+      });
+    } else {
+      console.log(`[WS Call] 📡 Emitindo chamada geral para unidade user_${unitId} (callId: ${callId})`);
+      io.to(`user_${unitId}`).emit('incoming_call', {
+        callId,
+        visitorSocketId: socket.id,
+        photo: photoBase64,
+        callerName: callerName || 'Visitante',
+        timestamp: visit.timestamp,
+        visitId: visit.id,
+        propertyId
+      });
+    }
+
+    // 2. Dispara Notificações Push individualmente para cada morador em background
     for (const resident of activeResidents) {
       try {
-        // Verifica se está no horário de silêncio
         const now = new Date();
         const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
-        // BUG FIX: doorbellEnabled pode ser null em contas antigas (antes da migration @default(true))
-        // Tratamos null/undefined como true — o usuário deve explicitamente DESATIVAR para silenciar
         let shouldRing = resident.doorbellEnabled !== false;
         if (resident.quietModeStart && resident.quietModeEnd) {
           if (resident.quietModeStart < resident.quietModeEnd) {
@@ -3677,44 +3702,10 @@ io.on('connection', (socket) => {
         }
 
         if (!shouldRing) {
-          console.log(`[WS Call] ⏸ Morador ${resident.name} SILENCIADO`);
-          console.log(`[WS Call]   doorbellEnabled: ${resident.doorbellEnabled}`);
-          console.log(`[WS Call]   quietModeStart: ${resident.quietModeStart}`);
-          console.log(`[WS Call]   quietModeEnd: ${resident.quietModeEnd}`);
-          console.log(`[WS Call]   horário atual (servidor UTC): ${currentTime}`);
-          console.log(`[WS Call]   → Para receber chamadas, desative o Modo Silencioso nas configurações do app`);
+          console.log(`[WS Call] ⏸ Push para morador ${resident.name} silenciado (Modo Silencioso)`);
           continue;
         }
 
-        // 1. Notifica via Socket.io (funciona se o app está aberto em primeiro plano)
-        const socketRoomUser = `user_${resident.id}`;
-        const socketRoomUnit = `user_${unitId}`;
-        
-        // Diagnóstico: verifica quantos sockets estão em cada sala
-        const roomUser = io.sockets.adapter.rooms.get(socketRoomUser);
-        const roomUnit = io.sockets.adapter.rooms.get(socketRoomUnit);
-        console.log(`[WS Call] 📡 Emitindo para sala ${socketRoomUser} (${roomUser?.size || 0} socket(s)) e ${socketRoomUnit} (${roomUnit?.size || 0} socket(s))`);
-        
-        if (!roomUser?.size && !roomUnit?.size) {
-          console.warn(`[WS Call] ⚠️ ALERTA: Nenhum socket conectado para o morador ${resident.name} (${resident.id}) — o app pode estar fechado ou com ID errado registrado`);
-        }
-        
-        // DEDUP FIX: emite para ambas as salas mas inclui um callId único
-        // O frontend usa o callId para ignorar duplicatas (mesmo evento chegando por 2 salas)
-        const callId = `${socket.id}-${Date.now()}`;
-        
-        // Emite para ambas as salas para redundância absoluta (morador / unidade)
-        io.to(socketRoomUser).to(socketRoomUnit).emit('incoming_call', {
-          callId,
-          visitorSocketId: socket.id,
-          photo: photoBase64,
-          callerName: callerName || 'Visitante',
-          timestamp: visit.timestamp,
-          visitId: visit.id,
-          propertyId
-        });
-
-        // 2. Push Notification: Acorda o app mesmo fechado/background (SEMPRE envia, independente do socket)
         await sendPushToUser(resident.id, {
           title: '🔔 Alguém na sua porta!',
           body: `${callerName || 'Visitante'} está chamando. Toque para atender.`,
@@ -3732,11 +3723,9 @@ io.on('connection', (socket) => {
             callId
           }
         });
-
-        console.log(`[WS Call] ✔ Morador ${resident.name} (${resident.id}) notificado com sucesso via Socket + Push`);
+        console.log(`[WS Call] ✔ Push enviado para morador ${resident.name} (${resident.id})`);
       } catch (e) {
-        console.error(`[WS Call] ✘ Erro ao notificar morador ${resident.id}:`, e.message);
-        // Continua para o próximo morador — não interrompe o loop
+        console.error(`[WS Call] ✘ Erro ao enviar push para morador ${resident.id}:`, e.message);
       }
     }
   };
