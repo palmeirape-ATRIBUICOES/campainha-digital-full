@@ -1176,7 +1176,7 @@ app.post('/api/master/users/:id/promo', authenticate, async (req, res) => {
 
 // Gerar números únicos e sequenciais de placa
 app.post('/api/master/plates/generate', authenticate, async (req, res) => {
-  if (!req.user.isSuperAdmin) return res.status(403).json({ error: 'Acesso negado.' });
+  if (!req.user.isSuperAdmin && !req.user.isAdmin) return res.status(403).json({ error: 'Acesso negado.' });
   const { quantity } = req.body;
   const qty = parseInt(quantity, 10) || 4;
   
@@ -3725,10 +3725,11 @@ io.on('connection', (socket) => {
           requireInteraction: true,
           vibrate: [400, 200, 400, 200, 800],
           data: { 
-            url: `${baseUrl}/#/morador/${unitId}?call=true&visitorSocketId=${socket.id}`, 
+            url: `${baseUrl}/#/morador/${unitId}?call=true&visitorSocketId=${socket.id}&callId=${callId}`, 
             unitId, 
             propertyId,
-            visitorSocketId: socket.id
+            visitorSocketId: socket.id,
+            callId
           }
         });
 

@@ -632,9 +632,29 @@ export default function ResidentDashboard() {
     // Listener para mensagens do Service Worker (quando push chega com app em background)
     const handleSWMessage = (event) => {
       if (event.data?.type === 'INCOMING_CALL') {
-        console.log('[SW Message] Push recebido via Service Worker — ativando campainha');
-        
         const payload = event.data.payload || {};
+        let callIdVal = payload.callId;
+        
+        if (!callIdVal && payload.url) {
+          try {
+            const urlPart = payload.url.split('?')[1] || '';
+            const urlParams = new URLSearchParams(urlPart);
+            callIdVal = urlParams.get('callId');
+          } catch {}
+        }
+        
+        if (callIdVal && callIdVal === lastCallIdRef.current) {
+          console.log('[SW Message] Chamada duplicada já processada pelo Socket, ignorando:', callIdVal);
+          return;
+        }
+        
+        if (status !== 'idle') {
+          console.log('[SW Message] Ignorando pois o status atual já é:', status);
+          return;
+        }
+        
+        lastCallIdRef.current = callIdVal || null;
+        console.log('[SW Message] Push recebido via Service Worker — ativando campainha:', callIdVal);
         let visitorSocketIdVal = payload.visitorSocketId;
         
         // Fallback: extrai visitorSocketId da URL do push
@@ -732,8 +752,19 @@ export default function ResidentDashboard() {
 
       const hasCallParam = params.get('call') === 'true';
       const paramVisitorSocket = params.get('visitorSocketId');
+      const paramCallId = params.get('callId');
 
       if (hasCallParam && paramVisitorSocket) {
+        if (paramCallId && paramCallId === lastCallIdRef.current) {
+          console.log('[URL Param] Chamada duplicada já processada pelo Socket/SW, ignorando:', paramCallId);
+          return;
+        }
+        if (status !== 'idle') {
+          console.log('[URL Param] Ignorando carregamento de chamada pois status atual já é:', status);
+          return;
+        }
+        
+        lastCallIdRef.current = paramCallId || null;
         setVisitorSocketId(paramVisitorSocket);
         setStatus('ringing');
         setTab('home');
