@@ -265,6 +265,16 @@ export default function ResidentDashboard() {
         return;
       }
 
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.userAgent && navigator.userAgent.includes('Macintosh') && 'ontouchend' in document);
+      const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+
+      if (isIOS && !isStandalone) {
+        alert('No iOS (iPhone/iPad), as notificações push PWA REQUEREM que o aplicativo seja adicionado à Tela de Início:\n\n1. Toque no botão de Compartilhar (ícone de quadrado com seta para cima no Safari).\n2. Selecione "Adicionar à Tela de Início".\n3. Abra o aplicativo por essa nova tela e ative as notificações por lá.');
+        setPushLoading(false);
+        return;
+      }
+
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
         alert('Permissão de notificações negada. Por favor, ative nas configurações do Safari/Aparelho.');
@@ -1685,12 +1695,73 @@ export default function ResidentDashboard() {
                 </div>
 
                 {/* Status de notificações push */}
-                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: pushEnabled ? '#10B981' : '#94A3B8', background: pushEnabled ? 'rgba(16,185,129,0.08)' : 'rgba(148,163,184,0.1)', padding: '5px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>
-                    {pushEnabled ? <BellRing size={12} /> : <BellOff size={12} />}
-                    {pushEnabled ? 'Push Ativo' : 'Push Inativo'}
+                {!pushEnabled && (
+                  <div style={{ 
+                    marginTop: '16px',
+                    width: '100%', 
+                    maxWidth: '340px', 
+                    background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', 
+                    border: '1px solid #BFDBFE', 
+                    borderRadius: '20px', 
+                    padding: '16px 20px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '12px', 
+                    boxShadow: '0 8px 20px rgba(59, 130, 246, 0.05)',
+                    textAlign: 'left'
+                  }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <div style={{ 
+                        background: '#3B82F6', 
+                        color: '#FFF', 
+                        borderRadius: '50%', 
+                        width: '32px', 
+                        height: '32px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        flexShrink: 0, 
+                        boxShadow: '0 4px 10px rgba(59, 130, 246, 0.15)' 
+                      }}>
+                        <BellOff size={16} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#1E40AF', margin: '0 0 2px' }}>Notificações Inativas</h4>
+                        <p style={{ fontSize: '11px', color: '#1E3A8A', margin: 0, lineHeight: 1.4 }}>
+                          Ative as notificações para receber chamadas de visitantes mesmo quando o celular estiver bloqueado ou com a tela desligada!
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={enablePushNotifications}
+                      disabled={pushLoading}
+                      style={{ 
+                        width: '100%', 
+                        padding: '10px', 
+                        borderRadius: '12px', 
+                        background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', 
+                        color: '#FFF', 
+                        border: 'none', 
+                        fontWeight: 800, 
+                        fontSize: '12px', 
+                        cursor: 'pointer', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        gap: '6px', 
+                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)' 
+                      }}
+                    >
+                      {pushLoading ? 'Ativando...' : '🔔 Ativar Notificações Agora'}
+                    </button>
                   </div>
-                  {pushEnabled ? (
+                )}
+
+                {pushEnabled && (
+                  <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', background: 'rgba(16,185,129,0.08)', padding: '5px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>
+                      <BellRing size={12} /> Push Ativo
+                    </div>
                     <button
                       onClick={async () => {
                         setPushLoading(true);
@@ -1721,16 +1792,8 @@ export default function ResidentDashboard() {
                     >
                       {pushLoading ? '...' : '🔔 Testar'}
                     </button>
-                  ) : (
-                    <button
-                      onClick={enablePushNotifications}
-                      disabled={pushLoading}
-                      style={{ padding: '5px 12px', borderRadius: '99px', background: 'rgba(16,185,129,0.1)', border: 'none', color: '#10B981', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      {pushLoading ? '...' : '🔔 Ativar Notificações'}
-                    </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* QR Code de Campainha Digital */}
