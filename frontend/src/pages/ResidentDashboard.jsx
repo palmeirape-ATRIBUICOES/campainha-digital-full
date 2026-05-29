@@ -779,6 +779,7 @@ export default function ResidentDashboard() {
       s.disconnect();
       window.removeEventListener('beforeinstallprompt', bip);
       navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
+      stopRing();
       stopAll();
     };
   }, [id]);
@@ -901,8 +902,10 @@ export default function ResidentDashboard() {
   const stopRing = () => { 
     stopDoorbell(); 
     doorbellStartedRef.current = false; 
+    statusRef.current = 'idle';
     setAudioError(false); 
   };
+
   const stopAll = () => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(t => t.stop());
@@ -1054,7 +1057,9 @@ export default function ResidentDashboard() {
   }, []);
 
   const handleMonitor = () => {
-    stopRing(); setStatus('monitoring'); localStreamRef.current = null;
+    stopRing();
+    statusRef.current = 'monitoring';
+    setStatus('monitoring'); localStreamRef.current = null;
     socketRef.current.emit('answer_call', { visitorSocketId: call.visitorSocketId, mode: 'monitor', unitId: id });
     // Sinaliza ao visitante que pode criar a offer WebRTC
     socketRef.current.emit('webrtc_ready', { target: call.visitorSocketId });
@@ -1065,7 +1070,7 @@ export default function ResidentDashboard() {
     stopAll();
     
     // Se estiver no modo de monitoramento (oculto), fecha a conexão antiga para evitar conflito de hardware
-    if (status === 'monitoring') {
+    if (statusRef.current === 'monitoring') {
       console.log('[WebRTC] Transição de Monitor -> Falar: limpando conexão antiga');
       if (pcRef.current) {
         try { pcRef.current.close(); } catch {}
@@ -1076,6 +1081,7 @@ export default function ResidentDashboard() {
       }
     }
     
+    statusRef.current = 'active';
     setStatus('active');
     setCamOn(withCamera);
     
@@ -1105,11 +1111,12 @@ export default function ResidentDashboard() {
     doorbellStartedRef.current = false;
     if (visitorSocketId) {
       socketRef.current?.emit('call_ended', { target: visitorSocketId, unitId: id });
-    } else if (status === 'calling' && call && call._isDoorman) {
+    } else if (statusRef.current === 'calling' && call && call._isDoorman) {
       socketRef.current?.emit('cancel_call', { propertyId: call.propertyId });
-    } else if (status === 'calling' && call && call.unitId) {
+    } else if (statusRef.current === 'calling' && call && call.unitId) {
       socketRef.current?.emit('cancel_call', { unitId: call.unitId });
     }
+    statusRef.current = 'idle';
     setStatus('idle'); setCall(null); stopAll();
   };
 
@@ -1399,7 +1406,11 @@ export default function ResidentDashboard() {
     return null;
   }
 
-  const handleUserInteraction = () => {
+  const handleUserInteraction = (e) => {
+    // Evita reiniciar a campainha se o usuário clicou em botões de ação ou inputs
+    if (e && e.target && (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select'))) {
+      return;
+    }
     // Desbloqueia áudio no iOS no primeiro toque do usuário
     warmUpAudio();
     // Se há campainha pendente (chegou antes da interação), toca agora
@@ -1407,7 +1418,8 @@ export default function ResidentDashboard() {
       tryResumePending();
     }
     // Se está tocando e o Web Audio falhou, re-tenta com interação
-    if (status === 'ringing') {
+    // Usamos statusRef.current para evitar leitura stale durante o bubbling do clique em "Atender"
+    if (statusRef.current === 'ringing') {
       triggerDoorbell();
     }
   };
@@ -2055,25 +2067,25 @@ export default function ResidentDashboard() {
 
               {/* Botões de atender */}
               {call.callerName === 'Portaria' ? (
-                <button onClick={() => handleAnswer(false)} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '15px', background: '#10B981', boxShadow: '0 8px 24px rgba(16,185,129,0.35)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontWeight: 700 }}>
+                <button onClick={(e) => { e.stopPropagation(); handleAnswer(false); }} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '15px', background: '#10B981', boxShadow: '0 8px 24px rgba(16,185,129,0.35)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontWeight: 700 }}>
                   <Phone size={22} /> Atender Portaria (Áudio)
                 </button>
               ) : (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                    <button onClick={handleMonitor} style={{ padding: '16px', borderRadius: '14px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px' }}>
+                    <button onClick={(e) => { e.stopPropagation(); handleMonitor(); }} style={{ padding: '16px', borderRadius: '14px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px' }}>
                       <EyeOff size={22} color="var(--primary)" />Modo Oculto
                     </button>
-                    <button onClick={() => handleAnswer(false)} style={{ padding: '16px', borderRadius: '14px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px' }}>
+                    <button onClick={(e) => { e.stopPropagation(); handleAnswer(false); }} style={{ padding: '16px', borderRadius: '14px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px' }}>
                       <Phone size={22} color="#10B981" />Só Áudio
                     </button>
                   </div>
-                  <button onClick={() => handleAnswer(true)} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '15px', background: '#10B981', boxShadow: '0 8px 24px rgba(16,185,129,0.35)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                  <button onClick={(e) => { e.stopPropagation(); handleAnswer(true); }} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '15px', background: '#10B981', boxShadow: '0 8px 24px rgba(16,185,129,0.35)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
                     <Video size={22} /> Atender com Câmera e Áudio
                   </button>
                 </>
               )}
-              <button onClick={handleEnd} style={{ width: '100%', marginTop: '10px', padding: '12px', borderRadius: '14px', border: 'none', background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <button onClick={(e) => { e.stopPropagation(); handleEnd(); }} style={{ width: '100%', marginTop: '10px', padding: '12px', borderRadius: '14px', border: 'none', background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 <PhoneOff size={18} /> Recusar
               </button>
             </div>

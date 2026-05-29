@@ -18,10 +18,10 @@ function fmtDate(ts) {
 
 function HoverHelp({ text, children, style = {} }) {
   return (
-    <span className="tooltip-wrapper" style={{ display: 'block', width: '100%', ...style }}>
+    <div className="tooltip-wrapper" style={{ display: 'block', width: '100%', ...style }}>
       {children}
       <span className="tooltip-text">{text}</span>
-    </span>
+    </div>
   );
 }
 

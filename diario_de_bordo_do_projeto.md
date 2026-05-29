@@ -516,5 +516,39 @@ Implementação completa dos endpoints de gestão de portaria e login unificado 
    - O Service Worker agora detecta dinamicamente a plataforma iOS (`/iPad|iPhone|iPod/.test(navigator.userAgent)`).
    - Se for iOS, removemos os parâmetros `actions` das opções da notificação. Isso elimina o travamento silencioso das notificações em dispositivos Apple, garantindo que o alerta chegue perfeitamente com som na tela de bloqueio.
 
+---
 
+## 📐 v4.5.0 — Sincronização Simétrica de Grid & Bloqueio contra Múltiplas Conexões / Xiados (29/05/2026)
 
+### Problema
+1. **Misalignment de Grid (Ícone do Telefone)**: Os ícones de telefone azul (botões de ligar) estavam desalinhados no topo-esquerdo das unidades no Painel do Condomínio. Isso acontecia porque a diretiva do container `HoverHelp` usava `<span display: 'inline-flex'>` que não se comportava como item de grid block, fazendo com que as dimensões do card interno encolhessem ao tamanho do texto (60px) em vez de esticar para 100% da coluna do grid, fazendo com que o botão absoluto (`top: 10px, right: 10px`) ficasse colado ao meio e parecesse bizarro/fora de lugar.
+2. **Dupla Conexão & Xiados de Voz**: Ao atender uma chamada, o som de campainha às vezes voltava a tocar e criava-se um xiado terrível de microfones cruzados (feedbacks paralelos). Isso ocorria por **stale closures** no `useEffect` de soquetes do `ResidentDashboard.jsx`: quando o componente remontava ou mudava de estado, listeners antigos continuavam escutando no background. Ao receber uma chamada de soquete duplicada ou mensagens de SW, ambos os escopos disparavam WebRTC ao mesmo tempo, abrindo **dois PeerConnections paralelos** no mesmo áudio.
+
+### Solução
+1. **Sincronização e Alinhamento do Grid (`AdminPanel.jsx`)**:
+   - Ajustado o `HoverHelp` para renderizar `<span display: 'block' width: '100%'>`, forçando o wrap de tooltip a esticar exatamente na largura da célula da coluna do grid.
+   - Adicionada a propriedade `width: '100%'` no card `div` interno para que todas as caixas fiquem simétricas de forma perfeita.
+   - Escalado o diâmetro do botão de chamada de `38px` para `32px` com `top: 8px` e `right: 8px` e reduzido o ícone para `size={14}`, acomodando o atalho elegantemente no topo-direito interno de cada unidade sem conflitar com o texto.
+2. **Proteção contra Closures e Duplicatas (`ResidentDashboard.jsx`)**:
+   - Criada a referência de estado ativo `statusRef` (`useRef(status)` + atualizador automático em `useEffect`).
+   - Inserida uma barreira robusta na recepção de soquete `incoming_call`: se `statusRef.current === 'active'` ou `'monitoring'`, a nova solicitação de chamada é sumariamente descartada, evitando tocar ou substituir o fluxo ativo.
+   - Corrigido o interceptador de segundo plano `handleSWMessage` (Service Worker) para usar `statusRef.current !== 'idle'` em vez de `status`, bloqueando qualquer ressurgimento indesejado de áudio sintético.
+
+---
+
+## 📐 v4.6.0 — Ajuste Definitivo de Layout Grid (HoverHelp Div) e Fim da Campainha Dupla/Chiado (29/05/2026)
+
+### Problema
+1. **Misalignment de Grid (Ícone de Telefone Azul)**: Mesmo com largura de bloco nas tags wrappers, os cartões continuavam colapsando de largura em navegadores devido ao aninhamento HTML inválido (colocar uma `div` de bloco dentro de uma `span` inline-flex). Isso fazia as colunas do grid ficarem irregulares e os botões absolutos de telefone azul desalinhados/fora do lugar.
+2. **Dupla Campainha e Chiado Residual no Atendimento**: O clique global na raiz do PWA (`handleUserInteraction`) era disparado pelo *event bubbling* do clique no botão "Atender". Como a transição de estado do React é assíncrona, a raiz ainda lia o status como `'ringing'` e religava o doorbell imediatamente após o atendimento. Isso resultava em toque infinito em segundo plano e chiado de feedback acústico (microfonia) durante a conversa WebRTC ativa.
+
+### Solução
+1. **Wrapper Div no HoverHelp (`AdminPanel.jsx`)**:
+   - Alteramos a tag externa do componente `<HoverHelp>` de `span` para `div`.
+   - Isso fornece aninhamento HTML 100% válido, garantindo que o navegador renderize todos os cartões de unidade para preencher exatamente **100% da largura da coluna do Grid (130px)**.
+   - Todos os cartões agora são perfeitamente simétricos e organizados, e o botão azul de telefone está elegantemente alinhado no canto superior direito (`top: 8px`, `right: 8px`) em cada célula de forma idêntica.
+2. **Contenção Total contra Bubbling e Stale Closures (`ResidentDashboard.jsx`)**:
+   - **e.stopPropagation()**: Adicionada interrupção explícita de propagação nos handlers de clique de todos os botões de ação ("Atender", "Recusar", "Modo Oculto", "Só Áudio").
+   - **Interrupção de Interação em Inputs/Buttons**: Atualizada a função `handleUserInteraction(e)` para detectar e ignorar qualquer clique originado de elementos interativos (`button`, `input`, `textarea`, `select`), matando a reativação acidental.
+   - **Atualização Síncrona de Referências**: Atualizados os métodos de transição (`handleAnswer`, `handleEnd`, `handleMonitor`, `stopRing`) para atualizar `statusRef.current` de forma síncrona e instantânea antes do render do React, evitando qualquer stale closure na propagação.
+   - **Cleanup Completo de Áudio**: Adicionada a chamada `stopRing()` na desmontagem/cleanup do soquete no `useEffect` para silenciar a campainha imediatamente em trocas de rota ou remontagens.
