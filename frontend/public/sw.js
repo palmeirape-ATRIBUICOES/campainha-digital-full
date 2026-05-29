@@ -81,6 +81,9 @@ self.addEventListener('push', (event) => {
   }
 
   // Opções de notificação otimizadas para iOS + Android
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   const options = {
     body: data.body,
     icon: data.icon || BASE_URL + 'logo.png',
@@ -91,12 +94,16 @@ self.addEventListener('push', (event) => {
     silent: false,            // CRUCIAL: garante que o iOS toca o som do sistema
     sound: 'default',         // Som do sistema no iOS
     vibrate: data.vibrate || [300, 100, 600, 800, 300, 100, 600, 800, 300, 100, 600],
-    data: data.data || {},
-    actions: [
+    data: data.data || {}
+  };
+
+  // Só adiciona actions se NÃO for iOS (Safari iOS rejeita ou falha silenciosamente se contiver actions em PWA)
+  if (!isIOS) {
+    options.actions = [
       { action: 'answer', title: '📞 Atender' },
       { action: 'dismiss', title: '❌ Ignorar' }
-    ]
-  };
+    ];
+  }
 
   event.waitUntil(
     // 1. Exibe notificação (com fallback simplificado para iOS que não suporta actions)

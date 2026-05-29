@@ -29,6 +29,7 @@ let _audioEl = null;          // HTML5 <audio> element fallback
 let _isWarmedUp = false;      // Se o áudio já foi desbloqueado
 let _pendingRing = false;     // Se há campainha aguardando interação do usuário
 let _isPlaying = false;       // Se está tocando atualmente
+let _masterGainNode = null;   // Nó de ganho global master para silenciar imediatamente
 
 // ─── Padrão de vibração campainha ─────────────────────────────────────────────
 const VIBRATION_PATTERN = [300, 100, 600, 1000];
@@ -110,15 +111,18 @@ function playOneDingDong() {
       return false;
     }
 
-    const master = ctx.createGain();
-    master.gain.setValueAtTime(2.0, ctx.currentTime);
-    master.connect(ctx.destination);
+    if (!_masterGainNode) {
+      _masterGainNode = ctx.createGain();
+      _masterGainNode.connect(ctx.destination);
+    }
+    // Certifique-se de que o ganho está ativado ao tocar
+    _masterGainNode.gain.setValueAtTime(2.0, ctx.currentTime);
 
     const note = (freq, startSec, durSec) => {
       const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
-      gain.connect(master);
+      gain.connect(_masterGainNode);
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, ctx.currentTime + startSec);
       osc.frequency.exponentialRampToValueAtTime(
@@ -229,6 +233,15 @@ export function stopDoorbell() {
   _isPlaying = false;
   _pendingRing = false;
   
+  if (_masterGainNode) {
+    try {
+      // Zera o ganho master instantaneamente para anular qualquer som sintético tocando ou agendado
+      _masterGainNode.gain.setValueAtTime(0.0, _ctx?.currentTime || 0);
+    } catch (e) {
+      console.warn('Erro ao silenciar master gain:', e);
+    }
+  }
+
   if (_soundInterval) {
     clearInterval(_soundInterval);
     _soundInterval = null;

@@ -171,7 +171,11 @@ const sendPushToUser = async (userId, payload) => {
     await Promise.all(subs.map(async (sub) => {
       const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
       try {
-        await webpush.sendNotification(pushSub, JSON.stringify(payload));
+        await webpush.sendNotification(pushSub, JSON.stringify(payload), {
+          TTL: 60,
+          urgency: 'high',
+          topic: 'incoming-call'
+        });
         successCount++;
         console.log(`[Push] ✔ Notificação enviada com sucesso para endpoint: ${sub.endpoint.substring(0, 60)}...`);
       } catch (err) {
