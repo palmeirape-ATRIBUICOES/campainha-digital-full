@@ -476,3 +476,25 @@ Implementação de um **Detector de Falhas On-Screen** (`DebugConsole` em `App.j
   - Feedback visual imediato e transição suave ("Copiar" -> "Copiado!").
 - **Limpeza Fácil**: Botão "Limpar" para limpar o histórico e fechar o console.
 
+
+---
+
+## 🔑 v4.3.0 — Gestão Ativa de Portaria & Acesso Unificado (29/05/2026)
+
+### Problema
+No painel do administrador (síndico/cliente), a aba "Porteiro" na seção de gestão de Pessoas oferecia a inserção do e-mail do porteiro, mas a chamada de salvamento (`PUT /api/properties/:id/doorman`) não existia no backend do Prisma PostgreSQL, resultando em erro 404 silencioso. Além disso, a página de login exclusivo da portaria (`PorteiroLogin.jsx`) tentava autenticar via `/api/doorman/login` que também não estava implementado no servidor.
+
+### Solução
+Implementação completa dos endpoints de gestão de portaria e login unificado no backend (`server.js`) integrados ao Prisma ORM.
+
+- **Endpoint de Criação/Atualização de Porteiro (`PUT /api/properties/:id/doorman`)**:
+  - Valida se o solicitante é o administrador proprietário do condomínio.
+  - Se o e-mail do porteiro estiver em branco, remove/desvincula o porteiro atual (set `doormanId: null`).
+  - Se o e-mail for preenchido, verifica se o usuário já existe. Se não existir, gera um **código curto único de portaria case-insensitive** (ex: `P3A8F`), cria o usuário do tipo `isDoorman: true` com este código como `password` e `clientCode`, e vincula-o à propriedade.
+- **Endpoint de Login da Portaria (`POST /api/doorman/login`)**:
+  - Recebe `{ email, doormanCode }` e busca o porteiro correspondente de forma case-insensitive.
+  - Retorna o `propertyId` e `propertyName` vinculados a essa portaria para inicializar o `PorteiroDashboard` perfeitamente.
+- **Inclusão Dinâmica na API de Propriedades (`GET /api/properties`)**:
+  - Inclui a relação do `doorman` nas propriedades gerenciadas e mapeia os campos legados `doormanEmail` e `doormanCode` na resposta da API para garantir retrocompatibilidade perfeita com o frontend sem quebrar nada.
+
+
