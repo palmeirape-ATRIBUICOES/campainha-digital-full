@@ -453,3 +453,26 @@ Revisão completa da arquitetura de acesso e experiência do usuário.
 - [ ] Geração de contrato PDF com assinatura digital.
 - [ ] Sistema de notificações push (FCM).
 - [ ] Dashboard de analytics com gráficos no Master Admin.
+
+---
+
+## 🐞 v4.2.0 — Detector de Erros On-Screen (29/05/2026)
+
+### Problema
+Durante a homologação e o desenvolvimento ativo em dispositivos móveis (PWAs/WebViews), diagnosticar travamentos ou erros silenciosos era extremamente difícil devido à falta de acesso fácil ao painel DevTools / Console JavaScript.
+
+### Solução
+Implementação de um **Detector de Falhas On-Screen** (`DebugConsole` em `App.jsx`) que intercepta erros e exceções globais em tempo real.
+
+- **Captura Global de Exceções**: Registra automaticamente eventos de `window.onerror` (erros de sintaxe ou execução) e `window.onunhandledrejection` (rejeições de Promises).
+- **Interceptação de console.error**: Captura e redireciona mensagens enviadas explicitamente ao console de erros (`console.error`).
+- **Interface Flutuante Premium**:
+  - Exibe um pequeno botão/badge vermelho dinâmico com o ícone de joaninha (`🐞`) apenas se um erro ocorrer.
+  - Animação de pulso contínuo (`pulse-error`) para chamar atenção.
+  - Janela de console expandível com design moderno em *Dark Mode* profundo e efeito glassmorphic (`backdropFilter`).
+- **Cópia e Fallback Inteligente**:
+  - Botão "Copiar" que une o timestamp, a mensagem de erro e a stack-trace para facilitar o envio no chat de suporte/desenvolvimento.
+  - Fallback automático para copiar via elemento temporário `<textarea>` caso a API nativa `navigator.clipboard` seja bloqueada (comum em WebViews, in-app browsers ou HTTP simples).
+  - Feedback visual imediato e transição suave ("Copiar" -> "Copiado!").
+- **Limpeza Fácil**: Botão "Limpar" para limpar o histórico e fechar o console.
+
