@@ -82,61 +82,67 @@ self.addEventListener('push', (event) => {
 
   // Opções de notificação otimizadas para iOS + Android
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                (navigator.userAgent && navigator.userAgent.includes('Macintosh') && 'ontouchend' in self);
 
   const options = {
     body: data.body,
     icon: data.icon || BASE_URL + 'logo.png',
     badge: data.badge || BASE_URL + 'badge.png',
     tag: data.tag || 'campainha',
-    renotify: true,
-    requireInteraction: true,
     silent: false,            // CRUCIAL: garante que o iOS toca o som do sistema
-    sound: 'default',         // Som do sistema no iOS
-    vibrate: data.vibrate || [300, 100, 600, 800, 300, 100, 600, 800, 300, 100, 600],
     data: data.data || {}
   };
 
-  // Só adiciona actions se NÃO for iOS (Safari iOS rejeita ou falha silenciosamente se contiver actions em PWA)
+  // Só adiciona opções complexas se NÃO for iOS (evita TypeError ou rejeição silenciosa no Safari iOS)
   if (!isIOS) {
-    options.actions = [
-      { action: 'answer', title: '📞 Atender' },
-      { action: 'dismiss', title: '❌ Ignorar' }
-    ];
+    try {
+      options.actions = [
+        { action: 'answer', title: '📞 Atender' },
+        { action: 'dismiss', title: '❌ Ignorar' }
+      ];
+      options.vibrate = data.vibrate || [300, 100, 600, 800, 300, 100, 600, 800, 300, 100, 600];
+      options.requireInteraction = true;
+      options.renotify = true;
+    } catch (e) {
+      console.warn('[SW] Erro ao configurar opções complexas:', e);
+    }
   }
 
-  event.waitUntil(
-    // 1. Exibe notificação (com fallback simplificado para iOS que não suporta actions)
-    self.registration.showNotification(data.title, options)
-      .catch((err) => {
-        console.warn('[SW] Falha com opções complexas, tentando simplificada:', err);
-        // Fallback robusto sem actions (iOS não suporta notification actions em PWA)
-        return self.registration.showNotification(data.title, {
-          body: data.body,
-          icon: BASE_URL + 'logo.png',
-          badge: BASE_URL + 'badge.png',
-          tag: 'campainha',
-          silent: false,
-          data: data.data || {}
+  const promise = Promise.resolve()
+    .then(() => {
+      // Exibe a notificação com as opções configuradas
+      return self.registration.showNotification(data.title, options);
+    })
+    .catch((err) => {
+      console.warn('[SW] Falha com opções normais, tentando simplificada:', err);
+      // Fallback robusto e extremamente simplificado sem opções avançadas
+      return self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: BASE_URL + 'logo.png',
+        badge: BASE_URL + 'badge.png',
+        tag: 'campainha',
+        silent: false,
+        data: data.data || {}
+      });
+    })
+    .then(() => {
+      // 2. Acorda janelas abertas do app para tocar campainha
+      return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    })
+    .then((clientList) => {
+      clientList.forEach((client) => {
+        client.postMessage({
+          type: 'INCOMING_CALL',
+          payload: data.data || {}
         });
-      })
-      .then(() => {
-        // 2. Acorda janelas abertas do app para tocar campainha
-        return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-      })
-      .then((clientList) => {
-        clientList.forEach((client) => {
-          client.postMessage({
-            type: 'INCOMING_CALL',
-            payload: data.data || {}
-          });
-        });
-        console.log(`[SW] Push processado. ${clientList.length} janela(s) notificada(s).`);
-      })
-      .catch((err) => {
-        console.error('[SW] Erro crítico no push handler:', err);
-      })
-  );
+      });
+      console.log(`[SW] Push processado com sucesso. ${clientList.length} janela(s) notificada(s).`);
+    })
+    .catch((err) => {
+      console.error('[SW] Erro crítico no fluxo de push:', err);
+    });
+
+  event.waitUntil(promise);
 });
 
 // ─── NotificationClick: Abre o app quando o usuário toca na notificação ──────

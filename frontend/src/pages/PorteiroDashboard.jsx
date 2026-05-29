@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { LogOut, Building2, Phone, Search, KeyRound, CheckCircle2, MessageSquare, Send, X, ShieldCheck, Sun, Moon } from 'lucide-react';
+import { LogOut, Building2, Phone, PhoneCall, PhoneOff, Search, KeyRound, CheckCircle2, MessageSquare, Send, X, ShieldCheck, Sun, Moon } from 'lucide-react';
 import Logo from '../components/Logo';
 
 import { API } from '../config';
@@ -193,6 +193,28 @@ export default function PorteiroDashboard() {
   };
 
   useEffect(() => {
+    let ringInterval = null;
+    if (incomingCall) {
+      const playRing = () => {
+        try {
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+          audio.volume = 0.8;
+          audio.play().catch(() => {});
+        } catch (e) {
+          console.warn('[Audio] Failed to play ringtone:', e);
+        }
+      };
+      playRing();
+      ringInterval = setInterval(playRing, 2500);
+    }
+    return () => {
+      if (ringInterval) {
+        clearInterval(ringInterval);
+      }
+    };
+  }, [incomingCall]);
+
+  useEffect(() => {
     if (darkMode) {
       document.body.classList.add('dark-theme');
       localStorage.setItem('cd_dark_mode', 'true');
@@ -290,8 +312,7 @@ export default function PorteiroDashboard() {
 
     s.on('incoming_resident_call', ({ callerName, unitId, residentSocketId }) => {
       setIncomingCall({ callerName, unitId, residentSocketId });
-      try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {}); } catch {}
-      setTimeout(() => setIncomingCall(null), 20000);
+      setTimeout(() => setIncomingCall(null), 30000);
     });
 
     s.on('incoming_visitor_code', ({ propertyId, visitorName, unitName, code, timestamp }) => {
@@ -613,17 +634,145 @@ export default function PorteiroDashboard() {
           </div>
         )}
 
-        {/* Notificação de Chamada Recebida do Morador */}
+        {/* Notificação de Chamada Recebida do Morador (Modal Prominente) */}
         {incomingCall && (
-          <div style={{ background: '#FFF', border: '2px solid #F59E0B', padding: '20px', borderRadius: '20px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 8px 24px rgba(245,158,11,0.15)', animation: 'pulse 2s infinite' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#FFFBEB', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Phone size={24} />
+          <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999
+          }}>
+            <div style={{
+              width: '90%',
+              maxWidth: '440px',
+              padding: '40px 30px',
+              borderRadius: '28px',
+              border: '2px solid #F59E0B',
+              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 100%)',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(245, 158, 11, 0.2)',
+              textAlign: 'center',
+              color: '#fff',
+              position: 'relative',
+              boxSizing: 'border-box'
+            }}>
+              {/* Linha decorativa no topo */}
+              <div style={{
+                position: 'absolute',
+                top: 0, left: '50%',
+                transform: 'translateX(-50%)',
+                width: '120px',
+                height: '4px',
+                background: 'linear-gradient(90deg, transparent, #F59E0B, transparent)',
+                borderRadius: '0 0 4px 4px'
+              }} />
+
+              {/* Ícone de Telefone Pulsante */}
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                background: 'rgba(245, 158, 11, 0.15)',
+                color: '#F59E0B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 24px',
+                boxShadow: '0 0 30px rgba(245, 158, 11, 0.3)',
+                animation: 'pulse 1.8s infinite'
+              }}>
+                <PhoneCall size={38} style={{ animation: 'bounce 2s infinite' }} />
+              </div>
+
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                letterSpacing: '2px',
+                color: '#F59E0B',
+                display: 'block',
+                marginBottom: '8px'
+              }}>
+                📞 Chamada do Interfone
+              </span>
+
+              <h2 style={{
+                fontSize: '28px',
+                fontWeight: 900,
+                margin: '0 0 8px',
+                color: '#fff',
+                letterSpacing: '-0.5px'
+              }}>
+                {incomingCall.callerName}
+              </h2>
+
+              <p style={{
+                margin: '0 0 32px',
+                color: '#94A3B8',
+                fontSize: '14px',
+                lineHeight: 1.5,
+                fontWeight: 500
+              }}>
+                O morador está interfonando para a portaria.<br />Clique abaixo para atender ou recusar a chamada.
+              </p>
+
+              {/* Botões de Ação */}
+              <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+                <button
+                  onClick={async () => {
+                    if (socketRef.current) {
+                      socketRef.current.emit('call_ended', { target: incomingCall.residentSocketId });
+                    }
+                    setIncomingCall(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    borderRadius: '16px',
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    color: '#EF4444',
+                    fontWeight: 800,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s',
+                    border: '1px solid rgba(239, 68, 68, 0.2)'
+                  }}
+                >
+                  <PhoneOff size={16} /> Recusar
+                </button>
+                
+                <button
+                  onClick={() => handleAnswerResidentCall(incomingCall)}
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: '#10B981',
+                    color: '#FFF',
+                    fontWeight: 800,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <Phone size={16} /> Atender
+                </button>
+              </div>
             </div>
-            <div style={{ flex: 1 }}>
-              <h2 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px', color: '#1E293B' }}>Chamada de: {incomingCall.callerName}</h2>
-              <p style={{ margin: 0, color: '#64748B', fontSize: '13px' }}>O morador está interfonando para a portaria.</p>
-            </div>
-            <button onClick={() => handleAnswerResidentCall(incomingCall)} style={{ padding: '12px 24px', borderRadius: '10px', border: 'none', background: '#10B981', color: '#FFF', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}>Atender</button>
           </div>
         )}
 
