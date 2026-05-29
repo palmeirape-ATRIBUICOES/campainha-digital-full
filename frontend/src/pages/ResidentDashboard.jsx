@@ -585,6 +585,16 @@ export default function ResidentDashboard() {
       stopAll();
     });
 
+    s.on('call_already_answered', () => {
+      console.log('[Socket] Chamada já foi atendida em outro dispositivo/aba.');
+      stopDoorbell();
+      doorbellStartedRef.current = false;
+      setStatus('idle');
+      setCall(null);
+      stopAll();
+      alert('Esta chamada já foi atendida em outro dispositivo.');
+    });
+
     // Receber mensagens broadcast do condomínio
     s.on('broadcast_message', (msg) => {
       setBroadcastMessages(prev => [msg, ...prev]);
