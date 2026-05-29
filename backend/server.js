@@ -224,22 +224,76 @@ app.delete('/api/push/unsubscribe', authenticate, async (req, res) => {
   res.json({ success: true });
 });
 
-// Rota de TESTE para validar se o push está chegando
+// Rota de TESTE para validar se o push está chegando com feedback detalhado
 app.post('/api/push/test', authenticate, async (req, res) => {
   let baseUrl = process.env.FRONTEND_URL || 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
   if (baseUrl.includes('palmeirape-atribuicoes.github.io') && !baseUrl.includes('campainha-digital-full')) {
     baseUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
   }
 
-  await sendPushToUser(req.user.id, {
+  const userId = req.user.id;
+  const payload = {
     title: '🔔 Teste de Campainha!',
     body: 'Se você está vendo isso, as notificações push estão funcionando!',
     icon: `${baseUrl}/logo.png`,
     badge: `${baseUrl}/badge.png`,
     tag: 'test-notification',
     data: { url: `${baseUrl}/#/morador/${req.user.id}` }
-  });
-  res.json({ success: true, message: 'Notificação de teste enviada!' });
+  };
+
+  try {
+    const subs = await prisma.pushSubscription.findMany({ where: { userId } });
+    if (subs.length === 0) {
+      return res.json({ 
+        success: false, 
+        message: 'Nenhum dispositivo registrado no banco de dados. Você precisa clicar em "Ativar Notificações Agora" primeiro dentro do PWA instalado na Tela Inicial.' 
+      });
+    }
+
+    const results = [];
+    const dead = [];
+    let successCount = 0;
+
+    for (const sub of subs) {
+      const pushSub = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
+      try {
+        const result = await webpush.sendNotification(pushSub, JSON.stringify(payload), {
+          TTL: 60,
+          urgency: 'high',
+        });
+        successCount++;
+        results.push({ 
+          type: sub.endpoint.includes('googleapis') ? 'Android' : 'iOS/Safari',
+          success: true, 
+          status: result.statusCode 
+        });
+      } catch (err) {
+        results.push({ 
+          type: sub.endpoint.includes('googleapis') ? 'Android' : 'iOS/Safari',
+          success: false, 
+          status: err.statusCode, 
+          error: err.message 
+        });
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          dead.push(sub.id);
+        }
+      }
+    }
+
+    if (dead.length > 0) {
+      await prisma.pushSubscription.deleteMany({ where: { id: { in: dead } } }).catch(() => {});
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Registrados: ${subs.length}. Sucessos: ${successCount}. Disparos: ${JSON.stringify(results)}`,
+      successCount,
+      totalCount: subs.length,
+      details: results
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro crítico ao testar envio.', details: err.message });
+  }
 });
 
 // Diagnóstico: Quantas subscriptions push o usuário tem registradas?

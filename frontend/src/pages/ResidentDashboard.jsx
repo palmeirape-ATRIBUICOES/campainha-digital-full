@@ -1757,7 +1757,7 @@ export default function ResidentDashboard() {
                   </div>
                 )}
 
-                {pushEnabled && (
+                 {pushEnabled && (
                   <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', background: 'rgba(16,185,129,0.08)', padding: '5px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>
                       <BellRing size={12} /> Push Ativo
@@ -1776,7 +1776,12 @@ export default function ResidentDashboard() {
                             headers: { 'Authorization': token } 
                           });
                           if (res.ok) {
-                            alert('Sinal enviado! Se o PWA estiver instalado na Tela Inicial e com permissões ativas, a notificação deve aparecer em instantes.');
+                            const resData = await res.json().catch(() => ({}));
+                            if (resData.success === false) {
+                              alert(`⚠️ Alerta: ${resData.message}`);
+                            } else {
+                              alert(`Sinal enviado com sucesso!\n\n📋 Detalhes:\n${resData.message}\n\nSe a notificação ainda não aparecer na tela bloqueada, verifique:\n1. Se o PWA está instalado e aberto pela Tela Inicial (Home Screen).\n2. Se o modo "Não Perturbe" ou "Foco" está ativo no seu celular.\n3. Se você permitiu as notificações nas configurações do sistema.`);
+                            }
                           } else {
                             const errData = await res.json().catch(() => ({}));
                             alert(`Erro no servidor (${res.status}): ${errData.error || 'Falha na requisição'}`);

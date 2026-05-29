@@ -1,6 +1,6 @@
 // ─── Campainha Digital — Service Worker ───────────────────────────────────────
 // Versão do cache — altere para forçar atualização
-const CACHE_NAME = 'campainha-v12';
+const CACHE_NAME = 'campainha-v13';
 
 const STATIC_ASSETS = [
   './',
@@ -61,15 +61,7 @@ self.addEventListener('push', (event) => {
   let data = {
     title: '🔔 Alguém na sua porta!',
     body: 'Toque para atender agora.',
-    icon: BASE_URL + 'logo.png',
-    badge: BASE_URL + 'badge.png',
     tag: 'incoming-call',
-    requireInteraction: true,
-    vibrate: [
-      300, 100, 600, 800,
-      300, 100, 600, 800,
-      300, 100, 600, 800
-    ],
     data: { url: BASE_URL }
   };
 
@@ -80,25 +72,27 @@ self.addEventListener('push', (event) => {
     console.warn('[SW] Erro ao parsear push payload:', e);
   }
 
-  // Opções de notificação otimizadas para iOS + Android
+  // Detecção precisa de iOS (incluindo iPad em modo desktop)
   let isIOS = false;
   try {
     const ua = (self.navigator && self.navigator.userAgent) || '';
-    isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in self);
+    isIOS = /iPad|iPhone|iPod/.test(ua) || 
+            (ua.includes('Macintosh') && self.navigator && self.navigator.maxTouchPoints > 0);
   } catch (e) {
     console.warn('[SW] Erro ao detectar iOS:', e);
   }
 
+  // Configuração das opções base de notificação
   const options = {
     body: data.body,
-    icon: data.icon || BASE_URL + 'logo.png',
     tag: data.tag || 'campainha',
     data: data.data || {}
   };
 
-  // Só adiciona opções complexas se NÃO for iOS (evita TypeError ou rejeição silenciosa no Safari iOS)
+  // Só adiciona opções complexas/mídia se NÃO for iOS para evitar bloqueios ou downloads lentos
   if (!isIOS) {
     try {
+      options.icon = data.icon || BASE_URL + 'logo.png';
       options.badge = data.badge || BASE_URL + 'badge.png';
       options.silent = false;
       options.actions = [
@@ -113,23 +107,21 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  const promise = Promise.resolve()
-    .then(() => {
-      // Exibe a notificação com as opções configuradas
-      return self.registration.showNotification(data.title, options);
-    })
+  // 1. Dispara a notificação imediatamente de forma síncrona
+  const notificationPromise = self.registration.showNotification(data.title, options)
     .catch((err) => {
       console.warn('[SW] Falha com opções normais, tentando simplificada:', err);
-      // Fallback robusto e extremamente simplificado sem opções avançadas de forma a garantir a exibição
+      // Fallback ultra-simples, garantido sem carregar ícones/links externos que possam falhar em sleep mode
       return self.registration.showNotification(data.title, {
         body: data.body,
-        icon: BASE_URL + 'logo.png',
         tag: 'campainha',
         data: data.data || {}
       });
-    })
+    });
+
+  // 2. Agenda ações paralelas (como acordar janelas abertas) após a exibição
+  const postNotificationPromise = notificationPromise
     .then(() => {
-      // 2. Acorda janelas abertas do app para tocar campainha
       return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     })
     .then((clientList) => {
@@ -139,13 +131,14 @@ self.addEventListener('push', (event) => {
           payload: data.data || {}
         });
       });
-      console.log(`[SW] Push processado com sucesso. ${clientList.length} janela(s) notificada(s).`);
+      console.log(`[SW] Push processado com sucesso. ${clientList.length} janela(s) acordada(s).`);
     })
     .catch((err) => {
-      console.error('[SW] Erro crítico no fluxo de push:', err);
+      console.error('[SW] Erro no fluxo pós-notificação:', err);
     });
 
-  event.waitUntil(promise);
+  // Retorna a promessa combinada para o navegador manter o SW ativo até a finalização completa
+  event.waitUntil(Promise.all([notificationPromise, postNotificationPromise]));
 });
 
 // ─── NotificationClick: Abre o app quando o usuário toca na notificação ──────
