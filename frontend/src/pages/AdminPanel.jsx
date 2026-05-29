@@ -117,6 +117,7 @@ export default function AdminPanel() {
   const pcRef = useRef(null);
   const webrtcStartedRef = useRef(false);
   const remoteAudioRef = useRef(null);
+  const callInitiatedRef = useRef(false);
 
   const DEFAULT_ICE_CONFIG = {
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -146,6 +147,7 @@ export default function AdminPanel() {
       pcRef.current = null;
     }
     webrtcStartedRef.current = false;
+    callInitiatedRef.current = false;
   };
 
   const startOutboundWebRTC = async (residentSocketId) => {
@@ -2765,6 +2767,8 @@ export default function AdminPanel() {
                             if (isDemoMode) {
                               alert(`📞 Ligação simulada para o morador ${resident.name} iniciada!`);
                             } else if (socketRef.current) {
+                              if (callInitiatedRef.current) return;
+                              callInitiatedRef.current = true;
                               stopAllCall();
                               setActiveCall({
                                 residentSocketId: null,
@@ -2809,6 +2813,8 @@ export default function AdminPanel() {
                   if (isDemoMode) {
                     alert('📞 Chamada simulada iniciada para toda a unidade!');
                   } else if (socketRef.current) {
+                    if (callInitiatedRef.current) return;
+                    callInitiatedRef.current = true;
                     stopAllCall();
                     setActiveCall({
                       residentSocketId: null,
@@ -2843,6 +2849,7 @@ export default function AdminPanel() {
         </div>
       )}
 
+      <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
     </div>
   );
 }

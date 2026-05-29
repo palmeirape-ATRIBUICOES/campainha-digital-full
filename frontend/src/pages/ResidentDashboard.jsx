@@ -2054,7 +2054,12 @@ export default function ResidentDashboard() {
               </div>
 
               {/* Mídia / Vídeos / Voz */}
-              {call.callerName === 'Portaria' ? (
+              <div style={{ display: call.callerName === 'Portaria' ? 'none' : 'block', position: 'relative', borderRadius: '20px', overflow: 'hidden', background: '#000', minHeight: '220px', marginBottom: '16px' }}>
+                <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', objectFit: 'cover' }} />
+                {camOn && <video ref={localVideoRef} autoPlay playsInline muted style={{ position: 'absolute', bottom: '12px', right: '12px', width: '100px', borderRadius: '12px', border: '2px solid var(--primary)' }} />}
+              </div>
+
+              {call.callerName === 'Portaria' && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', background: '#0F172A', borderRadius: '20px', border: '1px solid #1E293B', marginBottom: '16px', minHeight: '220px' }}>
                   <div style={{
                     width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(0,229,255,0.1)',
@@ -2065,11 +2070,6 @@ export default function ResidentDashboard() {
                   </div>
                   <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#FFF', margin: '0 0 4px' }}>Portaria</h4>
                   <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0 }}>Comunicação por voz...</p>
-                </div>
-              ) : (
-                <div style={{ position: 'relative', borderRadius: '20px', overflow: 'hidden', background: '#000', minHeight: '220px', marginBottom: '16px' }}>
-                  <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', objectFit: 'cover' }} />
-                  {camOn && <video ref={localVideoRef} autoPlay playsInline muted style={{ position: 'absolute', bottom: '12px', right: '12px', width: '100px', borderRadius: '12px', border: '2px solid var(--primary)' }} />}
                 </div>
               )}
 
