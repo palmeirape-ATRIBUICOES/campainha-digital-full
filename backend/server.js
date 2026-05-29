@@ -3792,6 +3792,22 @@ io.on('connection', (socket) => {
   // Outros eventos WebRTC...
   socket.on('answer_call', ({ visitorSocketId, mode, unitId }) => {
     io.to(visitorSocketId).emit('call_answered', { residentSocketId: socket.id, mode, unitId });
+    if (unitId) {
+      socket.to(`user_${unitId}`).emit('call_answered_elsewhere', { answeredBy: socket.id, visitorSocketId });
+    }
+    if (socket.userId) {
+      socket.to(`user_${socket.userId}`).emit('call_answered_elsewhere', { answeredBy: socket.id, visitorSocketId });
+    }
+  });
+
+  socket.on('cancel_call', ({ unitId, propertyId }) => {
+    console.log(`[WS Call] Chamada cancelada por ${socket.id}: unitId=${unitId}, propertyId=${propertyId}`);
+    if (unitId) {
+      io.to(`user_${unitId}`).emit('call_cancelled', { callerSocketId: socket.id });
+    }
+    if (propertyId) {
+      io.to(`doorman_${propertyId}`).emit('call_cancelled', { callerSocketId: socket.id });
+    }
   });
   
   socket.on('webrtc_ready', ({ target }) => {
@@ -3815,8 +3831,11 @@ io.on('connection', (socket) => {
     io.to(target).emit('quick_message', { message });
   });
 
-  socket.on('call_ended', ({ target }) => {
+  socket.on('call_ended', ({ target, unitId }) => {
     io.to(target).emit('call_ended');
+    if (unitId) {
+      socket.to(`user_${unitId}`).emit('call_ended');
+    }
   });
 
   socket.on('authorize_entry', ({ visitorId }) => {

@@ -143,8 +143,14 @@ export default function AdminPanel() {
       localStreamRef.current = null;
     }
     if (pcRef.current) {
-      pcRef.current.close();
+      try { pcRef.current.close(); } catch {}
       pcRef.current = null;
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
     }
     webrtcStartedRef.current = false;
     callInitiatedRef.current = false;
@@ -239,7 +245,9 @@ export default function AdminPanel() {
     if (socketRef.current && (doormanCallState === 'calling' || doormanCallState === 'talking' || (activeCall && activeCall.status !== 'ended'))) {
       const targetSocket = socketRef.current.targetSocketId || (activeCall && activeCall.residentSocketId);
       if (targetSocket) {
-        socketRef.current.emit('call_ended', { target: targetSocket });
+        socketRef.current.emit('call_ended', { target: targetSocket, unitId: activeCall?.unitId });
+      } else if (activeCall && activeCall.unitId) {
+        socketRef.current.emit('cancel_call', { unitId: activeCall.unitId });
       }
     }
     stopAllCall();
@@ -342,6 +350,11 @@ export default function AdminPanel() {
       setIncomingCall({ callerName, unitId, residentSocketId });
       try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {}); } catch {}
       setTimeout(() => setIncomingCall(null), 20000);
+    });
+
+    s.on('call_cancelled', ({ callerSocketId }) => {
+      console.log('[AdminPanel WS] Call cancelled by caller:', callerSocketId);
+      setIncomingCall(prev => (prev && prev.residentSocketId === callerSocketId) ? null : prev);
     });
 
     s.on('webrtc_offer', async ({ sender, offer }) => {

@@ -188,8 +188,11 @@ export default function VisitorCall() {
       localStreamRef.current = null;
     }
     if (pcRef.current) {
-      pcRef.current.close();
+      try { pcRef.current.close(); } catch {}
       pcRef.current = null;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
     }
     webrtcStartedRef.current = false; // Permite nova chamada depois
   };
@@ -344,7 +347,9 @@ export default function VisitorCall() {
 
   const handleHangup = () => {
     if (residentSocket && socketRef.current) {
-      socketRef.current.emit('call_ended', { target: residentSocket });
+      socketRef.current.emit('call_ended', { target: residentSocket, unitId: callingUnit?.id });
+    } else if (socketRef.current && callingUnit) {
+      socketRef.current.emit('cancel_call', { unitId: callingUnit.id });
     }
     setStatus('idle');
     setCallingUnit(null);

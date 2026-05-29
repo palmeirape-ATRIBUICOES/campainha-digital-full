@@ -563,6 +563,24 @@ export default function ResidentDashboard() {
       stopAll();
     });
 
+    s.on('call_answered_elsewhere', ({ answeredBy }) => {
+      console.log('[Socket] Chamada atendida em outro dispositivo/aba:', answeredBy);
+      stopDoorbell();
+      doorbellStartedRef.current = false;
+      setStatus('idle');
+      setCall(null);
+      stopAll();
+    });
+
+    s.on('call_cancelled', () => {
+      console.log('[Socket] Chamada cancelada pelo visitante/porteiro.');
+      stopDoorbell();
+      doorbellStartedRef.current = false;
+      setStatus('idle');
+      setCall(null);
+      stopAll();
+    });
+
     // Receber mensagens broadcast do condomínio
     s.on('broadcast_message', (msg) => {
       setBroadcastMessages(prev => [msg, ...prev]);
@@ -876,8 +894,17 @@ export default function ResidentDashboard() {
     setAudioError(false); 
   };
   const stopAll = () => {
-    if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t => t.stop()); localStreamRef.current = null; }
-    if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
+    }
+    if (pcRef.current) {
+      try { pcRef.current.close(); } catch {}
+      pcRef.current = null;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
   };
 
   const searchNeighbor = async () => {
@@ -949,7 +976,7 @@ export default function ResidentDashboard() {
     if (!socketRef.current || !propertyId) return;
     
     setStatus('calling');
-    setCall({ callerName: neighbor.name || 'Vizinho', propertyId });
+    setCall({ callerName: neighbor.name || 'Vizinho', propertyId, unitId: neighbor.id });
     setVisitorSocketId(null);
     setTab('home');
 
@@ -1044,7 +1071,11 @@ export default function ResidentDashboard() {
   const handleEnd = () => {
     stopDoorbell();
     doorbellStartedRef.current = false;
-    if (visitorSocketId) socketRef.current?.emit('call_ended', { target: visitorSocketId });
+    if (visitorSocketId) {
+      socketRef.current?.emit('call_ended', { target: visitorSocketId, unitId: id });
+    } else if (status === 'calling' && call && call.unitId) {
+      socketRef.current?.emit('cancel_call', { unitId: call.unitId });
+    }
     setStatus('idle'); setCall(null); stopAll();
   };
 
