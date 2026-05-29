@@ -1036,6 +1036,54 @@ app.post('/api/resident/login', async (req, res) => {
   }
 });
 
+// Login do Porteiro (doormanCode = clientCode)
+app.post('/api/doorman/login', async (req, res) => {
+  const { email, doormanCode } = req.body;
+  if (!email || !doormanCode) {
+    return res.status(400).json({ error: 'E-mail e código são obrigatórios.' });
+  }
+
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanCode = doormanCode.trim().toUpperCase();
+
+    // Busca o usuário doorman com o e-mail correspondente e clientCode
+    const user = await prisma.user.findFirst({
+      where: {
+        email: cleanEmail,
+        clientCode: { equals: cleanCode, mode: 'insensitive' },
+        isDoorman: true
+      },
+      include: {
+        propertiesDoorman: true
+      }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'E-mail ou código de portaria incorretos.' });
+    }
+
+    // Busca a propriedade associada
+    const property = user.propertiesDoorman[0];
+    if (!property) {
+      return res.status(404).json({ error: 'Nenhum condomínio/propriedade vinculada a esta portaria.' });
+    }
+
+    res.json({
+      success: true,
+      token: user.id,
+      userId: user.id,
+      propertyId: property.id,
+      propertyName: property.name,
+      doormanEmail: user.email,
+      doormanCode: user.clientCode
+    });
+  } catch (err) {
+    console.error('Doorman login error:', err);
+    res.status(500).json({ error: 'Erro no servidor durante login da portaria.', details: err.message });
+  }
+});
+
 
 // Recuperação de Senha - Solicitar
 app.post('/api/auth/forgot-password', async (req, res) => {
@@ -1533,6 +1581,7 @@ app.get('/api/properties', async (req, res) => {
           include: {
             property: {
               include: {
+                doorman: true,
                 units: {
                   orderBy: { name: 'asc' },
                   include: {
@@ -1545,6 +1594,7 @@ app.get('/api/properties', async (req, res) => {
         },
         propertiesManaged: {
           include: {
+            doorman: true,
             units: {
               orderBy: { name: 'asc' },
               include: {
@@ -1585,7 +1635,9 @@ app.get('/api/properties', async (req, res) => {
         ...p,
         url,
         qrCodeUrl: `${backendUrl}/api/qrcode?text=${encodeURIComponent(url)}`,
-        units: unitsWithAccess
+        units: unitsWithAccess,
+        doormanEmail: p.doorman?.email || null,
+        doormanCode: p.doorman?.clientCode || null
       };
     });
 
@@ -3205,6 +3257,97 @@ app.put('/api/properties/:id', async (req, res) => {
   } catch (err) {
     console.error('Update property error:', err);
     res.status(500).json({ error: 'Erro ao atualizar propriedade. Talvez o subdomínio já esteja em uso.' });
+  }
+});
+
+// Criar / Atualizar ou Remover o porteiro da propriedade
+app.put('/api/properties/:id/doorman', async (req, res) => {
+  const { id } = req.params;
+  const { adminEmail, doormanEmail } = req.body;
+
+  try {
+    // 1. Validar se a propriedade existe
+    const property = await prisma.property.findUnique({
+      where: { id },
+      include: { admin: true }
+    });
+
+    if (!property) {
+      return res.status(404).json({ error: 'Propriedade não encontrada.' });
+    }
+
+    // Se o adminEmail for fornecido, valida se é o dono da propriedade
+    if (adminEmail && property.admin && property.admin.email.toLowerCase() !== adminEmail.toLowerCase()) {
+      return res.status(403).json({ error: 'Você não tem permissão para alterar esta propriedade.' });
+    }
+
+    // 2. Se doormanEmail estiver em branco, desvincula o porteiro da propriedade
+    if (!doormanEmail || !doormanEmail.trim()) {
+      await prisma.property.update({
+        where: { id },
+        data: { doormanId: null }
+      });
+      return res.json({ success: true, message: 'Porteiro removido da propriedade.' });
+    }
+
+    const cleanEmail = doormanEmail.trim().toLowerCase();
+
+    // 3. Verifica se já existe um usuário com esse e-mail
+    let doormanUser = await prisma.user.findUnique({
+      where: { email: cleanEmail }
+    });
+
+    if (!doormanUser) {
+      // Se não existir, gera um código de acesso único curto e marcante para a portaria (ex: P7A8F)
+      let uniqueCode = '';
+      let isUnique = false;
+      while (!isUnique) {
+        uniqueCode = 'P' + Math.random().toString(36).substring(2, 6).toUpperCase();
+        const existing = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { clientCode: uniqueCode },
+              { plateCode: uniqueCode }
+            ]
+          }
+        });
+        if (!existing) isUnique = true;
+      }
+
+      // Cria o usuário do tipo doorman no banco de dados
+      doormanUser = await prisma.user.create({
+        data: {
+          name: `Portaria ${property.name}`,
+          email: cleanEmail,
+          password: uniqueCode, // Usa o próprio código como senha inicial para login convencional
+          isDoorman: true,
+          clientCode: uniqueCode
+        }
+      });
+    } else {
+      // Se já existir, garante que a flag isDoorman está ativa
+      if (!doormanUser.isDoorman) {
+        doormanUser = await prisma.user.update({
+          where: { id: doormanUser.id },
+          data: { isDoorman: true }
+        });
+      }
+    }
+
+    // 4. Vincula o doormanUser à propriedade
+    await prisma.property.update({
+      where: { id },
+      data: { doormanId: doormanUser.id }
+    });
+
+    res.json({
+      success: true,
+      doormanCode: doormanUser.clientCode,
+      doormanEmail: doormanUser.email
+    });
+  } catch (err) {
+    console.error('Error managing doorman:', err);
+    res.status(500).json({ error: 'Erro ao processar porteiro.', details: err.message });
   }
 });
 
