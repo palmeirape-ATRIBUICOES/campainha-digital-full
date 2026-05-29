@@ -1181,7 +1181,7 @@ export default function ResidentDashboard() {
       });
       if (res.ok) {
         setVisitorOrPackageName(''); // clear input on success
-        alert('Notificação enviada com sucesso para a portaria/zelador!');
+        alert('Notificação enviada com sucesso para a portaria!');
       } else {
         alert('Erro ao despachar alerta.');
       }
@@ -1722,7 +1722,7 @@ export default function ResidentDashboard() {
                   </button>
 
                   {/* Grid for alert dispatchers */}
-                  <p style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', marginBottom: '4px' }}>Notificar Portaria / Zelador na Grade Visual:</p>
+                  <p style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', marginBottom: '4px' }}>Notificar Portaria na Grade Visual:</p>
                   
                   <input
                     type="text"
@@ -1788,7 +1788,7 @@ export default function ResidentDashboard() {
                   </div>
 
                   <button
-                    onClick={() => dispatchAlert('alert', '⚠️ Pedido de Ajuda / Suporte', 'Morador solicita assistência urgente do zelador ou administração.')}
+                    onClick={() => dispatchAlert('alert', '⚠️ Pedido de Ajuda / Suporte', 'Morador solicita assistência urgente da portaria ou administração.')}
                     disabled={dispatchAlertLoading}
                     style={{
                       width: '100%',

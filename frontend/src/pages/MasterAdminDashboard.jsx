@@ -423,7 +423,7 @@ export default function MasterAdminDashboard() {
                         <ModuleBadge label="Cliente Final" active={user.isResident} onClick={() => toggleModule(user.id, 'isResident', user.isResident)} />
                         <ModuleBadge label="Admin de Vilas" active={user.isVilaAdmin} onClick={() => toggleModule(user.id, 'isVilaAdmin', user.isVilaAdmin)} />
                         <ModuleBadge label="Admin Condo" active={user.isAdmin} onClick={() => toggleModule(user.id, 'isAdmin', user.isAdmin)} />
-                        <ModuleBadge label="Zelador" active={user.isDoorman} onClick={() => toggleModule(user.id, 'isDoorman', user.isDoorman)} />
+                        <ModuleBadge label="Portaria" active={user.isDoorman} onClick={() => toggleModule(user.id, 'isDoorman', user.isDoorman)} />
                         <ModuleBadge label="Revendedor" active={user.isReseller} onClick={() => toggleModule(user.id, 'isReseller', user.isReseller)} />
                         <ModuleBadge label="Morador de Casas" active={user.isHouseResident} onClick={() => toggleModule(user.id, 'isHouseResident', user.isHouseResident)} />
                         <ModuleBadge label="Morador Vilas/Condomínios" active={user.isCondoResident} onClick={() => toggleModule(user.id, 'isCondoResident', user.isCondoResident)} />
@@ -689,7 +689,7 @@ export default function MasterAdminDashboard() {
                               <span style={{ color: '#64748B' }}>Plano:</span> <strong style={{ color: '#0F172A' }}>{condo.plan}</strong>
                             </div>
                             <div style={{ background: '#F8FAFC', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', border: '1px solid #E2E8F0' }}>
-                              <span style={{ color: '#64748B' }}>Zelador/Porteiro:</span> <strong style={{ color: '#0F172A' }}>{doormanObj?.name || 'Não atribuído'}</strong>
+                              <span style={{ color: '#64748B' }}>Portaria:</span> <strong style={{ color: '#0F172A' }}>{doormanObj?.name || 'Não atribuído'}</strong>
                             </div>
                           </div>
                         </div>

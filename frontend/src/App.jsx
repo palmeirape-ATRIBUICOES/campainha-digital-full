@@ -37,7 +37,7 @@ function RootRedirect() {
     const isSuperAdmin  = localStorage.getItem('cd_is_super_admin') === 'true';
     const isVilaAdmin   = localStorage.getItem('cd_vila_property_id');
     const isAdmin       = localStorage.getItem('cd_admin_role') === 'client';
-    const isDoorman     = localStorage.getItem('cd_doorman_propertyId');
+    const isDoorman     = localStorage.getItem('cd_admin_role') === 'doorman' || localStorage.getItem('cd_doorman_propertyId');
     const unitId        = localStorage.getItem('residentUnitId');
     const userId        = localStorage.getItem('cd_user_id');
 
@@ -45,10 +45,8 @@ function RootRedirect() {
       navigate('/master-admin', { replace: true });
     } else if (isVilaAdmin) {
       navigate('/vila-admin', { replace: true });
-    } else if (isAdmin) {
+    } else if (isAdmin || isDoorman) {
       navigate('/admin', { replace: true });
-    } else if (isDoorman) {
-      navigate('/portaria', { replace: true });
     } else if (unitId || userId) {
       navigate(`/morador/${unitId || userId}`, { replace: true });
     } else {
@@ -96,7 +94,7 @@ function AuthRedirect() {
     const isSuperAdmin  = localStorage.getItem('cd_is_super_admin') === 'true';
     const isVilaAdmin   = localStorage.getItem('cd_vila_property_id');
     const isAdmin       = localStorage.getItem('cd_admin_role') === 'client';
-    const isDoorman     = localStorage.getItem('cd_doorman_propertyId');
+    const isDoorman     = localStorage.getItem('cd_admin_role') === 'doorman' || localStorage.getItem('cd_doorman_propertyId');
     const unitId        = localStorage.getItem('residentUnitId');
     const userId        = localStorage.getItem('cd_user_id');
 
@@ -104,10 +102,8 @@ function AuthRedirect() {
       navigate('/master-admin', { replace: true });
     } else if (isVilaAdmin) {
       navigate('/vila-admin', { replace: true });
-    } else if (isAdmin) {
+    } else if (isAdmin || isDoorman) {
       navigate('/admin', { replace: true });
-    } else if (isDoorman) {
-      navigate('/portaria', { replace: true });
     } else if (unitId || userId) {
       navigate(`/morador/${unitId || userId}`, { replace: true });
     } else {

@@ -1529,6 +1529,20 @@ app.get('/api/properties', async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
+        units: {
+          include: {
+            property: {
+              include: {
+                units: {
+                  orderBy: { name: 'asc' },
+                  include: {
+                    residents: true
+                  }
+                }
+              }
+            }
+          }
+        },
         propertiesManaged: {
           include: {
             units: {
@@ -1554,7 +1568,12 @@ app.get('/api/properties', async (req, res) => {
 
     const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
 
-    const propsWithUrls = user.propertiesManaged.map(p => {
+    let propertiesList = [...user.propertiesManaged];
+    if (propertiesList.length === 0 && user.units && user.units.length > 0 && user.units[0].property) {
+      propertiesList.push(user.units[0].property);
+    }
+
+    const propsWithUrls = propertiesList.map(p => {
       const url = `${frontendUrl}/#/chamada/${p.id}`;
 
       // Transforma cada unit.inviteCode em accessCode para compatibilidade com o frontend

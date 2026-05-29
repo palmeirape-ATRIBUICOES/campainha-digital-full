@@ -156,7 +156,11 @@ export default function AuthPage() {
             localStorage.setItem('cd_user_id', data.userId || data.token);
             localStorage.setItem('cd_doorman_propertyId', data.propertyId);
             localStorage.setItem('cd_doorman_propertyName', data.propertyName);
-            navigate('/portaria');
+            localStorage.setItem('cd_admin_role', 'doorman');
+            localStorage.setItem('cd_admin_propertyId', data.propertyId);
+            localStorage.setItem('cd_admin_email', data.adminEmail || '');
+            localStorage.setItem('cd_admin_name', data.unitName || 'Portaria');
+            navigate('/admin');
           } else if (data.role === 'admin') {
             localStorage.setItem('cd_token', data.token);
             localStorage.setItem('cd_user_id', data.userId || data.token);
@@ -287,7 +291,11 @@ export default function AuthPage() {
           localStorage.removeItem('cd_is_super_admin');
           localStorage.setItem('cd_doorman_propertyId', data.user.propertyId || '');
           localStorage.setItem('cd_doorman_propertyName', data.user.propertyName || '');
-          navigate('/portaria');
+          localStorage.setItem('cd_admin_role', 'doorman');
+          localStorage.setItem('cd_admin_propertyId', data.user.propertyId || '');
+          localStorage.setItem('cd_admin_email', data.user.email || identifier || '');
+          localStorage.setItem('cd_admin_name', data.user.name || 'Portaria');
+          navigate('/admin');
         } else if (data.user.isResident) {
           localStorage.removeItem('cd_is_super_admin');
           localStorage.setItem('residentUnitId', data.user.unitId || '');
