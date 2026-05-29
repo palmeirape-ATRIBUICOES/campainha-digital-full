@@ -3596,7 +3596,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  const handleIncomingCall = async ({ unitId, propertyId, photoBase64, callerName, visitorLat, visitorLng, targetUserId }) => {
+  const handleIncomingCall = async ({ unitId, propertyId, photoBase64, callerName, visitorLat, visitorLng, targetUserId, isDoormanCall }) => {
     console.log(`\n[WS Call] ===== NOVA CHAMADA =====`);
     console.log(`[WS Call] unitId: ${unitId}`);
     console.log(`[WS Call] propertyId: ${propertyId}`);
@@ -3630,7 +3630,7 @@ io.on('connection', (socket) => {
       select: { geofenceEnabled: true, geofenceLat: true, geofenceLng: true, geofenceRadius: true }
     });
 
-    if (property?.geofenceEnabled && property.geofenceLat != null && property.geofenceLng != null) {
+    if (!isDoormanCall && property?.geofenceEnabled && property.geofenceLat != null && property.geofenceLng != null) {
       if (visitorLat == null || visitorLng == null) {
         // Visitante não compartilhou GPS — bloqueia
         console.log(`[Geofence] Chamada BLOQUEADA: GPS do visitante não disponível para unidade ${unit.name}`);
@@ -3787,7 +3787,7 @@ io.on('connection', (socket) => {
   };
 
   socket.on('initiate_call', handleIncomingCall);
-  socket.on('doorman_call', handleIncomingCall);
+  socket.on('doorman_call', (data) => handleIncomingCall({ ...data, isDoormanCall: true }));
 
   // Outros eventos WebRTC...
   socket.on('answer_call', ({ visitorSocketId, mode, unitId }) => {
