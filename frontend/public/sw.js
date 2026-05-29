@@ -81,21 +81,26 @@ self.addEventListener('push', (event) => {
   }
 
   // Opções de notificação otimizadas para iOS + Android
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                (navigator.userAgent && navigator.userAgent.includes('Macintosh') && 'ontouchend' in self);
+  let isIOS = false;
+  try {
+    const ua = (self.navigator && self.navigator.userAgent) || '';
+    isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in self);
+  } catch (e) {
+    console.warn('[SW] Erro ao detectar iOS:', e);
+  }
 
   const options = {
     body: data.body,
     icon: data.icon || BASE_URL + 'logo.png',
-    badge: data.badge || BASE_URL + 'badge.png',
     tag: data.tag || 'campainha',
-    silent: false,            // CRUCIAL: garante que o iOS toca o som do sistema
     data: data.data || {}
   };
 
   // Só adiciona opções complexas se NÃO for iOS (evita TypeError ou rejeição silenciosa no Safari iOS)
   if (!isIOS) {
     try {
+      options.badge = data.badge || BASE_URL + 'badge.png';
+      options.silent = false;
       options.actions = [
         { action: 'answer', title: '📞 Atender' },
         { action: 'dismiss', title: '❌ Ignorar' }
@@ -115,13 +120,11 @@ self.addEventListener('push', (event) => {
     })
     .catch((err) => {
       console.warn('[SW] Falha com opções normais, tentando simplificada:', err);
-      // Fallback robusto e extremamente simplificado sem opções avançadas
+      // Fallback robusto e extremamente simplificado sem opções avançadas de forma a garantir a exibição
       return self.registration.showNotification(data.title, {
         body: data.body,
         icon: BASE_URL + 'logo.png',
-        badge: BASE_URL + 'badge.png',
         tag: 'campainha',
-        silent: false,
         data: data.data || {}
       });
     })
