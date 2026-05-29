@@ -18,7 +18,7 @@ function fmtDate(ts) {
 
 function HoverHelp({ text, children, style = {} }) {
   return (
-    <span className="tooltip-wrapper" style={{ display: 'inline-flex', ...style }}>
+    <span className="tooltip-wrapper" style={{ display: 'block', width: '100%', ...style }}>
       {children}
       <span className="tooltip-text">{text}</span>
     </span>
@@ -2063,6 +2063,7 @@ export default function AdminPanel() {
                                   alignItems: 'center',
                                   justifyContent: 'center',
                                   minHeight: '110px',
+                                  width: '100%',
                                   transition: 'all 0.2s',
                                   boxShadow: hasAlert ? 'none' : '0 2px 6px rgba(0,0,0,0.01)'
                                 }}
@@ -2075,14 +2076,14 @@ export default function AdminPanel() {
                                   }}
                                   style={{
                                     position: 'absolute',
-                                    top: '10px',
-                                    right: '10px',
+                                    top: '8px',
+                                    right: '8px',
                                     background: 'rgba(59, 130, 246, 0.15)',
                                     border: '1px solid rgba(59, 130, 246, 0.3)',
                                     color: '#3B82F6',
                                     borderRadius: '50%',
-                                    width: '38px',
-                                    height: '38px',
+                                    width: '32px',
+                                    height: '32px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -2095,7 +2096,7 @@ export default function AdminPanel() {
                                   onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.background = '#3B82F6'; e.currentTarget.style.color = '#fff'; }}
                                   onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)'; e.currentTarget.style.color = '#3B82F6'; }}
                                 >
-                                  <Phone size={16} />
+                                  <Phone size={14} />
                                 </button>
 
                                 <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>{u.name}</span>

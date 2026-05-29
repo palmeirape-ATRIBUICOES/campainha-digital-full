@@ -58,6 +58,10 @@ export default function ResidentDashboard() {
   const [showMenu, setShowMenu] = useState(false);
   const [call, setCall] = useState(null);
   const [status, setStatus] = useState('idle'); // idle|ringing|active|monitoring
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
   const [audioError, setAudioError] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [camOn, setCamOn] = useState(false);
@@ -500,6 +504,12 @@ export default function ResidentDashboard() {
 
 
     s.on('incoming_call', (data) => {
+      // Se já estivermos em uma chamada ativa ou monitorando, ignora novas chamadas para evitar tocar o som
+      if (statusRef.current === 'active' || statusRef.current === 'monitoring') {
+        console.log('[Socket] Ignorando incoming_call pois já estamos em uma chamada ativa/monitoramento (status:', statusRef.current, ')');
+        return;
+      }
+
       // DEDUP: o backend emite para 2 salas (user_userId e user_unitId).
       // Se o socket está nas 2 salas, o evento chega 2x. Ignoramos duplicatas.
       if (data.callId && data.callId === lastCallIdRef.current) {
@@ -726,8 +736,8 @@ export default function ResidentDashboard() {
           return;
         }
         
-        if (status !== 'idle') {
-          console.log('[SW Message] Ignorando pois o status atual já é:', status);
+        if (statusRef.current !== 'idle') {
+          console.log('[SW Message] Ignorando pois o status atual já é:', statusRef.current);
           return;
         }
         
