@@ -1021,12 +1021,6 @@ export default function ResidentDashboard() {
     } catch (e) {
       console.warn('[Media] Falha ao capturar mídia local:', e);
     }
-    
-    // Se a chamada for da Portaria (que não tem WebRTC configurado na web), não espere a oferta WebRTC.
-    if (call?.callerName === 'Portaria') {
-      alert('Conectado à Portaria (Modo Áudio Simples).');
-      return;
-    }
 
     const targetSocket = call?.visitorSocketId || visitorSocketId;
     if (socketRef.current && targetSocket) {

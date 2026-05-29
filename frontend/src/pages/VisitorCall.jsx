@@ -323,6 +323,7 @@ export default function VisitorCall() {
     });
 
   const handleCall = async (unit) => {
+    if (status === 'calling' || status === 'active' || status === 'monitoring') return;
     // Solicita GPS antes de chamar (servidor rejeita se geofence ativo e coords ausentes)
     const coords = geoCoordsRef.current || await requestGeo();
 

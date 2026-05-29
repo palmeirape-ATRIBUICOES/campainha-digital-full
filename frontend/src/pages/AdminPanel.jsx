@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, Send, Zap, Sun, Moon } from 'lucide-react';
+import { Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, Send, Zap, Sun, Moon, Phone, PhoneCall, PhoneOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import Logo from '../components/Logo';
@@ -107,7 +107,198 @@ export default function AdminPanel() {
   const [activeControlBlock, setActiveControlBlock] = useState(null);
   const [lastBlockAlertCount, setLastBlockAlertCount] = useState(0);
   const [selectedUnitDetails, setSelectedUnitDetails] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [activeCall, setActiveCall] = useState(null);
   const socketRef = useRef(null);
+
+  const localStreamRef = useRef(null);
+  const pcRef = useRef(null);
+  const webrtcStartedRef = useRef(false);
+  const remoteAudioRef = useRef(null);
+
+  const DEFAULT_ICE_CONFIG = {
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    iceCandidatePoolSize: 10
+  };
+
+  const fetchIceConfig = async () => {
+    try {
+      const res = await fetch(`${API}/api/ice-servers`);
+      if (res.ok) {
+        const data = await res.json();
+        return { iceServers: data.iceServers, iceCandidatePoolSize: 10 };
+      }
+    } catch (e) {
+      console.warn('[ICE] Failed to fetch ICE config:', e);
+    }
+    return DEFAULT_ICE_CONFIG;
+  };
+
+  const stopAllCall = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
+    }
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    webrtcStartedRef.current = false;
+  };
+
+  const startOutboundWebRTC = async (residentSocketId) => {
+    try {
+      stopAllCall();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = stream;
+
+      const iceConfig = await fetchIceConfig();
+      const pc = new RTCPeerConnection(iceConfig);
+      pcRef.current = pc;
+
+      stream.getTracks().forEach(track => {
+        pc.addTrack(track, stream);
+      });
+
+      pc.ontrack = (event) => {
+        if (event.streams[0] && remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = event.streams[0];
+          remoteAudioRef.current.play().catch(e => console.warn('[Audio] autoplay blocked:', e));
+        }
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate && socketRef.current) {
+          socketRef.current.emit('webrtc_ice_candidate', {
+            target: residentSocketId,
+            candidate: event.candidate
+          });
+        }
+      };
+
+      const offer = await pc.createOffer({ offerToReceiveAudio: true });
+      await pc.setLocalDescription(offer);
+
+      socketRef.current.emit('webrtc_offer', {
+        target: residentSocketId,
+        offer: pc.localDescription
+      });
+    } catch (err) {
+      console.error('[WebRTC] Outbound connection failed:', err);
+    }
+  };
+
+  const handleIncomingOffer = async (residentSocketId, offer) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = stream;
+
+      const iceConfig = await fetchIceConfig();
+      const pc = new RTCPeerConnection(iceConfig);
+      pcRef.current = pc;
+
+      stream.getTracks().forEach(track => {
+        pc.addTrack(track, stream);
+      });
+
+      pc.ontrack = (event) => {
+        if (event.streams[0] && remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = event.streams[0];
+          remoteAudioRef.current.play().catch(e => console.warn('[Audio] autoplay blocked:', e));
+        }
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate && socketRef.current) {
+          socketRef.current.emit('webrtc_ice_candidate', {
+            target: residentSocketId,
+            candidate: event.candidate
+          });
+        }
+      };
+
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socketRef.current.emit('webrtc_answer', {
+        target: residentSocketId,
+        answer: pc.localDescription
+      });
+    } catch (err) {
+      console.error('[WebRTC] Handle offer failed:', err);
+    }
+  };
+
+  const handleHangup = () => {
+    if (socketRef.current && (doormanCallState === 'calling' || doormanCallState === 'talking' || (activeCall && activeCall.status !== 'ended'))) {
+      const targetSocket = socketRef.current.targetSocketId || (activeCall && activeCall.residentSocketId);
+      if (targetSocket) {
+        socketRef.current.emit('call_ended', { target: targetSocket });
+      }
+    }
+    stopAllCall();
+    setDoormanCallState('idle');
+    setActiveCall(null);
+    setIncomingCall(null);
+  };
+
+  const handleCallUnit = (unit) => {
+    if (isDemoMode) {
+      setSimulatedUnit(unit);
+      setSimCallTarget('resident');
+      setSimCallState('ringing');
+      alert(`[Interfone] Iniciando chamada de voz para o ${unit.name}...`);
+      return;
+    }
+    if (!socketRef.current) {
+      alert('Erro: Conexão em tempo real não estabelecida.');
+      return;
+    }
+    stopAllCall();
+    setActiveCall({
+      residentSocketId: null,
+      callerName: unit.name,
+      unitId: unit.id,
+      isIncoming: false,
+      status: 'calling'
+    });
+    setDoormanCallState('calling');
+    
+    socketRef.current.emit('doorman_call', {
+      unitId: unit.id,
+      propertyId: unit.propertyId,
+      callerName: 'Portaria'
+    });
+  };
+
+  const handleAnswerResidentCall = async (incomingCallData) => {
+    stopAllCall();
+    const residentSocketId = incomingCallData.residentSocketId;
+    setActiveCall({
+      residentSocketId,
+      callerName: incomingCallData.callerName || 'Morador',
+      unitId: incomingCallData.unitId,
+      isIncoming: true,
+      status: 'talking'
+    });
+    setDoormanCallState('talking');
+    setIncomingCall(null);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = stream;
+    } catch (e) {
+      console.warn('[Media] Falha ao capturar áudio local:', e);
+    }
+
+    if (socketRef.current && residentSocketId) {
+      console.log('[Socket] Atendendo chamada de morador e enviando answer_call / webrtc_ready para:', residentSocketId);
+      socketRef.current.targetSocketId = residentSocketId;
+      socketRef.current.emit('answer_call', { visitorSocketId: residentSocketId, mode: 'audio', unitId: incomingCallData.unitId });
+      socketRef.current.emit('webrtc_ready', { target: residentSocketId });
+    }
+  };
 
   useEffect(() => {
     if (isDemoMode || !selectedProperty) {
@@ -123,10 +314,78 @@ export default function AdminPanel() {
     
     s.emit('register_doorman', { propertyId: selectedProperty });
     console.log('[AdminPanel] Socket conectado para propriedade:', selectedProperty);
+
+    s.on('call_answered', ({ residentSocketId }) => {
+      console.log('[AdminPanel WS] Call answered by resident:', residentSocketId);
+      s.targetSocketId = residentSocketId;
+      setDoormanCallState('talking');
+      setActiveCall(prev => prev ? { ...prev, status: 'talking', residentSocketId } : null);
+    });
+
+    s.on('webrtc_ready', async ({ residentSocketId }) => {
+      console.log('[AdminPanel WS] Resident ready for WebRTC:', residentSocketId);
+      s.targetSocketId = residentSocketId;
+      setDoormanCallState('talking');
+      setActiveCall(prev => prev ? { ...prev, status: 'talking', residentSocketId } : null);
+      if (webrtcStartedRef.current) return;
+      webrtcStartedRef.current = true;
+      await startOutboundWebRTC(residentSocketId);
+    });
+
+    s.on('incoming_resident_call', ({ callerName, unitId, residentSocketId }) => {
+      console.log('[AdminPanel WS] Incoming call from resident:', residentSocketId);
+      setIncomingCall({ callerName, unitId, residentSocketId });
+      try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {}); } catch {}
+      setTimeout(() => setIncomingCall(null), 20000);
+    });
+
+    s.on('webrtc_offer', async ({ sender, offer }) => {
+      console.log('[AdminPanel WS] Received webrtc_offer from resident:', sender);
+      s.targetSocketId = sender;
+      setDoormanCallState('talking');
+      setActiveCall(prev => prev ? { ...prev, status: 'talking', residentSocketId: sender } : {
+        residentSocketId: sender,
+        callerName: 'Morador',
+        unitId: null,
+        isIncoming: true,
+        status: 'talking'
+      });
+      await handleIncomingOffer(sender, offer);
+    });
+
+    s.on('webrtc_answer', async ({ answer }) => {
+      console.log('[AdminPanel WS] Received webrtc_answer');
+      if (pcRef.current && pcRef.current.signalingState !== 'stable') {
+        try {
+          await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+        } catch (e) {
+          console.error('[AdminPanel WebRTC] Error applying answer:', e);
+        }
+      }
+    });
+
+    s.on('webrtc_ice_candidate', async ({ candidate }) => {
+      if (pcRef.current && candidate) {
+        try {
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+          console.warn('[AdminPanel WebRTC] Error adding ICE candidate:', e);
+        }
+      }
+    });
+
+    s.on('call_ended', () => {
+      console.log('[AdminPanel WS] Call ended by resident');
+      stopAllCall();
+      setDoormanCallState('idle');
+      setActiveCall(null);
+      setIncomingCall(null);
+    });
     
     return () => {
       s.disconnect();
       socketRef.current = null;
+      stopAllCall();
     };
   }, [selectedProperty, isDemoMode]);
 
@@ -925,6 +1184,84 @@ export default function AdminPanel() {
 
       <main className="container fade-in" style={{ marginTop: '32px' }}>
 
+        {/* Painel de Chamada Ativa WebRTC */}
+        {activeCall && (
+          <div style={{
+            background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+            border: '2px solid #3B82F6',
+            padding: '20px 24px',
+            borderRadius: '24px',
+            marginBottom: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '20px',
+            boxShadow: '0 10px 30px rgba(59,130,246,0.2)',
+            color: '#fff'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: activeCall.status === 'calling' ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)',
+                color: activeCall.status === 'calling' ? '#F59E0B' : '#10B981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                animation: activeCall.status === 'calling' ? 'pulse 1.5s infinite' : 'none'
+              }}>
+                <Phone size={28} />
+              </div>
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#94A3B8' }}>
+                  {activeCall.isIncoming ? 'Interfone Recebido' : 'Chamando Unidade'}
+                </span>
+                <h3 style={{ fontSize: '20px', fontWeight: 900, margin: '2px 0 4px', color: '#fff' }}>
+                  {activeCall.callerName}
+                </h3>
+                <p style={{ fontSize: '13px', margin: 0, color: '#CBD5E1', fontWeight: 600 }}>
+                  {activeCall.status === 'calling' ? '🔔 Campainha tocando no celular do morador...' : '🎙️ Comunicação de voz ativa (WebRTC)...'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleHangup}
+              style={{
+                background: '#EF4444',
+                color: '#FFF',
+                border: 'none',
+                padding: '12px 24px',
+                borderRadius: '14px',
+                fontWeight: 800,
+                fontSize: '14px',
+                cursor: 'pointer',
+                boxShadow: '0 6px 20px rgba(239,68,68,0.3)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              Desligar
+            </button>
+          </div>
+        )}
+
+        {/* Notificação de Chamada Recebida do Morador */}
+        {incomingCall && (
+          <div style={{ background: 'var(--bg-surface)', border: '2px solid #F59E0B', padding: '20px', borderRadius: '20px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 8px 24px rgba(245,158,11,0.15)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(245,158,11,0.1)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Phone size={24} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px', color: 'var(--text-main)' }}>Chamada de: {incomingCall.callerName}</h2>
+              <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '13px' }}>O morador está interfonando para a administração.</p>
+            </div>
+            <button onClick={() => handleAnswerResidentCall(incomingCall)} style={{ padding: '12px 24px', borderRadius: '10px', border: 'none', background: '#10B981', color: '#FFF', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}>Atender</button>
+          </div>
+        )}
+
         {/* ── ABA: PROPRIEDADES ── */}
         {activeTab === 'properties' && (
           <>
@@ -1210,45 +1547,130 @@ export default function AdminPanel() {
         {/* ── ABA: PAINEL DE CONTROLE / GRADE VISUAL (CONTROL_PANEL) ── */}
         {activeTab === 'control_panel' && selectedProperty && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
               <div>
-                <h2 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px' }}>Dashboard Central</h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Grade visual de unidades com alertas e acionamento Sonoff em tempo real</p>
+                <h2 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.75px', color: 'var(--text-main)' }}>Centro Operacional</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '2px', fontWeight: 500 }}>Monitoramento em tempo real das unidades e acessos do condomínio.</p>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <select value={alertTypeFilter} onChange={e => setAlertTypeFilter(e.target.value)} className="input-glass" style={{ padding: '8px 12px', fontSize: '13px', width: 'auto' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <select value={alertTypeFilter} onChange={e => setAlertTypeFilter(e.target.value)} className="input-glass" style={{ padding: '10px 16px', fontSize: '13px', width: 'auto', borderRadius: '10px', height: '40px', background: 'var(--bg-surface)' }}>
                   <option value="all">🔍 Todos os Status</option>
-                  <option value="active">⚠️ Somente Alertas Ativos</option>
+                  <option value="active">⚠️ Alertas Ativos</option>
                 </select>
-                <button className="btn-secondary" style={{ padding: '8px 12px', fontSize: '13px' }} onClick={() => fetchAlerts(selectedProperty)}>
-                  <RefreshCw size={14} /> Recarregar
+                <button className="btn-secondary" style={{ padding: '10px 16px', fontSize: '13px', borderRadius: '10px', height: '40px', width: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={() => fetchAlerts(selectedProperty)}>
+                  <RefreshCw size={12} /> Recarregar
                 </button>
               </div>
             </div>
 
-            {/* Mock do Dispositivo Físico Sonoff no Dashboard */}
-            <div style={{ background: 'linear-gradient(135deg, #1E293B, #0F172A)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', padding: '20px', marginBottom: '32px', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Zap size={24} color="var(--primary)" />
+            {/* Controles de Portão Sonoff / eWelink Premium */}
+            <div style={{ 
+              background: 'rgba(255, 255, 255, 0.03)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '24px', 
+              padding: '24px', 
+              marginBottom: '32px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              flexWrap: 'wrap', 
+              gap: '20px', 
+              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.08)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+                <div style={{ 
+                  width: '52px', 
+                  height: '52px', 
+                  borderRadius: '16px', 
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: '1px solid rgba(59, 130, 246, 0.2)'
+                }}>
+                  <Zap size={24} color="#3B82F6" style={{ filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.5))' }} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '16px', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    Rele Sonoff Dual / eWelink 
-                    <span style={{ fontSize: '10px', background: '#10B981', color: '#FFF', padding: '2px 6px', borderRadius: '100px', fontWeight: 800 }}>MOCK ONLINE</span>
+                  <h4 style={{ fontSize: '16px', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-main)' }}>
+                    Rele Sonoff Dual
+                    <span style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '5px', 
+                      fontSize: '10px', 
+                      background: 'rgba(16, 185, 129, 0.1)', 
+                      color: '#10B981', 
+                      padding: '4px 10px', 
+                      borderRadius: '100px', 
+                      fontWeight: 800,
+                      border: '1px solid rgba(16, 185, 129, 0.2)'
+                    }}>
+                      <span style={{ 
+                        width: '6px', 
+                        height: '6px', 
+                        borderRadius: '50%', 
+                        background: '#10B981', 
+                        boxShadow: '0 0 8px #10B981', 
+                        display: 'inline-block',
+                        animation: 'blink 1.5s infinite' 
+                      }} />
+                      CONECTADO
+                    </span>
                   </h4>
-                  <p style={{ fontSize: '12px', color: '#94A3B8', margin: '4px 0 0' }}>Dispositivo de contato seco associado ao portão social e de veículos.</p>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0', fontWeight: 500 }}>
+                    Integração eWelink para abertura remota de portões sociais e de garagem.
+                  </p>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <HoverHelp text="Mimetiza o acionamento elétrico do portão de pedestres via eWelink">
-                  <button onClick={() => alert('[Sonoff] Comando de abertura portão SOCIAL enviado com sucesso!')} style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '10px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    🔓 Abrir Social
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <HoverHelp text="Acionar abertura elétrica do portão de pedestres">
+                  <button 
+                    onClick={() => alert('[Sonoff] Comando de abertura portão SOCIAL enviado com sucesso!')} 
+                    style={{ 
+                      background: '#10B981', 
+                      color: '#FFF', 
+                      border: 'none', 
+                      padding: '12px 20px', 
+                      borderRadius: '12px', 
+                      fontSize: '13px', 
+                      fontWeight: 800, 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.filter = 'brightness(1.1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.filter = 'none'; }}
+                  >
+                    🔓 Portão Social
                   </button>
                 </HoverHelp>
-                <HoverHelp text="Mimetiza o acionamento do portão de veículos">
-                  <button onClick={() => alert('[Sonoff] Comando de abertura portão VEÍCULOS enviado com sucesso!')} style={{ background: 'var(--primary)', color: '#FFF', border: 'none', padding: '10px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    🚗 Abrir Veículos
+                <HoverHelp text="Acionar motor do portão de veículos">
+                  <button 
+                    onClick={() => alert('[Sonoff] Comando de abertura portão VEÍCULOS enviado com sucesso!')} 
+                    style={{ 
+                      background: 'var(--primary)', 
+                      color: '#FFF', 
+                      border: 'none', 
+                      padding: '12px 20px', 
+                      borderRadius: '12px', 
+                      fontSize: '13px', 
+                      fontWeight: 800, 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      boxShadow: '0 4px 12px var(--primary-glow)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.filter = 'brightness(1.1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.filter = 'none'; }}
+                  >
+                    🚗 Portão Garagem
                   </button>
                 </HoverHelp>
               </div>
@@ -1339,10 +1761,7 @@ export default function AdminPanel() {
                           <button
                             onClick={() => {
                               if (unit) {
-                                setSimulatedUnit(unit);
-                                setSimCallTarget('resident');
-                                setSimCallState('ringing');
-                                alert(`[Interfone] Iniciando chamada de voz para o ${unit.name}...`);
+                                handleCallUnit(unit);
                               } else {
                                 alert('Erro ao identificar unidade para ligação.');
                               }
@@ -1611,22 +2030,51 @@ export default function AdminPanel() {
                                 style={{
                                   background: 'var(--bg-surface)',
                                   border: '1px solid var(--border-subtle)',
-                                  borderRadius: '12px',
-                                  padding: '16px 12px',
+                                  borderRadius: '16px',
+                                  padding: '20px 14px',
                                   textAlign: 'center',
-                                  cursor: (hasAlert || isDemoMode) ? 'pointer' : 'default',
+                                  cursor: 'pointer',
                                   position: 'relative',
                                   display: 'flex',
                                   flexDirection: 'column',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  minHeight: '100px',
+                                  minHeight: '110px',
                                   transition: 'all 0.2s',
                                   boxShadow: hasAlert ? 'none' : '0 2px 6px rgba(0,0,0,0.01)'
                                 }}
                                 className={cardClass}
                               >
-                                <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>{u.name}</span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCallUnit(u);
+                                  }}
+                                  style={{
+                                    position: 'absolute',
+                                    top: '8px',
+                                    right: '8px',
+                                    background: 'rgba(59, 130, 246, 0.08)',
+                                    border: 'none',
+                                    color: 'var(--primary)',
+                                    borderRadius: '50%',
+                                    width: '28px',
+                                    height: '28px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    opacity: 0.8
+                                  }}
+                                  title={`Ligar para ${u.name}`}
+                                  onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--primary)'; e.currentTarget.style.color = '#fff'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.opacity = '0.8'; e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; e.currentTarget.style.color = 'var(--primary)'; }}
+                                >
+                                  <Phone size={12} />
+                                </button>
+
+                                <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>{u.name}</span>
                                 {u.number && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Nº {u.number}</span>}
                                 
                                 {isOnline ? (
@@ -1655,43 +2103,6 @@ export default function AdminPanel() {
                                     {alertBadge}
                                   </span>
                                 )}
-
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (isDemoMode) {
-                                      alert('📞 Chamada simulada iniciada para a unidade!');
-                                    } else if (socketRef.current) {
-                                      socketRef.current.emit('doorman_call', {
-                                        unitId: u.id,
-                                        propertyId: u.propertyId,
-                                        callerName: 'Portaria'
-                                      });
-                                      alert('📞 Interfonando para a unidade...');
-                                    } else {
-                                      alert('Erro: Conexão em tempo real não estabelecida.');
-                                    }
-                                  }}
-                                  style={{
-                                    marginTop: '12px',
-                                    background: 'var(--bg-deep)',
-                                    color: 'var(--primary)',
-                                    border: '1px solid var(--border-subtle)',
-                                    borderRadius: '8px',
-                                    padding: '6px 12px',
-                                    fontSize: '11px',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    transition: 'all 0.2s',
-                                    width: '100%',
-                                    justifyContent: 'center'
-                                  }}
-                                >
-                                  📞 Ligar
-                                </button>
                               </div>
                             </HoverHelp>
                           );
@@ -2253,15 +2664,14 @@ export default function AdminPanel() {
 
                     <button
                       onClick={() => {
-                        // Emits a call to the resident
-                        socketRef.current?.emit('doorman_call', {
-                          unitId: selectedMessage.unitId,
-                          propertyId: properties[0]?.id,
-                          callerName: 'Portaria'
-                        });
-                        resolveAlert(selectedMessage.id);
-                        setSelectedMessage(null);
-                        alert('📞 Chamada iniciada para o morador!');
+                        const unit = properties.flatMap(p => p.units).find(u => u.id === selectedMessage.unitId);
+                        if (unit) {
+                          handleCallUnit(unit);
+                          resolveAlert(selectedMessage.id);
+                          setSelectedMessage(null);
+                        } else {
+                          alert('Erro ao identificar unidade.');
+                        }
                       }}
                       style={{ flex: 1, background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
                     >
@@ -2349,26 +2759,36 @@ export default function AdminPanel() {
                             if (isDemoMode) {
                               alert(`📞 Ligação simulada para o morador ${resident.name} iniciada!`);
                             } else if (socketRef.current) {
+                              stopAllCall();
+                              setActiveCall({
+                                residentSocketId: null,
+                                callerName: resident.name,
+                                unitId: selectedUnitDetails.id,
+                                isIncoming: false,
+                                status: 'calling'
+                              });
+                              setDoormanCallState('calling');
                               socketRef.current.emit('doorman_call', {
                                 unitId: selectedUnitDetails.id,
                                 propertyId: selectedUnitDetails.propertyId,
                                 callerName: 'Portaria',
                                 targetUserId: resident.id
                               });
-                              alert(`📞 Interfonando para ${resident.name}...`);
                             } else {
                               alert('Erro: Painel não conectado ao servidor em tempo real.');
                             }
                           }}
                           style={{
-                            background: 'linear-gradient(135deg,#3B82F6,#2563EB)',
-                            color: '#FFF', border: 'none', borderRadius: '8px',
-                            padding: '6px 12px', fontSize: '11px', fontWeight: 700,
+                            background: 'transparent',
+                            color: '#3B82F6', border: '1px solid #3B82F6', borderRadius: '8px',
+                            padding: '6px 10px', fontSize: '12px', fontWeight: 700,
                             cursor: 'pointer', display: 'flex', alignItems: 'center',
-                            gap: '4px', whiteSpace: 'nowrap'
+                            transition: 'all 0.2s'
                           }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#3B82F6'; e.currentTarget.style.color = '#FFF'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#3B82F6'; }}
                         >
-                          📞 Ligar
+                          📞
                         </button>
                       </div>
                     </div>
@@ -2383,14 +2803,22 @@ export default function AdminPanel() {
                   if (isDemoMode) {
                     alert('📞 Chamada simulada iniciada para toda a unidade!');
                   } else if (socketRef.current) {
+                    stopAllCall();
+                    setActiveCall({
+                      residentSocketId: null,
+                      callerName: selectedUnitDetails.name,
+                      unitId: selectedUnitDetails.id,
+                      isIncoming: false,
+                      status: 'calling'
+                    });
+                    setDoormanCallState('calling');
                     socketRef.current.emit('doorman_call', {
                       unitId: selectedUnitDetails.id,
                       propertyId: selectedUnitDetails.propertyId,
                       callerName: 'Portaria'
                     });
-                    alert('📞 Chamando todos os moradores da unidade...');
                   } else {
-                    alert('Erro: Painel não conectado ao servidor.');
+                    alert('Erro: Conexão em tempo real não estabelecida.');
                   }
                 }}
                 style={{ flex: 1, background: 'linear-gradient(135deg,#10B981,#059669)', color: '#FFF', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}

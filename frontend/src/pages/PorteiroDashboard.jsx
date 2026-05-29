@@ -21,6 +21,7 @@ export default function PorteiroDashboard() {
   const [onlineStatus, setOnlineStatus] = useState({}); // { unitId: 'online' | 'offline' }
   
   // Acesso via código de visitante
+  // Acesso via código de visitante
   const [validatedCode, setValidatedCode] = useState(null);
   const [visitorCodeInput, setVisitorCodeInput] = useState('');
   const [validatingCode, setValidatingCode] = useState(false);
@@ -28,6 +29,168 @@ export default function PorteiroDashboard() {
 
   // ─── Suporte a Modo Noturno (Dark Mode) ───
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('cd_dark_mode') === 'true');
+
+  const [activeCall, setActiveCall] = useState(null); // { residentSocketId, callerName, unitId, isIncoming, status: 'calling'|'talking'|'ended' }
+
+  const localStreamRef = useRef(null);
+  const pcRef = useRef(null);
+  const webrtcStartedRef = useRef(false);
+  const remoteAudioRef = useRef(null);
+
+  const navigate = useNavigate();
+  const socketRef = useRef(null);
+
+  const DEFAULT_ICE_CONFIG = {
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    iceCandidatePoolSize: 10
+  };
+
+  const fetchIceConfig = async () => {
+    try {
+      const res = await fetch(`${API}/api/ice-servers`);
+      if (res.ok) {
+        const data = await res.json();
+        return { iceServers: data.iceServers, iceCandidatePoolSize: 10 };
+      }
+    } catch (e) {
+      console.warn('[ICE] Failed to fetch ICE config:', e);
+    }
+    return DEFAULT_ICE_CONFIG;
+  };
+
+  const stopAllCall = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
+    }
+    if (pcRef.current) {
+      pcRef.current.close();
+      pcRef.current = null;
+    }
+    webrtcStartedRef.current = false;
+  };
+
+  const startOutboundWebRTC = async (residentSocketId) => {
+    try {
+      stopAllCall();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = stream;
+
+      const iceConfig = await fetchIceConfig();
+      const pc = new RTCPeerConnection(iceConfig);
+      pcRef.current = pc;
+
+      stream.getTracks().forEach(track => {
+        pc.addTrack(track, stream);
+      });
+
+      pc.ontrack = (event) => {
+        if (event.streams[0] && remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = event.streams[0];
+          remoteAudioRef.current.play().catch(e => console.warn('[Audio] autoplay blocked:', e));
+        }
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate && socketRef.current) {
+          socketRef.current.emit('webrtc_ice_candidate', {
+            target: residentSocketId,
+            candidate: event.candidate
+          });
+        }
+      };
+
+      const offer = await pc.createOffer({ offerToReceiveAudio: true });
+      await pc.setLocalDescription(offer);
+
+      socketRef.current.emit('webrtc_offer', {
+        target: residentSocketId,
+        offer: pc.localDescription
+      });
+    } catch (err) {
+      console.error('[WebRTC] Outbound connection failed:', err);
+    }
+  };
+
+  const handleIncomingOffer = async (residentSocketId, offer) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = stream;
+
+      const iceConfig = await fetchIceConfig();
+      const pc = new RTCPeerConnection(iceConfig);
+      pcRef.current = pc;
+
+      stream.getTracks().forEach(track => {
+        pc.addTrack(track, stream);
+      });
+
+      pc.ontrack = (event) => {
+        if (event.streams[0] && remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = event.streams[0];
+          remoteAudioRef.current.play().catch(e => console.warn('[Audio] autoplay blocked:', e));
+        }
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate && socketRef.current) {
+          socketRef.current.emit('webrtc_ice_candidate', {
+            target: residentSocketId,
+            candidate: event.candidate
+          });
+        }
+      };
+
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socketRef.current.emit('webrtc_answer', {
+        target: residentSocketId,
+        answer: pc.localDescription
+      });
+    } catch (err) {
+      console.error('[WebRTC] Handle offer failed:', err);
+    }
+  };
+
+  const handleHangup = () => {
+    if (activeCall && socketRef.current) {
+      const targetSocket = activeCall.residentSocketId;
+      if (targetSocket) {
+        socketRef.current.emit('call_ended', { target: targetSocket });
+      }
+    }
+    stopAllCall();
+    setActiveCall(null);
+    setIncomingCall(null);
+  };
+
+  const handleAnswerResidentCall = async (incomingCallData) => {
+    stopAllCall();
+    const residentSocketId = incomingCallData.residentSocketId;
+    setActiveCall({
+      residentSocketId,
+      callerName: incomingCallData.callerName || 'Morador',
+      unitId: incomingCallData.unitId,
+      isIncoming: true,
+      status: 'talking'
+    });
+    setIncomingCall(null);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = stream;
+    } catch (e) {
+      console.warn('[Media] Falha ao capturar áudio local:', e);
+    }
+
+    if (socketRef.current && residentSocketId) {
+      console.log('[Socket] Atendendo chamada de morador e enviando answer_call / webrtc_ready para:', residentSocketId);
+      socketRef.current.emit('answer_call', { visitorSocketId: residentSocketId, mode: 'audio', unitId: incomingCallData.unitId });
+      socketRef.current.emit('webrtc_ready', { target: residentSocketId });
+    }
+  };
 
   useEffect(() => {
     if (darkMode) {
@@ -38,9 +201,6 @@ export default function PorteiroDashboard() {
       localStorage.setItem('cd_dark_mode', 'false');
     }
   }, [darkMode]);
-
-  const navigate = useNavigate();
-  const socketRef = useRef(null);
 
   useEffect(() => {
     const role = localStorage.getItem('cd_admin_role');
@@ -128,8 +288,8 @@ export default function PorteiroDashboard() {
       setTimeout(() => setResidentMsg(null), 20000); 
     });
 
-    s.on('incoming_resident_call', ({ callerName, unitId }) => {
-      setIncomingCall({ callerName, unitId });
+    s.on('incoming_resident_call', ({ callerName, unitId, residentSocketId }) => {
+      setIncomingCall({ callerName, unitId, residentSocketId });
       try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(() => {}); } catch {}
       setTimeout(() => setIncomingCall(null), 20000);
     });
@@ -143,9 +303,63 @@ export default function PorteiroDashboard() {
       }
     });
 
+    s.on('call_answered', ({ residentSocketId }) => {
+      console.log('[Porteiro WS] Call answered by resident:', residentSocketId);
+      setActiveCall(prev => prev ? { ...prev, status: 'talking', residentSocketId } : null);
+    });
+
+    s.on('webrtc_ready', async ({ residentSocketId }) => {
+      console.log('[Porteiro WS] Resident is ready for WebRTC:', residentSocketId);
+      if (webrtcStartedRef.current) return;
+      webrtcStartedRef.current = true;
+      setActiveCall(prev => prev ? { ...prev, status: 'talking', residentSocketId } : null);
+      await startOutboundWebRTC(residentSocketId);
+    });
+
+    s.on('webrtc_offer', async ({ sender, offer }) => {
+      console.log('[Porteiro WS] Received webrtc_offer from resident:', sender);
+      setActiveCall(prev => prev ? { ...prev, status: 'talking', residentSocketId: sender } : {
+        residentSocketId: sender,
+        callerName: 'Morador',
+        unitId: null,
+        isIncoming: true,
+        status: 'talking'
+      });
+      await handleIncomingOffer(sender, offer);
+    });
+
+    s.on('webrtc_answer', async ({ answer }) => {
+      console.log('[Porteiro WS] webrtc_answer received');
+      if (pcRef.current && pcRef.current.signalingState !== 'stable') {
+        try {
+          await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+        } catch (e) {
+          console.error('[Porteiro WebRTC] Error setting remote description:', e);
+        }
+      }
+    });
+
+    s.on('webrtc_ice_candidate', async ({ candidate }) => {
+      if (pcRef.current && candidate) {
+        try {
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+          console.warn('[Porteiro WebRTC] Error adding ICE candidate:', e);
+        }
+      }
+    });
+
+    s.on('call_ended', () => {
+      console.log('[Porteiro WS] Call ended');
+      stopAllCall();
+      setActiveCall(null);
+      setIncomingCall(null);
+    });
+
     return () => {
       s.disconnect();
       clearInterval(statusInterval);
+      stopAllCall();
     };
   }, [navigate, properties]);
 
@@ -197,7 +411,14 @@ export default function PorteiroDashboard() {
   };
 
   const callUnit = (unit) => {
-    if (!socketRef.current) return;
+    if (!socketRef.current || activeCall) return;
+    setActiveCall({
+      residentSocketId: null,
+      callerName: unit.name,
+      unitId: unit.id,
+      isIncoming: false,
+      status: 'calling'
+    });
     socketRef.current.emit('doorman_call', {
       unitId: unit.id,
       propertyId: unit.propertyId,
@@ -245,6 +466,73 @@ export default function PorteiroDashboard() {
 
       <main style={{ padding: '32px 24px', maxWidth: '1000px', margin: '0 auto' }}>
         
+        {/* Painel de Chamada Ativa WebRTC */}
+        {activeCall && (
+          <div style={{
+            background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+            border: '2px solid #3B82F6',
+            padding: '24px',
+            borderRadius: '24px',
+            marginBottom: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '20px',
+            boxShadow: '0 10px 30px rgba(59,130,246,0.2)',
+            animation: activeCall.status === 'calling' ? 'pulse 2.5s infinite' : 'none',
+            color: '#fff'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: activeCall.status === 'calling' ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)',
+                color: activeCall.status === 'calling' ? '#F59E0B' : '#10B981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                animation: activeCall.status === 'calling' ? 'pulse 1.5s infinite' : 'none'
+              }}>
+                <Phone size={28} />
+              </div>
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: '#94A3B8' }}>
+                  {activeCall.isIncoming ? 'Interfone Recebido' : 'Chamando Unidade'}
+                </span>
+                <h3 style={{ fontSize: '20px', fontWeight: 900, margin: '2px 0 4px', color: '#fff' }}>
+                  {activeCall.callerName}
+                </h3>
+                <p style={{ fontSize: '13px', margin: 0, color: '#CBD5E1', fontWeight: 600 }}>
+                  {activeCall.status === 'calling' ? '🔔 Campainha tocando no celular do morador...' : '🎙️ Comunicação de voz activa (WebRTC)...'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleHangup}
+              style={{
+                background: '#EF4444',
+                color: '#FFF',
+                border: 'none',
+                padding: '14px 28px',
+                borderRadius: '14px',
+                fontWeight: 800,
+                fontSize: '14px',
+                cursor: 'pointer',
+                boxShadow: '0 6px 20px rgba(239,68,68,0.3)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+            >
+              Desligar
+            </button>
+          </div>
+        )}
+
         {/* Alerta de Acesso por Código Validado */}
         {validatedCode && (
           <div style={{ background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: '#fff', padding: '24px', borderRadius: '24px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 8px 24px rgba(139,92,246,0.25)', animation: 'pulse 2s infinite' }}>
@@ -335,7 +623,7 @@ export default function PorteiroDashboard() {
               <h2 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px', color: '#1E293B' }}>Chamada de: {incomingCall.callerName}</h2>
               <p style={{ margin: 0, color: '#64748B', fontSize: '13px' }}>O morador está interfonando para a portaria.</p>
             </div>
-            <button onClick={() => setIncomingCall(null)} style={{ padding: '12px 24px', borderRadius: '10px', border: 'none', background: '#10B981', color: '#FFF', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}>Atender</button>
+            <button onClick={() => handleAnswerResidentCall(incomingCall)} style={{ padding: '12px 24px', borderRadius: '10px', border: 'none', background: '#10B981', color: '#FFF', fontWeight: 800, fontSize: '14px', cursor: 'pointer' }}>Atender</button>
           </div>
         )}
 
@@ -422,6 +710,7 @@ export default function PorteiroDashboard() {
         }
         .blink { animation: blink 1s infinite; }
       `}</style>
+      <audio ref={remoteAudioRef} autoPlay />
     </div>
   );
 }

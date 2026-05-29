@@ -3555,8 +3555,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('resident_call_doorman', ({ propertyId, unitId, callerName }) => {
-    console.log(`[WS Call] Morador chamando portaria: unitId=${unitId}, propertyId=${propertyId}`);
-    io.to(`doorman_${propertyId}`).emit('incoming_resident_call', { callerName, unitId });
+    console.log(`[WS Call] Morador chamando portaria: unitId=${unitId}, propertyId=${propertyId}, socketId=${socket.id}`);
+    io.to(`doorman_${propertyId}`).emit('incoming_resident_call', { callerName, unitId, residentSocketId: socket.id });
   });
 
   socket.on('resident_message_doorman', ({ propertyId, unitId, message, senderName, authorizeEntry }) => {
