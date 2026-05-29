@@ -2074,26 +2074,27 @@ export default function AdminPanel() {
                                   }}
                                   style={{
                                     position: 'absolute',
-                                    top: '8px',
-                                    right: '8px',
-                                    background: 'rgba(59, 130, 246, 0.08)',
-                                    border: 'none',
-                                    color: 'var(--primary)',
+                                    top: '10px',
+                                    right: '10px',
+                                    background: 'rgba(59, 130, 246, 0.15)',
+                                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                                    color: '#3B82F6',
                                     borderRadius: '50%',
-                                    width: '28px',
-                                    height: '28px',
+                                    width: '38px',
+                                    height: '38px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s',
-                                    opacity: 0.8
+                                    zIndex: 10,
+                                    boxShadow: '0 4px 10px rgba(59, 130, 246, 0.15)'
                                   }}
                                   title={`Ligar para ${u.name}`}
-                                  onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--primary)'; e.currentTarget.style.color = '#fff'; }}
-                                  onMouseLeave={e => { e.currentTarget.style.opacity = '0.8'; e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)'; e.currentTarget.style.color = 'var(--primary)'; }}
+                                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.background = '#3B82F6'; e.currentTarget.style.color = '#fff'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)'; e.currentTarget.style.color = '#3B82F6'; }}
                                 >
-                                  <Phone size={12} />
+                                  <Phone size={16} />
                                 </button>
 
                                 <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', marginTop: '4px' }}>{u.name}</span>

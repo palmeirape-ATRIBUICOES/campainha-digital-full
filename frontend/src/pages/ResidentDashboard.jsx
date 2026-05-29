@@ -995,6 +995,28 @@ export default function ResidentDashboard() {
     });
   };
 
+  const handleCallDoorman = async () => {
+    if (!socketRef.current || !propertyId) return;
+    
+    setStatus('calling');
+    setCall({ callerName: 'Portaria', propertyId, _isDoorman: true });
+    setVisitorSocketId(null);
+    setTab('home');
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      localStreamRef.current = stream;
+    } catch (e) {
+      console.warn('[Intercom Media] Sem acesso ao microfone:', e.message);
+    }
+
+    socketRef.current.emit('resident_call_doorman', {
+      propertyId: propertyId,
+      unitId: id,
+      callerName: unitName
+    });
+  };
+
   const markMessagesRead = () => {
     const ids = broadcastMessages.map(m => m.id);
     localStorage.setItem('cd_read_msgs', JSON.stringify(ids));
@@ -1073,6 +1095,8 @@ export default function ResidentDashboard() {
     doorbellStartedRef.current = false;
     if (visitorSocketId) {
       socketRef.current?.emit('call_ended', { target: visitorSocketId, unitId: id });
+    } else if (status === 'calling' && call && call._isDoorman) {
+      socketRef.current?.emit('cancel_call', { propertyId: call.propertyId });
     } else if (status === 'calling' && call && call.unitId) {
       socketRef.current?.emit('cancel_call', { unitId: call.unitId });
     }
@@ -1851,7 +1875,7 @@ export default function ResidentDashboard() {
                   </button>
 
                   <button
-                    onClick={() => dispatchAlert('alert', '📞 Chamada de Voz da Unidade', 'Morador está solicitando que a portaria interfone para ele.')}
+                    onClick={handleCallDoorman}
                     disabled={dispatchAlertLoading}
                     style={{
                       width: '100%',
