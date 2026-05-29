@@ -194,6 +194,7 @@ export default function AdminPanel() {
 
   const handleIncomingOffer = async (residentSocketId, offer) => {
     try {
+      stopAllCall();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
 

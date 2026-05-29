@@ -1003,6 +1003,7 @@ export default function ResidentDashboard() {
 
   const handleAnswer = async (withCamera = false) => {
     stopRing();
+    stopAll();
     
     // Se estiver no modo de monitoramento (oculto), fecha a conexão antiga para evitar conflito de hardware
     if (status === 'monitoring') {
