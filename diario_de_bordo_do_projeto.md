@@ -498,3 +498,23 @@ Implementação completa dos endpoints de gestão de portaria e login unificado 
   - Inclui a relação do `doorman` nas propriedades gerenciadas e mapeia os campos legados `doormanEmail` e `doormanCode` na resposta da API para garantir retrocompatibilidade perfeita com o frontend sem quebrar nada.
 
 
+---
+
+## 🔔 v4.4.0 — Mute Absoluto do Som Residual & Notificações de Tela Bloqueada Robustas (29/05/2026)
+
+### Problema
+1. **Campainha Residual**: Mesmo após o morador atender à chamada da portaria ou de um visitante, o som sintético Web Audio API ("ding-dong") continuava tocando em segundo plano por causa de notas agendadas no futuro na linha do tempo do `AudioContext` que não podiam ser removidas.
+2. **Push em Tela Bloqueada**: Notificações push não chegavam ou demoravam muito quando a tela do celular do morador estava bloqueada, e o iOS falhava silenciosamente devido à tentativa de renderizar ações de botões (`actions`) não suportadas por PWAs da Apple.
+
+### Solução
+1. **Nó de Ganho Global Mute (`useDoorbellAlert.js`)**:
+   - Adicionado um nó de ganho global master (`_masterGainNode`) conectado a todos os osciladores sintéticos de áudio.
+   - Ao chamar `stopDoorbell()`, zeramos o volume desse ganho master instantaneamente (`setValueAtTime(0.0, _ctx.currentTime)`), silenciando absoluta e imediatamente qualquer áudio agendado ou ativo na hora.
+2. **Prioridade Máxima e ADPs de Push (`server.js`)**:
+   - Atualizado o método `webpush.sendNotification` no backend para passar explicitamente cabeçalhos de alta urgência: `{ TTL: 60, urgency: 'high', topic: 'incoming-call' }`. Isso sinaliza ao FCM e APNs para acordar instantaneamente a CPU do celular e exibir a notificação mesmo com a tela bloqueada.
+3. **Filtro de iOS Otimizado (`sw.js`)**:
+   - O Service Worker agora detecta dinamicamente a plataforma iOS (`/iPad|iPhone|iPod/.test(navigator.userAgent)`).
+   - Se for iOS, removemos os parâmetros `actions` das opções da notificação. Isso elimina o travamento silencioso das notificações em dispositivos Apple, garantindo que o alerta chegue perfeitamente com som na tela de bloqueio.
+
+
+
