@@ -154,7 +154,6 @@ model Visitor {
   property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   photo           String?  
   callerName      String   @default("Visitante")
-  status          String   @default("ringing") // "ringing" | "answered" | "missed" | "rejected"
   timestamp       DateTime @default(now())
 }
 

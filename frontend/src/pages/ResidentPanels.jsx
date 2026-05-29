@@ -44,23 +44,6 @@ function VisitorCard({ v }) {
   const [expanded, setExpanded] = useState(false);
   const { date, time, weekday, ago } = fmt(v.timestamp);
   const name = v.callerName || 'Visitante';
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'answered':
-        return { text: 'Atendida', color: '#10B981', bg: 'rgba(16,185,129,0.08)' };
-      case 'missed':
-        return { text: 'Não Atendida', color: '#EF4444', bg: 'rgba(239,68,68,0.08)' };
-      case 'rejected':
-        return { text: 'Recusada', color: '#64748B', bg: 'rgba(100,116,139,0.08)' };
-      case 'ringing':
-        return { text: 'Chamando...', color: '#F59E0B', bg: 'rgba(245,158,11,0.08)' };
-      default:
-        return { text: 'Atendida', color: '#10B981', bg: 'rgba(16,185,129,0.08)' };
-    }
-  };
-  const badge = getStatusBadge(v.status);
-
   return (
     <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border-subtle)', background: '#FFF', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
       <div onClick={() => setExpanded(!expanded)} style={{ display: 'flex', gap: '14px', alignItems: 'center', padding: '14px 16px', cursor: 'pointer' }}>
@@ -70,10 +53,9 @@ function VisitorCard({ v }) {
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={24} style={{ opacity: 0.3 }} /></div>}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <span style={{ fontWeight: 700, fontSize: '14px' }}>{name}</span>
             <span style={{ fontSize: '11px', color: 'var(--primary)', background: 'rgba(0,229,255,0.08)', padding: '2px 8px', borderRadius: '100px', fontWeight: 600 }}>{ago}</span>
-            <span style={{ fontSize: '11px', color: badge.color, background: badge.bg, padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>{badge.text}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '12px' }}>
             <Clock size={11} /> {time} • {date}

@@ -266,12 +266,8 @@ export default function IntercomPanel({ propertyId, unitId, socketRef, unitName,
           <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {/* Botão de chamada de voz */}
             <button onClick={() => {
-              if (onCall) {
-                onCall({ _isDoorman: true, name: 'Portaria' });
-              } else {
-                if (!socketRef?.current) return;
-                socketRef.current.emit('resident_call_doorman', { propertyId, unitId, callerName: unitName || 'Morador' });
-              }
+              if (!socketRef?.current) return;
+              socketRef.current.emit('resident_call_doorman', { propertyId, unitId, callerName: unitName || 'Morador' });
               setCalled('doorman'); setTimeout(() => setCalled(null), 5000);
             }} style={{ width: '100%', padding: '11px', borderRadius: '10px', border: 'none',
               background: called === 'doorman' ? '#F59E0B' : 'linear-gradient(135deg,#F59E0B,#D97706)',

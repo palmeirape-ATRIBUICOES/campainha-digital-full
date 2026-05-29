@@ -565,15 +565,11 @@ export default function ResidentDashboard() {
 
     s.on('call_answered_elsewhere', ({ answeredBy }) => {
       console.log('[Socket] Chamada atendida em outro dispositivo/aba:', answeredBy);
-      // Ignorar se o morador INICIOU a chamada (status 'calling') — ele não é um receptor passivo
-      setStatus(prev => {
-        if (prev === 'calling' || prev === 'active') return prev;
-        stopDoorbell();
-        doorbellStartedRef.current = false;
-        setCall(null);
-        stopAll();
-        return 'idle';
-      });
+      stopDoorbell();
+      doorbellStartedRef.current = false;
+      setStatus('idle');
+      setCall(null);
+      stopAll();
     });
 
     s.on('call_cancelled', () => {
@@ -583,16 +579,6 @@ export default function ResidentDashboard() {
       setStatus('idle');
       setCall(null);
       stopAll();
-    });
-
-    s.on('call_already_answered', () => {
-      console.log('[Socket] Chamada já foi atendida em outro dispositivo/aba.');
-      stopDoorbell();
-      doorbellStartedRef.current = false;
-      setStatus('idle');
-      setCall(null);
-      stopAll();
-      alert('Esta chamada já foi atendida em outro dispositivo.');
     });
 
     // Receber mensagens broadcast do condomínio
@@ -833,26 +819,20 @@ export default function ResidentDashboard() {
 
   useEffect(() => {
     const checkActiveCallParam = async () => {
-      const searchParams = new URLSearchParams(window.location.search);
       const hashPart = window.location.hash;
-      if (hashPart.includes('?')) {
-        const hashQueryParams = new URLSearchParams(hashPart.split('?')[1]);
-        for (const [key, value] of hashQueryParams.entries()) {
-          searchParams.set(key, value);
-        }
-      }
+      const queryPart = hashPart.includes('?') ? hashPart.split('?')[1] : '';
+      const params = new URLSearchParams(queryPart);
       
-      const tabParam = searchParams.get('tab');
+      const tabParam = params.get('tab');
       if (tabParam) {
         setTab(tabParam);
       }
 
-      const hasCallParam = searchParams.get('call') === 'true';
-      const paramVisitorSocket = searchParams.get('visitorSocketId');
-      const paramCallId = searchParams.get('callId');
-      const paramCallerName = searchParams.get('callerName') || 'Visitante';
-      const paramPropertyId = searchParams.get('propertyId');
-      const isAutoAnswer = searchParams.get('autoAnswer') === 'true';
+      const hasCallParam = params.get('call') === 'true';
+      const paramVisitorSocket = params.get('visitorSocketId');
+      const paramCallId = params.get('callId');
+      const paramCallerName = params.get('callerName') || 'Visitante';
+      const paramPropertyId = params.get('propertyId');
 
       if (hasCallParam && paramVisitorSocket) {
         if (paramCallId && paramCallId === lastCallIdRef.current) {
@@ -871,22 +851,14 @@ export default function ResidentDashboard() {
         setSentMsg('');
         
         // Define o estado de chamada de forma síncrona/instantânea com os dados do push
-        const currentCallData = {
+        setCall({
           visitorSocketId: paramVisitorSocket,
           callerName: paramCallerName,
           photo: null,
           propertyId: paramPropertyId
-        };
-        setCall(currentCallData);
+        });
         
         triggerDoorbell(); // Toca a campainha imediatamente ao carregar via push
-        
-        if (isAutoAnswer) {
-          setTimeout(() => {
-            console.log('[Push AutoAnswer] Atendimento automático via ação de notificação.');
-            handleAnswer(false);
-          }, 600);
-        }
         
         try {
           let res = await fetch(`${API}/api/visitors/${id}`);
@@ -1002,30 +974,7 @@ export default function ResidentDashboard() {
 
   const handleIntercomCall = async (neighbor) => {
     if (!socketRef.current || !propertyId) return;
-
-    // Chamada para a PORTARIA (enviada pelo botão de interfone da portaria)
-    if (neighbor._isDoorman) {
-      setStatus('calling');
-      setCall({ callerName: 'Portaria', propertyId, unitId: null, _isDoorman: true });
-      setVisitorSocketId(null);
-      setTab('home');
-
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        localStreamRef.current = stream;
-      } catch (e) {
-        console.warn('[Intercom Portaria] Sem acesso ao microfone:', e.message);
-      }
-
-      socketRef.current.emit('resident_call_doorman', {
-        propertyId,
-        unitId: id,
-        callerName: unitName || 'Morador'
-      });
-      return;
-    }
     
-    // Chamada para VIZINHO
     setStatus('calling');
     setCall({ callerName: neighbor.name || 'Vizinho', propertyId, unitId: neighbor.id });
     setVisitorSocketId(null);
@@ -1124,9 +1073,6 @@ export default function ResidentDashboard() {
     doorbellStartedRef.current = false;
     if (visitorSocketId) {
       socketRef.current?.emit('call_ended', { target: visitorSocketId, unitId: id });
-    } else if (status === 'calling' && call && call._isDoorman) {
-      // Cancelar chamada saindo do morador para a portaria
-      socketRef.current?.emit('cancel_resident_call', { propertyId: call.propertyId, unitId: id });
     } else if (status === 'calling' && call && call.unitId) {
       socketRef.current?.emit('cancel_call', { unitId: call.unitId });
     }
@@ -1419,16 +1365,7 @@ export default function ResidentDashboard() {
     return null;
   }
 
-  const handleUserInteraction = (e) => {
-    // Evita re-tocar campainha se a interação veio de um botão/input de ação do painel (ex: Atender, Recusar, Oculto)
-    if (e && e.target) {
-      const isActionElement = e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('[role="button"]');
-      if (isActionElement) {
-        console.log('[Dashboard] Ignorando handleUserInteraction em elemento de ação:', e.target);
-        return;
-      }
-    }
-
+  const handleUserInteraction = () => {
     // Desbloqueia áudio no iOS no primeiro toque do usuário
     warmUpAudio();
     // Se há campainha pendente (chegou antes da interação), toca agora
@@ -1914,7 +1851,8 @@ export default function ResidentDashboard() {
                   </button>
 
                   <button
-                    onClick={() => handleIntercomCall({ _isDoorman: true, name: 'Portaria' })}
+                    onClick={() => dispatchAlert('alert', '📞 Chamada de Voz da Unidade', 'Morador está solicitando que a portaria interfone para ele.')}
+                    disabled={dispatchAlertLoading}
                     style={{
                       width: '100%',
                       background: '#EFF6FF',

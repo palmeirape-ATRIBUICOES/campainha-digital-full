@@ -149,6 +149,9 @@ export default function AdminPanel() {
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
     }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
     webrtcStartedRef.current = false;
     callInitiatedRef.current = false;
   };

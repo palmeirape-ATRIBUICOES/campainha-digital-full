@@ -29,8 +29,6 @@ let _audioEl = null;          // HTML5 <audio> element fallback
 let _isWarmedUp = false;      // Se o áudio já foi desbloqueado
 let _pendingRing = false;     // Se há campainha aguardando interação do usuário
 let _isPlaying = false;       // Se está tocando atualmente
-let _playPromise = null;      // Promise ativa do play() HTML5 Audio para evitar bugs de play/pause do Safari/Chrome
-let _webAudioGainNode = null; // Nó de ganho master do Web Audio para silenciamento instantâneo
 
 // ─── Padrão de vibração campainha ─────────────────────────────────────────────
 const VIBRATION_PATTERN = [300, 100, 600, 1000];
@@ -60,16 +58,6 @@ function getAudioContext() {
     _ctx.resume().catch(() => {});
   }
   return _ctx;
-}
-
-// ─── Obtém o Nó de Ganho Master do Web Audio ─────────────────────────────────
-function getWebAudioGainNode() {
-  const ctx = getAudioContext();
-  if (!_webAudioGainNode) {
-    _webAudioGainNode = ctx.createGain();
-    _webAudioGainNode.connect(ctx.destination);
-  }
-  return _webAudioGainNode;
 }
 
 // ─── Desbloqueia áudio no iOS ─────────────────────────────────────────────────
@@ -122,9 +110,9 @@ function playOneDingDong() {
       return false;
     }
 
-    const master = getWebAudioGainNode();
-    // Restaura o volume/ganho para o nível de chamada ativa
+    const master = ctx.createGain();
     master.gain.setValueAtTime(2.0, ctx.currentTime);
+    master.connect(ctx.destination);
 
     const note = (freq, startSec, durSec) => {
       const osc  = ctx.createOscillator();
@@ -157,13 +145,12 @@ function playOneDingDong() {
 function playHTML5Audio() {
   try {
     const audio = getAudioElement();
-    audio.muted = false;
-    audio.volume = 1.0;
     audio.currentTime = 0;
+    audio.volume = 1.0;
     audio.loop = true;
-    _playPromise = audio.play();
-    if (_playPromise) {
-      _playPromise.then(() => {
+    const p = audio.play();
+    if (p) {
+      p.then(() => {
         console.log('[DoorbellAlert] HTML5 Audio tocando com sucesso');
       }).catch((err) => {
         console.warn('[DoorbellAlert] HTML5 Audio bloqueado:', err.message);
@@ -178,26 +165,9 @@ function playHTML5Audio() {
 function stopHTML5Audio() {
   if (_audioEl) {
     try {
-      // Muta e zera o volume instantaneamente para silenciar o auto-falante 
-      // antes mesmo do pause() concluir (previne som residual ou travado por promise ativa)
-      _audioEl.muted = true;
-      _audioEl.volume = 0;
-      
-      if (_playPromise) {
-        _playPromise.then(() => {
-          _audioEl.pause();
-          _audioEl.currentTime = 0;
-        }).catch(() => {
-          _audioEl.pause();
-          _audioEl.currentTime = 0;
-        });
-      } else {
-        _audioEl.pause();
-        _audioEl.currentTime = 0;
-      }
-    } catch (err) {
-      console.warn('[DoorbellAlert] Erro ao parar HTML5 Audio:', err.message);
-    }
+      _audioEl.pause();
+      _audioEl.currentTime = 0;
+    } catch {}
   }
 }
 
@@ -267,16 +237,6 @@ export function stopDoorbell() {
     clearInterval(_vibeInterval);
     _vibeInterval = null;
   }
-
-  // Zera o ganho do Web Audio imediatamente para parar qualquer oscilador agendado/ativo
-  if (_webAudioGainNode && _ctx) {
-    try {
-      _webAudioGainNode.gain.setValueAtTime(0.0, _ctx.currentTime);
-    } catch (err) {
-      console.warn('[DoorbellAlert] Erro ao silenciar Web Audio:', err.message);
-    }
-  }
-
   stopHTML5Audio();
   if ('vibrate' in navigator) {
     try { navigator.vibrate(0); } catch {}

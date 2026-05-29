@@ -188,30 +188,6 @@ const sendPushToUser = async (userId, payload) => {
   }
 };
 
-const updateCallStatus = async (unitId, fromStatus, toStatus) => {
-  if (!unitId) return;
-  try {
-    const recentVisits = await prisma.visitor.findMany({
-      where: {
-        unitId,
-        status: fromStatus,
-        timestamp: { gte: new Date(Date.now() - 5 * 60 * 1000) }
-      },
-      orderBy: { timestamp: 'desc' },
-      take: 1
-    });
-    if (recentVisits.length > 0) {
-      await prisma.visitor.update({
-        where: { id: recentVisits[0].id },
-        data: { status: toStatus }
-      });
-      console.log(`[WS Call] Status da visita ${recentVisits[0].id} da unidade ${unitId} atualizado para: ${toStatus}`);
-    }
-  } catch (err) {
-    console.error(`[WS Call] Erro ao atualizar status da chamada para unidade ${unitId}:`, err.message);
-  }
-};
-
 // ─── Push Notification Routes ──────────────────────────────────────────────────
 
 // Retorna a chave pública VAPID para o frontend se inscrever
@@ -3814,46 +3790,10 @@ io.on('connection', (socket) => {
   socket.on('doorman_call', handleIncomingCall);
 
   // Outros eventos WebRTC...
-  socket.on('answer_call', async ({ visitorSocketId, mode, unitId }) => {
-    if (unitId) {
-      try {
-        const recentVisit = await prisma.visitor.findFirst({
-          where: {
-            unitId,
-            timestamp: { gte: new Date(Date.now() - 5 * 60 * 1000) }
-          },
-          orderBy: { timestamp: 'desc' }
-        });
-        
-        if (recentVisit && recentVisit.status === 'answered') {
-          console.log(`[WS Call] 🚫 Recusando answer_call secundário do socket ${socket.id} para unidade ${unitId} (já atendido)`);
-          socket.emit('call_already_answered');
-          return;
-        }
-      } catch (e) {
-        console.error('[WS Call] Erro ao verificar status da chamada no answer_call:', e.message);
-      }
-    }
-
+  socket.on('answer_call', ({ visitorSocketId, mode, unitId }) => {
     io.to(visitorSocketId).emit('call_answered', { residentSocketId: socket.id, mode, unitId });
     if (unitId) {
       socket.to(`user_${unitId}`).emit('call_answered_elsewhere', { answeredBy: socket.id, visitorSocketId });
-      updateCallStatus(unitId, 'ringing', 'answered');
-      
-      // Notifica todos os moradores individuais em salas separadas
-      try {
-        const unit = await prisma.unit.findUnique({
-          where: { id: unitId },
-          include: { residents: true }
-        });
-        if (unit) {
-          for (const resident of unit.residents) {
-            socket.to(`user_${resident.id}`).emit('call_answered_elsewhere', { answeredBy: socket.id, visitorSocketId });
-          }
-        }
-      } catch (err) {
-        console.error('[WS Call] Erro ao buscar moradores adicionais para answer_call:', err.message);
-      }
     }
     if (socket.userId) {
       socket.to(`user_${socket.userId}`).emit('call_answered_elsewhere', { answeredBy: socket.id, visitorSocketId });
@@ -3864,16 +3804,7 @@ io.on('connection', (socket) => {
     console.log(`[WS Call] Chamada cancelada por ${socket.id}: unitId=${unitId}, propertyId=${propertyId}`);
     if (unitId) {
       io.to(`user_${unitId}`).emit('call_cancelled', { callerSocketId: socket.id });
-      updateCallStatus(unitId, 'ringing', 'missed');
     }
-    if (propertyId) {
-      io.to(`doorman_${propertyId}`).emit('call_cancelled', { callerSocketId: socket.id });
-    }
-  });
-
-  // Morador cancela chamada de saída para a portaria
-  socket.on('cancel_resident_call', ({ propertyId, unitId }) => {
-    console.log(`[WS Call] Morador ${unitId} cancelou chamada para portaria ${propertyId}`);
     if (propertyId) {
       io.to(`doorman_${propertyId}`).emit('call_cancelled', { callerSocketId: socket.id });
     }
@@ -3904,7 +3835,6 @@ io.on('connection', (socket) => {
     io.to(target).emit('call_ended');
     if (unitId) {
       socket.to(`user_${unitId}`).emit('call_ended');
-      updateCallStatus(unitId, 'ringing', 'rejected');
     }
   });
 

@@ -33,17 +33,6 @@ function RootRedirect() {
       return;
     }
 
-    const getSearchString = () => {
-      const searchPart = window.location.search;
-      if (searchPart) return searchPart;
-      const hashPart = window.location.hash;
-      if (hashPart.includes('?')) {
-        return '?' + hashPart.split('?')[1];
-      }
-      return '';
-    };
-    const searchStr = getSearchString();
-
     // Determina para onde redirecionar com base no perfil salvo
     const isSuperAdmin  = localStorage.getItem('cd_is_super_admin') === 'true';
     const isVilaAdmin   = localStorage.getItem('cd_vila_property_id');
@@ -53,13 +42,13 @@ function RootRedirect() {
     const userId        = localStorage.getItem('cd_user_id');
 
     if (isSuperAdmin) {
-      navigate(`/master-admin${searchStr}`, { replace: true });
+      navigate('/master-admin', { replace: true });
     } else if (isVilaAdmin) {
-      navigate(`/vila-admin${searchStr}`, { replace: true });
+      navigate('/vila-admin', { replace: true });
     } else if (isAdmin || isDoorman) {
-      navigate(`/admin${searchStr}`, { replace: true });
+      navigate('/admin', { replace: true });
     } else if (unitId || userId) {
-      navigate(`/morador/${unitId || userId}${searchStr}`, { replace: true });
+      navigate(`/morador/${unitId || userId}`, { replace: true });
     } else {
       // Token existe mas sem informação de destino – vai para auth para revalidar
       setChecked(true);
@@ -102,17 +91,6 @@ function AuthRedirect() {
       return;
     }
 
-    const getSearchString = () => {
-      const searchPart = window.location.search;
-      if (searchPart) return searchPart;
-      const hashPart = window.location.hash;
-      if (hashPart.includes('?')) {
-        return '?' + hashPart.split('?')[1];
-      }
-      return '';
-    };
-    const searchStr = getSearchString();
-
     const isSuperAdmin  = localStorage.getItem('cd_is_super_admin') === 'true';
     const isVilaAdmin   = localStorage.getItem('cd_vila_property_id');
     const isAdmin       = localStorage.getItem('cd_admin_role') === 'client';
@@ -121,13 +99,13 @@ function AuthRedirect() {
     const userId        = localStorage.getItem('cd_user_id');
 
     if (isSuperAdmin) {
-      navigate(`/master-admin${searchStr}`, { replace: true });
+      navigate('/master-admin', { replace: true });
     } else if (isVilaAdmin) {
-      navigate(`/vila-admin${searchStr}`, { replace: true });
+      navigate('/vila-admin', { replace: true });
     } else if (isAdmin || isDoorman) {
-      navigate(`/admin${searchStr}`, { replace: true });
+      navigate('/admin', { replace: true });
     } else if (unitId || userId) {
-      navigate(`/morador/${unitId || userId}${searchStr}`, { replace: true });
+      navigate(`/morador/${unitId || userId}`, { replace: true });
     } else {
       setChecked(true);
     }
