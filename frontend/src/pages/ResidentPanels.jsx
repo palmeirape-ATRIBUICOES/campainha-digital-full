@@ -53,12 +53,29 @@ function VisitorCard({ v }) {
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><User size={24} style={{ opacity: 0.3 }} /></div>}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
             <span style={{ fontWeight: 700, fontSize: '14px' }}>{name}</span>
             <span style={{ fontSize: '11px', color: 'var(--primary)', background: 'rgba(0,229,255,0.08)', padding: '2px 8px', borderRadius: '100px', fontWeight: 600 }}>{ago}</span>
+            {v.status && (
+              <span style={{ 
+                fontSize: '10px', 
+                fontWeight: 800, 
+                padding: '2px 6px', 
+                borderRadius: '6px',
+                background: v.status === 'answered' ? '#DCFCE7' : v.status === 'missed' ? '#FEE2E2' : '#F3F4F6',
+                color: v.status === 'answered' ? '#15803D' : v.status === 'missed' ? '#B91C1C' : '#4B5563'
+              }}>
+                {v.status === 'answered' ? 'Atendida' : v.status === 'missed' ? 'Perdida' : v.status === 'rejected' ? 'Recusada' : 'Chamando'}
+              </span>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '12px' }}>
             <Clock size={11} /> {time} • {date}
+            {v.duration > 0 && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '2px', marginLeft: '6px', color: '#0284C7', fontWeight: 600 }}>
+                ⏱️ {Math.floor(v.duration / 60)}m {v.duration % 60}s
+              </span>
+            )}
           </div>
         </div>
         {expanded ? <ChevronUp size={16} style={{ opacity: 0.4 }} /> : <ChevronDown size={16} style={{ opacity: 0.4 }} />}

@@ -3705,13 +3705,28 @@ const activeSockets = new Map();
 io.on('connection', (socket) => {
   console.log('[WS] conectado:', socket.id);
 
-  socket.on('register_user', ({ userId }) => {
+  socket.on('register_user', async ({ userId }) => {
     socket.userId = userId;
     if (!activeSockets.has(userId)) {
       activeSockets.set(userId, new Set());
     }
     activeSockets.get(userId).add(socket.id);
     socket.join(`user_${userId}`);
+    
+    // Faz o socket entrar na sala da unidade do morador também
+    try {
+      const resident = await prisma.resident.findUnique({
+        where: { id: userId },
+        select: { unitId: true }
+      });
+      if (resident && resident.unitId) {
+        socket.join(`user_${resident.unitId}`);
+        console.log(`[WS] Socket ${socket.id} do morador ${userId} entrou na sala da unidade: user_${resident.unitId}`);
+      }
+    } catch (e) {
+      console.error('[WS] Erro ao obter unidade do morador para socket.join:', e.message);
+    }
+    
     console.log(`[WS] Usuário ${userId} registrado no socket ${socket.id}`);
   });
 
@@ -3720,9 +3735,23 @@ io.on('connection', (socket) => {
     console.log(`[WS] Porteiro registrado para propriedade ${propertyId} no socket ${socket.id}`);
   });
 
-  socket.on('resident_call_doorman', ({ propertyId, unitId, callerName }) => {
+  socket.on('resident_call_doorman', async ({ propertyId, unitId, callerName }) => {
     console.log(`[WS Call] Morador chamando portaria: unitId=${unitId}, propertyId=${propertyId}, socketId=${socket.id}`);
-    io.to(`doorman_${propertyId}`).emit('incoming_resident_call', { callerName, unitId, residentSocketId: socket.id });
+    let visitId = null;
+    try {
+      const visit = await prisma.visitor.create({
+        data: {
+          unitId,
+          propertyId,
+          callerName: callerName || 'Morador',
+          status: 'ringing'
+        }
+      });
+      visitId = visit.id;
+    } catch (e) {
+      console.error('[WS Call] Erro ao salvar chamada de morador para portaria no banco:', e.message);
+    }
+    io.to(`doorman_${propertyId}`).emit('incoming_resident_call', { callerName, unitId, residentSocketId: socket.id, visitId });
   });
 
   socket.on('resident_message_doorman', ({ propertyId, unitId, message, senderName, authorizeEntry }) => {
@@ -3937,9 +3966,25 @@ io.on('connection', (socket) => {
   socket.on('doorman_call', (data) => handleIncomingCall({ ...data, isDoormanCall: true }));
 
   // Outros eventos WebRTC...
-  socket.on('answer_call', ({ visitorSocketId, mode, unitId }) => {
-    io.to(visitorSocketId).emit('call_answered', { residentSocketId: socket.id, mode, unitId });
-    if (unitId) {
+  socket.on('answer_call', async ({ visitorSocketId, mode, unitId, visitId }) => {
+    io.to(visitorSocketId).emit('call_answered', { residentSocketId: socket.id, mode, unitId, visitId });
+    
+    // Atualiza status da visita para answered
+    if (visitId) {
+      try {
+        await prisma.visitor.update({
+          where: { id: visitId },
+          data: { status: 'answered' }
+        });
+        console.log(`[DB] Visita ${visitId} atualizada para status answered`);
+      } catch (e) {
+        console.warn(`[DB] Erro ao atualizar status answered para ${visitId}:`, e.message);
+      }
+    }
+
+    // Só envia call_answered_elsewhere se quem atendeu foi um morador (possui socket.userId definido),
+    // evitando que ligações do morador para a portaria caiam ao serem atendidas pelo porteiro.
+    if (unitId && socket.userId) {
       socket.to(`user_${unitId}`).emit('call_answered_elsewhere', { answeredBy: socket.id, visitorSocketId });
     }
     if (socket.userId) {
@@ -3947,8 +3992,22 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('cancel_call', ({ unitId, propertyId }) => {
-    console.log(`[WS Call] Chamada cancelada por ${socket.id}: unitId=${unitId}, propertyId=${propertyId}`);
+  socket.on('cancel_call', async ({ unitId, propertyId, visitId }) => {
+    console.log(`[WS Call] Chamada cancelada por ${socket.id}: unitId=${unitId}, propertyId=${propertyId}, visitId=${visitId}`);
+    
+    // Atualiza status da visita para missed
+    if (visitId) {
+      try {
+        await prisma.visitor.update({
+          where: { id: visitId },
+          data: { status: 'missed' }
+        });
+        console.log(`[DB] Visita ${visitId} atualizada para status missed (não atendida)`);
+      } catch (e) {
+        console.warn(`[DB] Erro ao atualizar status missed para ${visitId}:`, e.message);
+      }
+    }
+
     if (unitId) {
       io.to(`user_${unitId}`).emit('call_cancelled', { callerSocketId: socket.id });
     }
@@ -3978,10 +4037,26 @@ io.on('connection', (socket) => {
     io.to(target).emit('quick_message', { message });
   });
 
-  socket.on('call_ended', ({ target, unitId }) => {
+  socket.on('call_ended', async ({ target, unitId, visitId, duration }) => {
     io.to(target).emit('call_ended');
     if (unitId) {
       socket.to(`user_${unitId}`).emit('call_ended');
+    }
+    
+    // Atualiza duração da chamada no banco se fornecida
+    if (visitId && duration != null) {
+      try {
+        await prisma.visitor.update({
+          where: { id: visitId },
+          data: { 
+            duration: parseInt(duration),
+            status: 'answered' // garante que fica como atendida se terminou com duração
+          }
+        });
+        console.log(`[DB] Visita ${visitId} atualizada com duração de chamada: ${duration}s`);
+      } catch (e) {
+        console.warn(`[DB] Erro ao salvar duração de chamada para ${visitId}:`, e.message);
+      }
     }
   });
 

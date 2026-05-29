@@ -111,6 +111,29 @@ export default function AdminPanel() {
   const [selectedUnitDetails, setSelectedUnitDetails] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
+  const [callDuration, setCallDuration] = useState(0);
+
+  useEffect(() => {
+    let timer = null;
+    if (activeCall && activeCall.status === 'talking') {
+      setCallDuration(0);
+      timer = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setCallDuration(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [activeCall]);
+
+  const fmtDuration = (secs) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   const socketRef = useRef(null);
 
   const localStreamRef = useRef(null);
@@ -246,9 +269,9 @@ export default function AdminPanel() {
     if (socketRef.current && (doormanCallState === 'calling' || doormanCallState === 'talking' || (activeCall && activeCall.status !== 'ended'))) {
       const targetSocket = socketRef.current.targetSocketId || (activeCall && activeCall.residentSocketId);
       if (targetSocket) {
-        socketRef.current.emit('call_ended', { target: targetSocket, unitId: activeCall?.unitId });
+        socketRef.current.emit('call_ended', { target: targetSocket, unitId: activeCall?.unitId, visitId: activeCall?.visitId, duration: callDuration });
       } else if (activeCall && activeCall.unitId) {
-        socketRef.current.emit('cancel_call', { unitId: activeCall.unitId });
+        socketRef.current.emit('cancel_call', { unitId: activeCall.unitId, visitId: activeCall?.visitId });
       }
     }
     stopAllCall();
@@ -1265,7 +1288,7 @@ export default function AdminPanel() {
                   {activeCall.callerName}
                 </h3>
                 <p style={{ fontSize: '13px', margin: 0, color: '#CBD5E1', fontWeight: 600 }}>
-                  {activeCall.status === 'calling' ? '🔔 Campainha tocando no celular do morador...' : '🎙️ Comunicação de voz ativa (WebRTC)...'}
+                  {activeCall.status === 'calling' ? '🔔 Campainha tocando no celular do morador...' : `🎙️ Comunicação de voz ativa — ${fmtDuration(callDuration)}`}
                 </p>
               </div>
             </div>
@@ -2430,14 +2453,41 @@ export default function AdminPanel() {
                         ? <img src={v.photo} alt="Visitante" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : <User size={48} color="var(--text-muted)" style={{ opacity: 0.3 }} />
                       }
+                      {v.status && (
+                        <span style={{ 
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          fontSize: '10px', 
+                          fontWeight: 800, 
+                          padding: '3px 8px', 
+                          borderRadius: '6px',
+                          background: v.status === 'answered' ? '#DCFCE7' : v.status === 'missed' ? '#FEE2E2' : '#F3F4F6',
+                          color: v.status === 'answered' ? '#15803D' : v.status === 'missed' ? '#B91C1C' : '#4B5563',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          zIndex: 10
+                        }}>
+                          {v.status === 'answered' ? 'Atendida' : v.status === 'missed' ? 'Perdida' : v.status === 'rejected' ? 'Recusada' : 'Chamando'}
+                        </span>
+                      )}
                     </div>
                     <div style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '11px', marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '11px', marginBottom: '6px' }}>
                         <Clock size={11} /> {fmtDate(v.timestamp)}
                       </div>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--primary)' }}>
-                        {properties.find(p => p.id === selectedProperty)?.units.find(u => u.id === v.unitId)?.name || 'Unidade'}
-                      </span>
+                      <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text)', marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {v.callerName || 'Visitante'}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--primary)' }}>
+                          {properties.find(p => p.id === selectedProperty)?.units.find(u => u.id === v.unitId)?.name || 'Unidade'}
+                        </span>
+                        {v.duration > 0 && (
+                          <span style={{ fontSize: '11px', color: '#0284C7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '2px' }}>
+                            ⏱️ {Math.floor(v.duration / 60)}m {v.duration % 60}s
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -31,6 +31,28 @@ export default function PorteiroDashboard() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('cd_dark_mode') === 'true');
 
   const [activeCall, setActiveCall] = useState(null); // { residentSocketId, callerName, unitId, isIncoming, status: 'calling'|'talking'|'ended' }
+  const [callDuration, setCallDuration] = useState(0);
+
+  useEffect(() => {
+    let timer = null;
+    if (activeCall && activeCall.status === 'talking') {
+      setCallDuration(0);
+      timer = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setCallDuration(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [activeCall]);
+
+  const fmtDuration = (secs) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   const localStreamRef = useRef(null);
   const pcRef = useRef(null);
@@ -158,7 +180,7 @@ export default function PorteiroDashboard() {
     if (activeCall && socketRef.current) {
       const targetSocket = activeCall.residentSocketId;
       if (targetSocket) {
-        socketRef.current.emit('call_ended', { target: targetSocket });
+        socketRef.current.emit('call_ended', { target: targetSocket, unitId: activeCall?.unitId, visitId: activeCall?.visitId, duration: callDuration });
       }
     }
     stopAllCall();
@@ -174,7 +196,8 @@ export default function PorteiroDashboard() {
       callerName: incomingCallData.callerName || 'Morador',
       unitId: incomingCallData.unitId,
       isIncoming: true,
-      status: 'talking'
+      status: 'talking',
+      visitId: incomingCallData.visitId
     });
     setIncomingCall(null);
 
@@ -187,7 +210,7 @@ export default function PorteiroDashboard() {
 
     if (socketRef.current && residentSocketId) {
       console.log('[Socket] Atendendo chamada de morador e enviando answer_call / webrtc_ready para:', residentSocketId);
-      socketRef.current.emit('answer_call', { visitorSocketId: residentSocketId, mode: 'audio', unitId: incomingCallData.unitId });
+      socketRef.current.emit('answer_call', { visitorSocketId: residentSocketId, mode: 'audio', unitId: incomingCallData.unitId, visitId: incomingCallData.visitId });
       socketRef.current.emit('webrtc_ready', { target: residentSocketId });
     }
   };
@@ -525,7 +548,7 @@ export default function PorteiroDashboard() {
                   {activeCall.callerName}
                 </h3>
                 <p style={{ fontSize: '13px', margin: 0, color: '#CBD5E1', fontWeight: 600 }}>
-                  {activeCall.status === 'calling' ? '🔔 Campainha tocando no celular do morador...' : '🎙️ Comunicação de voz activa (WebRTC)...'}
+                  {activeCall.status === 'calling' ? '🔔 Campainha tocando no celular do morador...' : `🎙️ Comunicação de voz ativa — ${fmtDuration(callDuration)}`}
                 </p>
               </div>
             </div>

@@ -131,6 +131,28 @@ export default function ResidentDashboard() {
   const [dispatchAlertLoading, setDispatchAlertLoading] = useState(false);
   const [openGateLoading, setOpenGateLoading] = useState(false);
   const [entryNotification, setEntryNotification] = useState(null);
+  const [callDuration, setCallDuration] = useState(0);
+
+  useEffect(() => {
+    let timer = null;
+    if (status === 'active') {
+      setCallDuration(0);
+      timer = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setCallDuration(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [status]);
+
+  const fmtDuration = (secs) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   // Auto-close doorman release notification after 12 seconds
   useEffect(() => {
@@ -1100,7 +1122,7 @@ export default function ResidentDashboard() {
     if (socketRef.current && targetSocket) {
       console.log('[Socket] Enviando answer_call e webrtc_ready para:', targetSocket);
       // Primeiro notifica o visitante que a chamada foi atendida
-      socketRef.current.emit('answer_call', { visitorSocketId: targetSocket, mode: 'active', unitId: id });
+      socketRef.current.emit('answer_call', { visitorSocketId: targetSocket, mode: 'active', unitId: id, visitId: call?.visitId });
       // Depois sinaliza que a mídia local está pronta e pode criar a offer
       socketRef.current.emit('webrtc_ready', { target: targetSocket });
     }
@@ -1110,11 +1132,11 @@ export default function ResidentDashboard() {
     stopDoorbell();
     doorbellStartedRef.current = false;
     if (visitorSocketId) {
-      socketRef.current?.emit('call_ended', { target: visitorSocketId, unitId: id });
+      socketRef.current?.emit('call_ended', { target: visitorSocketId, unitId: id, visitId: call?.visitId, duration: callDuration });
     } else if (statusRef.current === 'calling' && call && call._isDoorman) {
-      socketRef.current?.emit('cancel_call', { propertyId: call.propertyId });
+      socketRef.current?.emit('cancel_call', { propertyId: call.propertyId, visitId: call?.visitId });
     } else if (statusRef.current === 'calling' && call && call.unitId) {
-      socketRef.current?.emit('cancel_call', { unitId: call.unitId });
+      socketRef.current?.emit('cancel_call', { unitId: call.unitId, visitId: call?.visitId });
     }
     statusRef.current = 'idle';
     setStatus('idle'); setCall(null); stopAll();
@@ -2136,7 +2158,7 @@ export default function ResidentDashboard() {
             <div style={{ padding: '16px 24px' }}>
               <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '14px', padding: '10px 16px', display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', animation: 'pulse 1s infinite' }} />
-                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '13px' }}>Chamada em andamento</span>
+                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '13px' }}>Chamada em andamento — {fmtDuration(callDuration)}</span>
               </div>
 
               {/* Mídia / Vídeos / Voz */}
