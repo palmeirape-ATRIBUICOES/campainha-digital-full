@@ -3771,11 +3771,12 @@ io.on('connection', (socket) => {
           requireInteraction: true,
           vibrate: [400, 200, 400, 200, 800],
           data: { 
-            url: `${baseUrl}/#/morador/${unitId}?call=true&visitorSocketId=${socket.id}&callId=${callId}`, 
+            url: `${baseUrl}/#/morador/${unitId}?call=true&visitorSocketId=${socket.id}&callId=${callId}&callerName=${encodeURIComponent(callerName || 'Visitante')}&propertyId=${propertyId}`, 
             unitId, 
             propertyId,
             visitorSocketId: socket.id,
-            callId
+            callId,
+            callerName: callerName || 'Visitante'
           }
         });
         console.log(`[WS Call] ✔ Push enviado para morador ${resident.name} (${resident.id})`);

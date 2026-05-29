@@ -813,6 +813,8 @@ export default function ResidentDashboard() {
       const hasCallParam = params.get('call') === 'true';
       const paramVisitorSocket = params.get('visitorSocketId');
       const paramCallId = params.get('callId');
+      const paramCallerName = params.get('callerName') || 'Visitante';
+      const paramPropertyId = params.get('propertyId');
 
       if (hasCallParam && paramVisitorSocket) {
         if (paramCallId && paramCallId === lastCallIdRef.current) {
@@ -829,6 +831,15 @@ export default function ResidentDashboard() {
         setStatus('ringing');
         setTab('home');
         setSentMsg('');
+        
+        // Define o estado de chamada de forma síncrona/instantânea com os dados do push
+        setCall({
+          visitorSocketId: paramVisitorSocket,
+          callerName: paramCallerName,
+          photo: null,
+          propertyId: paramPropertyId
+        });
+        
         triggerDoorbell(); // Toca a campainha imediatamente ao carregar via push
         
         try {
@@ -840,21 +851,18 @@ export default function ResidentDashboard() {
             const visitors = await res.json();
             if (visitors && visitors.length > 0) {
               const latest = visitors[0];
-              setCall({
-                visitorSocketId: paramVisitorSocket,
-                callerName: latest.callerName || 'Visitante',
+              // Atualiza com foto e informações adicionais em segundo plano
+              setCall(prev => prev ? {
+                ...prev,
+                callerName: latest.callerName || prev.callerName,
                 photo: latest.photo,
                 timestamp: latest.timestamp,
                 visitId: latest.id
-              });
-            } else {
-              setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
+              } : null);
             }
-          } else {
-            setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
           }
-        } catch {
-          setCall({ visitorSocketId: paramVisitorSocket, callerName: 'Visitante', photo: null });
+        } catch (err) {
+          console.warn('[URL Param] Erro ao buscar detalhes em background:', err);
         }
       }
     };
