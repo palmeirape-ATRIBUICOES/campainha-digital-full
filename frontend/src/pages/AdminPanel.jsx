@@ -117,6 +117,7 @@ export default function AdminPanel() {
   const pcRef = useRef(null);
   const webrtcStartedRef = useRef(false);
   const remoteAudioRef = useRef(null);
+  const remoteVideoRef = useRef(null);
   const callInitiatedRef = useRef(false);
 
   const DEFAULT_ICE_CONFIG = {
