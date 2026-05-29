@@ -3809,6 +3809,14 @@ io.on('connection', (socket) => {
       io.to(`doorman_${propertyId}`).emit('call_cancelled', { callerSocketId: socket.id });
     }
   });
+
+  // Morador cancela chamada de saída para a portaria
+  socket.on('cancel_resident_call', ({ propertyId, unitId }) => {
+    console.log(`[WS Call] Morador ${unitId} cancelou chamada para portaria ${propertyId}`);
+    if (propertyId) {
+      io.to(`doorman_${propertyId}`).emit('call_cancelled', { callerSocketId: socket.id });
+    }
+  });
   
   socket.on('webrtc_ready', ({ target }) => {
     io.to(target).emit('webrtc_ready', { residentSocketId: socket.id });

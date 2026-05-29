@@ -565,11 +565,15 @@ export default function ResidentDashboard() {
 
     s.on('call_answered_elsewhere', ({ answeredBy }) => {
       console.log('[Socket] Chamada atendida em outro dispositivo/aba:', answeredBy);
-      stopDoorbell();
-      doorbellStartedRef.current = false;
-      setStatus('idle');
-      setCall(null);
-      stopAll();
+      // Ignorar se o morador INICIOU a chamada (status 'calling') — ele não é um receptor passivo
+      setStatus(prev => {
+        if (prev === 'calling' || prev === 'active') return prev;
+        stopDoorbell();
+        doorbellStartedRef.current = false;
+        setCall(null);
+        stopAll();
+        return 'idle';
+      });
     });
 
     s.on('call_cancelled', () => {
@@ -974,7 +978,30 @@ export default function ResidentDashboard() {
 
   const handleIntercomCall = async (neighbor) => {
     if (!socketRef.current || !propertyId) return;
+
+    // Chamada para a PORTARIA (enviada pelo botão de interfone da portaria)
+    if (neighbor._isDoorman) {
+      setStatus('calling');
+      setCall({ callerName: 'Portaria', propertyId, unitId: null, _isDoorman: true });
+      setVisitorSocketId(null);
+      setTab('home');
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        localStreamRef.current = stream;
+      } catch (e) {
+        console.warn('[Intercom Portaria] Sem acesso ao microfone:', e.message);
+      }
+
+      socketRef.current.emit('resident_call_doorman', {
+        propertyId,
+        unitId: id,
+        callerName: unitName || 'Morador'
+      });
+      return;
+    }
     
+    // Chamada para VIZINHO
     setStatus('calling');
     setCall({ callerName: neighbor.name || 'Vizinho', propertyId, unitId: neighbor.id });
     setVisitorSocketId(null);
@@ -1073,6 +1100,9 @@ export default function ResidentDashboard() {
     doorbellStartedRef.current = false;
     if (visitorSocketId) {
       socketRef.current?.emit('call_ended', { target: visitorSocketId, unitId: id });
+    } else if (status === 'calling' && call && call._isDoorman) {
+      // Cancelar chamada saindo do morador para a portaria
+      socketRef.current?.emit('cancel_resident_call', { propertyId: call.propertyId, unitId: id });
     } else if (status === 'calling' && call && call.unitId) {
       socketRef.current?.emit('cancel_call', { unitId: call.unitId });
     }
