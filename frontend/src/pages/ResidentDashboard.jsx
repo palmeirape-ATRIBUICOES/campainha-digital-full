@@ -823,20 +823,26 @@ export default function ResidentDashboard() {
 
   useEffect(() => {
     const checkActiveCallParam = async () => {
+      const searchParams = new URLSearchParams(window.location.search);
       const hashPart = window.location.hash;
-      const queryPart = hashPart.includes('?') ? hashPart.split('?')[1] : '';
-      const params = new URLSearchParams(queryPart);
+      if (hashPart.includes('?')) {
+        const hashQueryParams = new URLSearchParams(hashPart.split('?')[1]);
+        for (const [key, value] of hashQueryParams.entries()) {
+          searchParams.set(key, value);
+        }
+      }
       
-      const tabParam = params.get('tab');
+      const tabParam = searchParams.get('tab');
       if (tabParam) {
         setTab(tabParam);
       }
 
-      const hasCallParam = params.get('call') === 'true';
-      const paramVisitorSocket = params.get('visitorSocketId');
-      const paramCallId = params.get('callId');
-      const paramCallerName = params.get('callerName') || 'Visitante';
-      const paramPropertyId = params.get('propertyId');
+      const hasCallParam = searchParams.get('call') === 'true';
+      const paramVisitorSocket = searchParams.get('visitorSocketId');
+      const paramCallId = searchParams.get('callId');
+      const paramCallerName = searchParams.get('callerName') || 'Visitante';
+      const paramPropertyId = searchParams.get('propertyId');
+      const isAutoAnswer = searchParams.get('autoAnswer') === 'true';
 
       if (hasCallParam && paramVisitorSocket) {
         if (paramCallId && paramCallId === lastCallIdRef.current) {
@@ -855,14 +861,22 @@ export default function ResidentDashboard() {
         setSentMsg('');
         
         // Define o estado de chamada de forma síncrona/instantânea com os dados do push
-        setCall({
+        const currentCallData = {
           visitorSocketId: paramVisitorSocket,
           callerName: paramCallerName,
           photo: null,
           propertyId: paramPropertyId
-        });
+        };
+        setCall(currentCallData);
         
         triggerDoorbell(); // Toca a campainha imediatamente ao carregar via push
+        
+        if (isAutoAnswer) {
+          setTimeout(() => {
+            console.log('[Push AutoAnswer] Atendimento automático via ação de notificação.');
+            handleAnswer(false);
+          }, 600);
+        }
         
         try {
           let res = await fetch(`${API}/api/visitors/${id}`);
@@ -1881,8 +1895,7 @@ export default function ResidentDashboard() {
                   </button>
 
                   <button
-                    onClick={() => dispatchAlert('alert', '📞 Chamada de Voz da Unidade', 'Morador está solicitando que a portaria interfone para ele.')}
-                    disabled={dispatchAlertLoading}
+                    onClick={() => handleIntercomCall({ _isDoorman: true, name: 'Portaria' })}
                     style={{
                       width: '100%',
                       background: '#EFF6FF',

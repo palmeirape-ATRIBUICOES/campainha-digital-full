@@ -138,7 +138,15 @@ self.addEventListener('notificationclick', (event) => {
 
   if (event.action === 'dismiss') return;
 
-  const targetUrl = event.notification.data?.url || './';
+  let targetUrl = event.notification.data?.url || './';
+
+  if (event.action === 'answer') {
+    if (targetUrl.includes('?')) {
+      targetUrl += '&autoAnswer=true';
+    } else {
+      targetUrl += '?autoAnswer=true';
+    }
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

@@ -188,6 +188,30 @@ const sendPushToUser = async (userId, payload) => {
   }
 };
 
+const updateCallStatus = async (unitId, fromStatus, toStatus) => {
+  if (!unitId) return;
+  try {
+    const recentVisits = await prisma.visitor.findMany({
+      where: {
+        unitId,
+        status: fromStatus,
+        timestamp: { gte: new Date(Date.now() - 5 * 60 * 1000) }
+      },
+      orderBy: { timestamp: 'desc' },
+      take: 1
+    });
+    if (recentVisits.length > 0) {
+      await prisma.visitor.update({
+        where: { id: recentVisits[0].id },
+        data: { status: toStatus }
+      });
+      console.log(`[WS Call] Status da visita ${recentVisits[0].id} da unidade ${unitId} atualizado para: ${toStatus}`);
+    }
+  } catch (err) {
+    console.error(`[WS Call] Erro ao atualizar status da chamada para unidade ${unitId}:`, err.message);
+  }
+};
+
 // ─── Push Notification Routes ──────────────────────────────────────────────────
 
 // Retorna a chave pública VAPID para o frontend se inscrever
@@ -3794,6 +3818,7 @@ io.on('connection', (socket) => {
     io.to(visitorSocketId).emit('call_answered', { residentSocketId: socket.id, mode, unitId });
     if (unitId) {
       socket.to(`user_${unitId}`).emit('call_answered_elsewhere', { answeredBy: socket.id, visitorSocketId });
+      updateCallStatus(unitId, 'ringing', 'answered');
     }
     if (socket.userId) {
       socket.to(`user_${socket.userId}`).emit('call_answered_elsewhere', { answeredBy: socket.id, visitorSocketId });
@@ -3804,6 +3829,7 @@ io.on('connection', (socket) => {
     console.log(`[WS Call] Chamada cancelada por ${socket.id}: unitId=${unitId}, propertyId=${propertyId}`);
     if (unitId) {
       io.to(`user_${unitId}`).emit('call_cancelled', { callerSocketId: socket.id });
+      updateCallStatus(unitId, 'ringing', 'missed');
     }
     if (propertyId) {
       io.to(`doorman_${propertyId}`).emit('call_cancelled', { callerSocketId: socket.id });
@@ -3843,6 +3869,7 @@ io.on('connection', (socket) => {
     io.to(target).emit('call_ended');
     if (unitId) {
       socket.to(`user_${unitId}`).emit('call_ended');
+      updateCallStatus(unitId, 'ringing', 'rejected');
     }
   });
 
