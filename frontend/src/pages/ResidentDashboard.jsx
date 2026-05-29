@@ -1419,7 +1419,16 @@ export default function ResidentDashboard() {
     return null;
   }
 
-  const handleUserInteraction = () => {
+  const handleUserInteraction = (e) => {
+    // Evita re-tocar campainha se a interação veio de um botão/input de ação do painel (ex: Atender, Recusar, Oculto)
+    if (e && e.target) {
+      const isActionElement = e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('[role="button"]');
+      if (isActionElement) {
+        console.log('[Dashboard] Ignorando handleUserInteraction em elemento de ação:', e.target);
+        return;
+      }
+    }
+
     // Desbloqueia áudio no iOS no primeiro toque do usuário
     warmUpAudio();
     // Se há campainha pendente (chegou antes da interação), toca agora
