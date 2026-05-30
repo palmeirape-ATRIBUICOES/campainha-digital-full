@@ -3570,8 +3570,13 @@ app.get('/api/properties/:propertyId/messages', async (req, res) => {
         const unitObj = await prisma.unit.findUnique({
           where: { id: unitId }
         });
-        if (unitObj && unitObj.block) {
-          residentBlocks.push(unitObj.block.trim().toLowerCase());
+        if (unitObj) {
+          let uBlock = unitObj.block ? unitObj.block.trim().toLowerCase() : '';
+          if (!uBlock) {
+            const match = (unitObj.name || '').match(/^(B\d+)/i);
+            uBlock = match ? match[1].toLowerCase() : 'geral';
+          }
+          residentBlocks.push(uBlock);
         }
       }
       
@@ -3676,7 +3681,11 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
         include: { residents: true }
       });
       for (const unit of units) {
-        const uBlock = unit.block ? unit.block.trim().toLowerCase() : '';
+        let uBlock = unit.block ? unit.block.trim().toLowerCase() : '';
+        if (!uBlock) {
+          const match = (unit.name || '').match(/^(B\d+)/i);
+          uBlock = match ? match[1].toLowerCase() : 'geral';
+        }
         if (selectedBlocks.some(b => uBlock.includes(b) || b.includes(uBlock))) {
           for (const resident of unit.residents) {
             if (!resident.trialEndsAt || new Date(resident.trialEndsAt) >= new Date()) {
@@ -3717,6 +3726,28 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
   } catch (err) {
     console.error('Error creating property broadcast:', err);
     res.status(500).json({ error: 'Erro ao enviar comunicado.' });
+  }
+});
+
+// Excluir comunicado do condomínio (para Admin)
+app.delete('/api/properties/:propertyId/broadcast/:messageId', async (req, res) => {
+  const { propertyId, messageId } = req.params;
+  try {
+    const msg = await prisma.message.findFirst({
+      where: { id: messageId, propertyId }
+    });
+    if (!msg) {
+      return res.status(404).json({ error: 'Comunicado não encontrado.' });
+    }
+    
+    await prisma.message.delete({
+      where: { id: messageId }
+    });
+    
+    res.json({ success: true, message: 'Comunicado excluído com sucesso.' });
+  } catch (err) {
+    console.error('Error deleting property broadcast:', err);
+    res.status(500).json({ error: 'Erro ao excluir comunicado.' });
   }
 });
 

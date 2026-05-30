@@ -45,11 +45,11 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
   useEffect(() => {
     // Carregar unidades e moradores do condomínio para os seletores
     if (propertyId === 'demo-vila-id') {
-      setUniqueBlocks(['Bloco 1', 'Bloco 2']);
+      setUniqueBlocks(['BLOCO 1', 'BLOCO 2']);
       setUnits([
-        { id: 'demo-u1', name: '1001', block: 'Bloco 1', inviteCode: 'ABC', residents: [{ id: 'demo-res1', name: 'Carlos' }] },
-        { id: 'demo-u2', name: '102', block: 'Bloco 1', inviteCode: 'DEF', residents: [{ id: 'demo-res2', name: 'Ana' }] },
-        { id: 'demo-u3', name: '201', block: 'Bloco 2', inviteCode: 'GHI', residents: [{ id: 'demo-res3', name: 'Mariana' }] }
+        { id: 'demo-u1', name: '1001', block: 'BLOCO 1', inviteCode: 'ABC', residents: [{ id: 'demo-res1', name: 'Carlos' }] },
+        { id: 'demo-u2', name: '102', block: 'BLOCO 1', inviteCode: 'DEF', residents: [{ id: 'demo-res2', name: 'Ana' }] },
+        { id: 'demo-u3', name: '201', block: 'BLOCO 2', inviteCode: 'GHI', residents: [{ id: 'demo-res3', name: 'Mariana' }] }
       ]);
       setMessages([
         {
@@ -72,8 +72,14 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
           if (res.ok) {
             const data = await res.json();
             setUnits(data);
-            // Extrair blocos únicos
-            const bList = [...new Set(data.map(u => u.block).filter(Boolean))];
+            
+            // Extrair blocos únicos, com parser inteligente do name se o campo block estiver vazio
+            const bList = [...new Set(data.map(u => {
+              if (u.block) return u.block.trim().toUpperCase();
+              // Regex inteligente: Extrai B1, B2, Bloco 1, Bloco A do nome do apartamento (ex: B1-101)
+              const match = (u.name || '').match(/^(B\d+)/i) || (u.name || '').match(/^(Bloco\s*\w+)/i);
+              return match ? match[1].toUpperCase() : 'B1';
+            }).filter(Boolean))];
             setUniqueBlocks(bList);
           }
         } catch (err) {
@@ -105,6 +111,28 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
   const clearMedia = () => {
     setMediaUrl('');
     setMediaName('');
+  };
+
+  const deleteMessage = async (messageId) => {
+    if (!window.confirm('Tem certeza que deseja excluir permanentemente este comunicado para todos os moradores?')) return;
+    
+    if (propertyId === 'demo-vila-id') {
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/api/properties/${propertyId}/broadcast/${messageId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setMessages(prev => prev.filter(m => m.id !== messageId));
+      } else {
+        alert('Erro ao excluir comunicado do servidor.');
+      }
+    } catch {
+      alert('Erro ao conectar ao servidor.');
+    }
   };
 
   const sendMessage = async () => {
@@ -237,11 +265,14 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
               <span style={{ fontSize:'12px', fontWeight:700, color:'#475569', display:'block', marginBottom:'8px' }}>Selecione o Apartamento:</span>
               <select value={selectedUnitId} onChange={(e) => setSelectedUnitId(e.target.value)} style={inputStyle}>
                 <option value="">-- Selecione uma Unidade --</option>
-                {units.map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.block ? `${u.block} - ` : ''}Apt {u.name}
-                  </option>
-                ))}
+                {units.map(u => {
+                  const parsedBlock = u.block ? u.block.toUpperCase() : ((u.name || '').match(/^(B\d+)/i)?.[1]?.toUpperCase() || 'B1');
+                  return (
+                    <option key={u.id} value={u.id}>
+                      {parsedBlock} - Apt {u.name}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           )}
@@ -256,11 +287,14 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
                   setSelectedResidentId('');
                 }} style={inputStyle}>
                   <option value="">-- Escolha o Apartamento --</option>
-                  {units.map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.block ? `${u.block} - ` : ''}Apt {u.name}
-                    </option>
-                  ))}
+                  {units.map(u => {
+                    const parsedBlock = u.block ? u.block.toUpperCase() : ((u.name || '').match(/^(B\d+)/i)?.[1]?.toUpperCase() || 'B1');
+                    return (
+                      <option key={u.id} value={u.id}>
+                        {parsedBlock} - Apt {u.name}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -349,11 +383,13 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
             if (m.targetType === 'blocks') targetLabel = `Bloco(s): ${m.targetBlocks}`;
             else if (m.targetType === 'unit') {
               const uObj = units.find(u => u.id === m.targetUnitId);
-              targetLabel = uObj ? `Apt ${uObj.name} (${uObj.block || ''})` : 'Apt Específico';
+              const blockName = uObj ? (uObj.block ? uObj.block.toUpperCase() : ((uObj.name || '').match(/^(B\d+)/i)?.[1]?.toUpperCase() || 'B1')) : '';
+              targetLabel = uObj ? `${blockName} - Apt ${uObj.name}` : 'Apt Específico';
             } else if (m.targetType === 'resident') {
               const uObj = units.find(u => u.id === m.targetUnitId);
               const rObj = uObj?.residents?.find(r => r.id === m.targetResidentId);
-              targetLabel = rObj ? `Morador: ${rObj.name} (Apt ${uObj.name})` : 'Morador Específico';
+              const blockName = uObj ? (uObj.block ? uObj.block.toUpperCase() : ((uObj.name || '').match(/^(B\d+)/i)?.[1]?.toUpperCase() || 'B1')) : '';
+              targetLabel = rObj ? `Morador: ${rObj.name} (${blockName} - Apt ${uObj.name})` : 'Morador Específico';
             }
 
             return (
@@ -365,10 +401,13 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
                   </span>
                   <span style={{ fontSize:'11px', color:'#64748B' }}>{fmt(m.createdAt)}</span>
                 </div>
-                <div style={{ marginBottom:'6px' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' }}>
                   <span style={{ fontSize:'10px', background:'#F1F5F9', color:'#475569', padding:'2px 8px', borderRadius:'100px', fontWeight:700 }}>
                     🎯 Alvo: {targetLabel}
                   </span>
+                  <button onClick={() => deleteMessage(m.id)} style={{ background:'none', border:'none', color:'#EF4444', fontSize:'11px', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:'4px' }}>
+                    🗑️ Excluir
+                  </button>
                 </div>
                 <p style={{ fontSize:'13px', color:'#475569', margin:0, lineHeight:1.6 }}>{m.body}</p>
                 

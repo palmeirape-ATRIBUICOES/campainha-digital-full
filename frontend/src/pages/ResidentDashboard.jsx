@@ -2740,28 +2740,61 @@ export default function ResidentDashboard() {
         ) : (
           <div style={{ padding: '20px 24px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>📢 Avisos do Condomínio</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '16px' }}>{broadcastMessages.length} mensagen{broadcastMessages.length !== 1 ? 's' : ''}</p>
-            {broadcastMessages.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
-                <Mail size={40} style={{ opacity: 0.2, marginBottom: '12px' }}/>
-                <p style={{ fontWeight: 600 }}>Nenhum aviso recebido</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {broadcastMessages.map(m => (
-                  <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239,68,68,0.3)' : '#E2E8F0'}`, borderRadius: '14px', padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {m.priority === 'urgent' && <span style={{ color: '#EF4444' }}>🚨</span>}
-                        {m.title}
-                      </span>
-                      <span style={{ fontSize: '11px', color: '#94A3B8' }}>{new Date(m.createdAt).toLocaleDateString('pt-BR')}</span>
+            {(() => {
+              const activeMsgs = broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id));
+              return (
+                <>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '16px' }}>{activeMsgs.length} mensagen{activeMsgs.length !== 1 ? 's' : ''}</p>
+                  {activeMsgs.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
+                      <Mail size={40} style={{ opacity: 0.2, marginBottom: '12px' }}/>
+                      <p style={{ fontWeight: 600 }}>Nenhum aviso recebido</p>
                     </div>
-                    <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.6 }}>{m.body}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {activeMsgs.map(m => (
+                        <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239,68,68,0.3)' : '#E2E8F0'}`, borderRadius: '14px', padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {m.priority === 'urgent' && <span style={{ color: '#EF4444' }}>🚨</span>}
+                              {m.title}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#94A3B8' }}>{new Date(m.createdAt).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                          <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 10px', lineHeight: 1.6 }}>{m.body}</p>
+                          
+                          {/* Exibição da Mídia do Comunicado */}
+                          {m.mediaUrl && (
+                            <div style={{ marginBottom: '12px', width: '100%' }}>
+                              {m.mediaUrl.startsWith('data:video/') || m.mediaUrl.includes('.mp4') ? (
+                                <video src={m.mediaUrl} controls style={{ width: '100%', maxHeight: '200px', borderRadius: '10px', objectFit: 'contain', background: '#000', border: '1px solid #E2E8F0' }} />
+                              ) : (
+                                <img src={m.mediaUrl} alt="Anexo" style={{ width: '100%', maxHeight: '200px', borderRadius: '10px', objectFit: 'contain', background: '#F8FAFC', border: '1px solid #E2E8F0' }} />
+                              )}
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #F1F5F9', paddingTop: '8px', marginTop: '8px' }}>
+                            <button
+                              onClick={() => {
+                                const deleted = JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]');
+                                deleted.push(m.id);
+                                localStorage.setItem('cd_deleted_msgs', JSON.stringify(deleted));
+                                // Atualiza estado local para ocultar imediatamente
+                                setBroadcastMessages(prev => prev.filter(item => item.id !== m.id));
+                              }}
+                              style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <span>📁</span> Arquivar Aviso
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )
       )}
