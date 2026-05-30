@@ -101,6 +101,7 @@ export default function ResidentDashboard() {
   const [propertyId, setPropertyId] = useState(() => localStorage.getItem('residentPropertyId'));
   const [propertyName, setPropertyName] = useState(() => localStorage.getItem('residentPropertyName') || '');
   const [broadcastMessages, setBroadcastMessages] = useState([]);
+  const [noticeFilter, setNoticeFilter] = useState('active'); // 'active' | 'archived'
   const [unreadCount, setUnreadCount] = useState(0);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -2750,20 +2751,58 @@ export default function ResidentDashboard() {
           </div>
         ) : (
           <div style={{ padding: '20px 24px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>📢 Avisos do Condomínio</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>📢 Avisos do Condomínio</h2>
+              
+              {/* Seletor de Sub-abas Ativos vs Arquivados */}
+              <div style={{ display: 'flex', gap: '6px', background: '#F1F5F9', padding: '3px', borderRadius: '10px' }}>
+                <button
+                  onClick={() => setNoticeFilter('active')}
+                  style={{
+                    padding: '6px 12px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                    background: noticeFilter === 'active' ? '#FFF' : 'transparent',
+                    color: noticeFilter === 'active' ? '#1E293B' : '#64748B',
+                    boxShadow: noticeFilter === 'active' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  📥 Ativos
+                </button>
+                <button
+                  onClick={() => setNoticeFilter('archived')}
+                  style={{
+                    padding: '6px 12px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                    background: noticeFilter === 'archived' ? '#FFF' : 'transparent',
+                    color: noticeFilter === 'archived' ? '#1E293B' : '#64748B',
+                    boxShadow: noticeFilter === 'archived' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  📁 Arquivados
+                </button>
+              </div>
+            </div>
+
             {(() => {
-              const activeMsgs = broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id));
+              const deletedIds = JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]');
+              const filteredMsgs = noticeFilter === 'active'
+                ? broadcastMessages.filter(m => !deletedIds.includes(m.id))
+                : broadcastMessages.filter(m => deletedIds.includes(m.id));
+
               return (
                 <>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '16px' }}>{activeMsgs.length} mensagen{activeMsgs.length !== 1 ? 's' : ''}</p>
-                  {activeMsgs.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '16px' }}>
+                    {filteredMsgs.length} mensagen{filteredMsgs.length !== 1 ? 's' : ''} {noticeFilter === 'active' ? 'ativa(s)' : 'arquivada(s)'}
+                  </p>
+                  
+                  {filteredMsgs.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
                       <Mail size={40} style={{ opacity: 0.2, marginBottom: '12px' }}/>
-                      <p style={{ fontWeight: 600 }}>Nenhum aviso recebido</p>
+                      <p style={{ fontWeight: 600 }}>Nenhum aviso nesta pasta</p>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {activeMsgs.map(m => (
+                      {filteredMsgs.map(m => (
                         <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239,68,68,0.3)' : '#E2E8F0'}`, borderRadius: '14px', padding: '14px 16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                             <span style={{ fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2786,18 +2825,35 @@ export default function ResidentDashboard() {
                           )}
 
                           <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #F1F5F9', paddingTop: '8px', marginTop: '8px' }}>
-                            <button
-                              onClick={() => {
-                                const deleted = JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]');
-                                deleted.push(m.id);
-                                localStorage.setItem('cd_deleted_msgs', JSON.stringify(deleted));
-                                // Atualiza estado local para ocultar imediatamente
-                                setBroadcastMessages(prev => prev.filter(item => item.id !== m.id));
-                              }}
-                              style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            >
-                              <span>📁</span> Arquivar Aviso
-                            </button>
+                            {noticeFilter === 'active' ? (
+                              <button
+                                onClick={() => {
+                                  const deleted = JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]');
+                                  if (!deleted.includes(m.id)) {
+                                    deleted.push(m.id);
+                                    localStorage.setItem('cd_deleted_msgs', JSON.stringify(deleted));
+                                  }
+                                  // Atualiza estado local para ocultar imediatamente mantendo na memória
+                                  setBroadcastMessages([...broadcastMessages]);
+                                }}
+                                style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <span>📁</span> Arquivar Aviso
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  let deleted = JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]');
+                                  deleted = deleted.filter(id => id !== m.id);
+                                  localStorage.setItem('cd_deleted_msgs', JSON.stringify(deleted));
+                                  // Move de volta para os ativos instantaneamente
+                                  setBroadcastMessages([...broadcastMessages]);
+                                }}
+                                style={{ background: 'none', border: 'none', color: '#10B981', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <span>📥</span> Mover para Ativos
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
