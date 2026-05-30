@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "br.com.campainhadigital.app",
+      "sha256_cert_fingerprints": [
+        "58:82:6E:0C:04:AF:60:F6:FC:07:DF:B6:06:B2:B3:F6:D3:3D:24:C4:76:2D:3D:DD:E4:9E:C0:5E:90:06:0C:C2"
+      ]
+    }
+  }
+]
