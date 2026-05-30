@@ -161,6 +161,16 @@ export default function ResidentDashboard() {
   const voipUARef = useRef(null);
   const voipSessionRef = useRef(null);
   const localAudioElementRef = useRef(null);
+  const voipIceConfigRef = useRef(null);
+
+  useEffect(() => {
+    fetchIceConfig().then(cfg => {
+      console.log('[VoIP] ICE Servers carregados com sucesso:', cfg);
+      voipIceConfigRef.current = cfg;
+    }).catch(err => {
+      console.warn('[VoIP] Falha ao carregar ICE Servers, usando fallback:', err);
+    });
+  }, []);
 
   const initVoipJsSIP = useCallback((creds) => {
     if (voipUARef.current) {
@@ -300,8 +310,10 @@ export default function ResidentDashboard() {
   const acceptVoipCall = useCallback(() => {
     if (voipSessionRef.current) {
       console.log('[VoIP] Atendendo chamada...');
+      const pcConfig = voipIceConfigRef.current || { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
       const options = {
-        mediaConstraints: { audio: true, video: false }
+        mediaConstraints: { audio: true, video: false },
+        pcConfig: pcConfig
       };
       voipSessionRef.current.answer(options);
 
@@ -2765,9 +2777,12 @@ export default function ResidentDashboard() {
               onCallDoorman={() => {
                 if (voipUARef.current && voipCredentials?.ramal_webrtc) {
                   console.log('[VoIP] Disparando chamada VoIP para Portaria (9000)...');
-                  const session = voipUARef.current.call(`sip:9000@${voipCredentials.dominio_pbx}`, {
-                    mediaConstraints: { audio: true, video: false }
-                  });
+                  const pcConfig = voipIceConfigRef.current || { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+                  const options = {
+                    mediaConstraints: { audio: true, video: false },
+                    pcConfig: pcConfig
+                  };
+                  const session = voipUARef.current.call(`sip:9000@${voipCredentials.dominio_pbx}`, options);
                   voipSessionRef.current = session;
                   setVoipCall(session);
                   setVoipCaller('Portaria');
