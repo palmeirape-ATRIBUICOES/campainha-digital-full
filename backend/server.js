@@ -14,6 +14,7 @@ const QRCode = require('qrcode');
 const crypto = require('crypto');
 const webpush = require('web-push');
 const prisma = require('./prismaClient'); // Usando Prisma!
+const VoipService = require('./VoipService');
 
 // VAPID keys para Push Notifications
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BOL7TRhhhHHze0bnWJY7w3ucZ9JhcxEzycbKQaCCPs2XCed4SVuLxSplr-dqfVeT6nfAmvj7JEvEUbXlnbZUT6U';
@@ -4166,6 +4167,280 @@ io.on('connection', (socket) => {
       }
     }
   });
+});
+
+// ─── ROTAS VoIP / WEBRTC / ASTERISK ──────────────────────────────────────────
+
+// Obter credenciais WebRTC do usuário logado (morador ou porteiro)
+app.get('/api/voip/credentials', authenticate, async (req, res) => {
+  try {
+    const userWithUnits = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        units: {
+          include: { property: true }
+        },
+        propertiesDoorman: true
+      }
+    });
+
+    if (!userWithUnits) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    let property = null;
+    let unitName = '';
+    
+    if (userWithUnits.isResident && userWithUnits.units.length > 0) {
+      const unit = userWithUnits.units[0];
+      property = unit.property;
+      unitName = unit.name;
+      
+      // Sincronizar ramais dinamicamente sob demanda
+      const syncResult = await VoipService.syncUnitExtensions(unit.id);
+      const updatedUser = syncResult.residents.find(r => r.id === req.user.id);
+      
+      const creds = VoipService.getCredentials(updatedUser || userWithUnits, property, unitName);
+      return res.json(creds);
+    } else if (userWithUnits.isDoorman && userWithUnits.propertiesDoorman.length > 0) {
+      property = userWithUnits.propertiesDoorman[0];
+      
+      // Sincronizar ramal do porteiro
+      const updatedDoorman = await VoipService.syncDoormanExtension(req.user.id, '9000');
+      
+      const creds = VoipService.getCredentials(updatedDoorman, property, 'Portaria');
+      return res.json(creds);
+    } else {
+      return res.status(400).json({ error: 'Este usuário não possui ramal configurado ou condomínio vinculado' });
+    }
+  } catch (err) {
+    console.error('[VoipAPI] Erro ao obter credenciais:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Sincronizar todos os ramais de uma propriedade (Condomínio)
+app.post('/api/voip/extensions', authenticate, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        propertiesManaged: true,
+        propertiesDoorman: true
+      }
+    });
+    
+    const propertyId = req.body.propertyId || 
+                      (user.propertiesManaged[0]?.id) || 
+                      (user.propertiesDoorman[0]?.id);
+                      
+    if (!propertyId) {
+      return res.status(400).json({ error: 'ID da propriedade não fornecido' });
+    }
+    
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+      include: { units: true }
+    });
+    
+    if (!property) {
+      return res.status(404).json({ error: 'Propriedade não encontrada' });
+    }
+    
+    // Sincronizar todos os apartamentos
+    for (const unit of property.units) {
+      await VoipService.syncUnitExtensions(unit.id);
+    }
+    
+    // Sincronizar doormen
+    const doormen = await prisma.user.findMany({
+      where: {
+        isDoorman: true,
+        propertiesDoorman: { some: { id: propertyId } }
+      }
+    });
+    for (const doorman of doormen) {
+      await VoipService.syncDoormanExtension(doorman.id, '9000');
+    }
+    
+    // Regenerar arquivos de configuração do Asterisk
+    const configs = await VoipService.generateAsteriskConfigs(propertyId);
+    
+    res.json({
+      success: true,
+      message: 'Todos os ramais da propriedade foram sincronizados com sucesso!',
+      configs: configs
+    });
+  } catch (err) {
+    console.error('[VoipAPI] Erro ao sincronizar ramais:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Criar/atualizar grupo de toque de um apartamento específico
+app.post('/api/voip/apartments/:id/ring-group', authenticate, async (req, res) => {
+  try {
+    const syncResult = await VoipService.syncUnitExtensions(req.params.id);
+    res.json({
+      success: true,
+      groupExtension: syncResult.groupExtension,
+      members: syncResult.residents.map(r => r.ramal_webrtc)
+    });
+  } catch (err) {
+    console.error('[VoipAPI] Erro ao criar grupo de toque:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Porteiro inicia chamada interfonada para o morador (ou grupo do apartamento)
+app.post('/api/voip/call/apartamento', authenticate, async (req, res) => {
+  try {
+    const { unitId } = req.body;
+    if (!unitId) return res.status(400).json({ error: 'ID da unidade não fornecido' });
+
+    const unit = await prisma.unit.findUnique({
+      where: { id: unitId },
+      include: { residents: true, property: true }
+    });
+
+    if (!unit) return res.status(404).json({ error: 'Unidade não encontrada' });
+
+    // Sincronizar e buscar ramais
+    const syncResult = await VoipService.syncUnitExtensions(unit.id);
+    const destination = syncResult.groupExtension || `6${unit.number || unit.name}`;
+
+    // Registrar chamada
+    const callLog = await prisma.voipCallLog.create({
+      data: {
+        propertyId: unit.propertyId,
+        origem_ramal: '9000',
+        destino_ramal: destination,
+        unitId: unit.id,
+        status: 'ringing',
+        startedAt: new Date()
+      }
+    });
+
+    // Emitir status em tempo real via Socket.io
+    io.emit('voip_call_status', {
+      propertyId: unit.propertyId,
+      unitId: unit.id,
+      callId: callLog.id,
+      status: 'ringing',
+      startedAt: callLog.startedAt
+    });
+
+    // Disparar push prioritário para cada morador para acordar o PWA
+    const payload = {
+      title: '📞 Chamada da Portaria!',
+      body: 'A portaria está interfonando. Toque para atender.',
+      tag: 'voip-incoming-call',
+      data: {
+        url: `${req.protocol}://${req.get('host')}/resident-dashboard`,
+        type: 'VOIP_INCOMING_CALL',
+        callId: callLog.id,
+        origem_ramal: '9000',
+        destino_ramal: destination
+      }
+    };
+
+    console.log(`[VoipPush] Enviando push prioritário de portaria para ${syncResult.residents.length} morador(es) do apartamento ${unit.name}`);
+    for (const resident of syncResult.residents) {
+      // Ignora doorbellEnabled ou quietMode - SEMPRE envia!
+      await sendPushToUser(resident.id, payload);
+    }
+
+    res.json({
+      success: true,
+      callId: callLog.id,
+      destination: destination
+    });
+  } catch (err) {
+    console.error('[VoipAPI] Erro ao iniciar chamada de portaria:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Atualizar status de chamada VoIP (atendida, finalizada, recusada, não atendida)
+app.post('/api/voip/call/:id/status', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // 'answered', 'ended', 'rejected', 'missed'
+
+    const callLog = await prisma.voipCallLog.findUnique({
+      where: { id }
+    });
+
+    if (!callLog) return res.status(404).json({ error: 'Log de chamada não encontrado' });
+
+    const updateData = { status };
+    if (status === 'answered') {
+      updateData.answeredAt = new Date();
+    } else if (status === 'ended' || status === 'rejected' || status === 'missed') {
+      updateData.endedAt = new Date();
+      
+      const start = callLog.answeredAt || callLog.startedAt;
+      const duration = Math.round((new Date().getTime() - start.getTime()) / 1000);
+      updateData.duration = duration > 0 ? duration : 0;
+    }
+
+    const updatedLog = await prisma.voipCallLog.update({
+      where: { id },
+      data: updateData
+    });
+
+    // Emitir alteração de status via Socket.io
+    io.emit('voip_call_status', {
+      propertyId: callLog.propertyId,
+      unitId: callLog.unitId,
+      callId: callLog.id,
+      status: updatedLog.status,
+      startedAt: callLog.startedAt,
+      answeredAt: updatedLog.answeredAt,
+      endedAt: updatedLog.endedAt,
+      duration: updatedLog.duration
+    });
+
+    res.json({ success: true, callLog: updatedLog });
+  } catch (err) {
+    console.error('[VoipAPI] Erro ao atualizar status da chamada:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Obter histórico de chamadas VoIP
+app.get('/api/voip/calls', authenticate, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        units: true,
+        propertiesDoorman: true
+      }
+    });
+
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+    let calls = [];
+    if (user.isResident && user.units.length > 0) {
+      calls = await prisma.voipCallLog.findMany({
+        where: { unitId: user.units[0].id },
+        orderBy: { createdAt: 'desc' },
+        take: 30
+      });
+    } else if (user.isDoorman && user.propertiesDoorman.length > 0) {
+      calls = await prisma.voipCallLog.findMany({
+        where: { propertyId: user.propertiesDoorman[0].id },
+        orderBy: { createdAt: 'desc' },
+        take: 50
+      });
+    }
+
+    res.json({ success: true, calls });
+  } catch (err) {
+    console.error('[VoipAPI] Erro ao obter histórico de chamadas:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Health Check (Keep-Alive)

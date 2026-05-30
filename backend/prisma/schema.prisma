@@ -55,12 +55,18 @@ model User {
   // Código da placa pré-configurada (Opção 1: placa entregue pronta)
   plateCode         String?   @unique
 
+  // Integração VoIP/Asterisk
+  ramal_webrtc      String?
+  ramal_sip         String?
+  senha_sip         String?
+
   // Mensagens internas entre morador principal e dependentes
   sentFamilyMessages      FamilyMessage[] @relation("FamilyMessageSender")
   receivedFamilyMessages  FamilyMessage[] @relation("FamilyMessageReceiver")
   
   // Assinaturas de Push Notification (um por aparelho)
   pushSubscriptions PushSubscription[]
+  voipCallLogs      VoipCallLog[]
 }
 
 model FamilyMessage {
@@ -102,6 +108,7 @@ model Property {
   clientAddress   String?
   companyName     String?
   plan            String    @default("BASIC")
+  dominio_pbx     String?
 
   // ─── Geofence (raio de segurança do visitante) ──────────────────────────
   geofenceEnabled Boolean   @default(false)
@@ -137,6 +144,7 @@ model Unit {
   street              String?
   number              String?
   inviteCode          String?    @unique 
+  ramal_grupo         String?
   residents           User[]     @relation("UnitResidents")
   visitors            Visitor[]
   mailboxMessages     MailboxMessage[]
@@ -246,4 +254,23 @@ model VilaMessage {
   read        Boolean  @default(false)
   createdAt   DateTime @default(now())
 }
+
+// Histórico de chamadas VoIP
+model VoipCallLog {
+  id            String    @id @default(uuid())
+  propertyId    String
+  origem_ramal  String
+  destino_ramal String
+  unitId        String?
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status        String    @default("ringing") // "ringing" | "answered" | "missed" | "rejected"
+  startedAt     DateTime  @default(now())
+  answeredAt    DateTime?
+  endedAt       DateTime?
+  duration      Int?      @default(0)
+  callId        String?
+  createdAt     DateTime  @default(now())
+}
+
 

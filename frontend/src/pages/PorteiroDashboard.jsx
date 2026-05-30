@@ -174,11 +174,29 @@ export default function PorteiroDashboard() {
     }
   };
 
-  const handleHangup = () => {
-    if (activeCall && socketRef.current) {
-      const targetSocket = activeCall.residentSocketId;
-      if (targetSocket) {
-        socketRef.current.emit('call_ended', { target: targetSocket, unitId: activeCall?.unitId, visitId: activeCall?.visitId, duration: callDuration });
+  const handleHangup = async () => {
+    if (activeCall) {
+      if (activeCall.callId) {
+        try {
+          const token = localStorage.getItem('cd_token');
+          await fetch(`${API}/api/voip/call/${activeCall.callId}/status`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': token
+            },
+            body: JSON.stringify({ status: 'ended' })
+          });
+        } catch (e) {
+          console.warn('Erro ao finalizar chamada VoIP no servidor:', e);
+        }
+      }
+      
+      if (socketRef.current) {
+        const targetSocket = activeCall.residentSocketId;
+        if (targetSocket) {
+          socketRef.current.emit('call_ended', { target: targetSocket, unitId: activeCall?.unitId, visitId: activeCall?.visitId, duration: callDuration });
+        }
       }
     }
     stopAllCall();
@@ -345,6 +363,18 @@ export default function PorteiroDashboard() {
       }
     });
 
+    s.on('voip_call_status', (data) => {
+      console.log('[Socket Porteiro] Status de chamada VoIP recebido:', data);
+      if (data.status === 'ringing') {
+        setActiveCall(prev => prev ? { ...prev, callId: data.callId } : null);
+      } else if (data.status === 'answered') {
+        setActiveCall(prev => prev ? { ...prev, status: 'talking' } : null);
+        setCallDuration(0); // Zera o relógio e cronometra a conversação de voz ativa!
+      } else if (data.status === 'ended' || data.status === 'rejected' || data.status === 'missed') {
+        setActiveCall(null);
+      }
+    });
+
     s.on('call_answered', ({ residentSocketId }) => {
       console.log('[Porteiro WS] Call answered by resident:', residentSocketId);
       setActiveCall(prev => prev ? { ...prev, status: 'talking', residentSocketId } : null);
@@ -452,20 +482,45 @@ export default function PorteiroDashboard() {
     setTimeout(() => { setMsgSent(false); setMsgUnit(null); setMsgText(''); }, 2000);
   };
 
-  const callUnit = (unit) => {
-    if (!socketRef.current || activeCall) return;
+  const callUnit = async (unit) => {
+    if (activeCall) return;
+    
+    // Iniciar cronômetro e status visual de imediato
     setActiveCall({
       residentSocketId: null,
       callerName: unit.name,
       unitId: unit.id,
       isIncoming: false,
-      status: 'calling'
+      status: 'calling',
+      callId: null
     });
-    socketRef.current.emit('doorman_call', {
-      unitId: unit.id,
-      propertyId: unit.propertyId,
-      callerName: 'Portaria'
-    });
+    setCallDuration(0);
+
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/voip/call/apartamento`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
+        body: JSON.stringify({ unitId: unit.id })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveCall(prev => prev ? { ...prev, callId: data.callId } : null);
+      }
+    } catch (err) {
+      console.warn('Erro ao disparar chamada VoIP no servidor:', err);
+    }
+
+    if (socketRef.current) {
+      socketRef.current.emit('doorman_call', {
+        unitId: unit.id,
+        propertyId: unit.propertyId,
+        callerName: 'Portaria'
+      });
+    }
   };
 
   if (loading) return <div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Carregando painel de controle...</div>;

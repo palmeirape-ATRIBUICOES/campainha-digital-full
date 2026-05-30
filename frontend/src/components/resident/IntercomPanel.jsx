@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Phone, Search, Building2, MessageSquare, Send, Volume2 } from 'lucide-react';
 import { API } from '../../config';
 
-export default function IntercomPanel({ propertyId, unitId, socketRef, unitName, onCall }) {
+export default function IntercomPanel({ propertyId, unitId, socketRef, unitName, onCall, onCallDoorman }) {
   const [block, setBlock] = useState('');
   const [number, setNumber] = useState('');
   const [results, setResults] = useState([]);
@@ -266,6 +266,10 @@ export default function IntercomPanel({ propertyId, unitId, socketRef, unitName,
           <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {/* Botão de chamada de voz */}
             <button onClick={() => {
+              if (onCallDoorman) {
+                onCallDoorman();
+                return;
+              }
               if (!socketRef?.current) return;
               socketRef.current.emit('resident_call_doorman', { propertyId, unitId, callerName: unitName || 'Morador' });
               setCalled('doorman'); setTimeout(() => setCalled(null), 5000);

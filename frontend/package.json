@@ -13,6 +13,7 @@
     "@mercadopago/sdk-react": "^1.0.7",
     "html2canvas": "^1.4.1",
     "jsqr": "^1.4.0",
+    "jssip": "^3.13.8",
     "lucide-react": "^1.14.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.5",
