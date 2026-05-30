@@ -1659,6 +1659,17 @@ app.get('/api/properties', async (req, res) => {
               }
             }
           }
+        },
+        propertiesDoorman: {
+          include: {
+            doorman: true,
+            units: {
+              orderBy: { name: 'asc' },
+              include: {
+                residents: true
+              }
+            }
+          }
         }
       }
     });
@@ -1676,6 +1687,9 @@ app.get('/api/properties', async (req, res) => {
     const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
 
     let propertiesList = [...user.propertiesManaged];
+    if (user.propertiesDoorman && user.propertiesDoorman.length > 0) {
+      propertiesList = [...propertiesList, ...user.propertiesDoorman];
+    }
     if (propertiesList.length === 0 && user.units && user.units.length > 0 && user.units[0].property) {
       propertiesList.push(user.units[0].property);
     }
@@ -2422,6 +2436,13 @@ app.post('/api/vila/:propertyId/units/:unitId/residents', async (req, res) => {
       }
     });
 
+    if (user.isDoorman) {
+      await prisma.property.update({
+        where: { id: property.id },
+        data: { doormanId: user.id }
+      });
+    }
+
     res.status(201).json(user);
   } catch (err) {
     console.error('Create Vila resident error:', err);
@@ -2527,6 +2548,18 @@ app.put('/api/vila/:propertyId/units/:unitId/residents/:residentId', async (req,
       where: { id: req.params.residentId },
       data: updateData
     });
+
+    if (user.isDoorman) {
+      await prisma.property.update({
+        where: { id: property.id },
+        data: { doormanId: user.id }
+      });
+    } else if (property.doormanId === user.id) {
+      await prisma.property.update({
+        where: { id: property.id },
+        data: { doormanId: null }
+      });
+    }
 
     res.json(user);
   } catch (err) {
