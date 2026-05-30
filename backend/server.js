@@ -3977,7 +3977,7 @@ io.on('connection', (socket) => {
         const now = new Date();
         const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
-        const isDoorman = isDoormanCall || callerName === 'Portaria';
+        const isDoorman = isDoormanCall || /portaria|porteiro|admin|administra/i.test(callerName || '');
         let shouldRing = isDoorman || resident.doorbellEnabled !== false;
         
         if (resident.quietModeStart && resident.quietModeEnd) {

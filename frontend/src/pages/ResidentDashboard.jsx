@@ -562,7 +562,10 @@ export default function ResidentDashboard() {
       doorbellStartedRef.current = true;
       if ('Notification' in window && Notification.permission === 'granted') {
         try {
-          new Notification('🔔 CAMPAINHA!', { body: `${unitName} — alguém está na porta!`, icon: '/logo.png' });
+          const isDoorman = /portaria|porteiro|admin|administra/i.test(data.callerName || '');
+          const localTitle = isDoorman ? '📞 PORTARIA INTERFONANDO!' : '🔔 CAMPAINHA!';
+          const localBody = isDoorman ? 'A portaria está interfonando. Toque para atender.' : `${unitName} — alguém está na porta!`;
+          new Notification(localTitle, { body: localBody, icon: '/logo.png' });
         } catch {}
       }
     });
