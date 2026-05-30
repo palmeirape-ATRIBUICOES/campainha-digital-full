@@ -1,38 +1,46 @@
 {
-  "twaHost": "palmeirape-atribuicoes.github.io",
-  "webManifestUrl": "https://palmeirape-atribuicoes.github.io/campainha-digital-full/manifest.json",
   "packageId": "br.com.campainhadigital.app",
+  "host": "palmeirape-atribuicoes.github.io",
   "name": "Campainha Digital",
   "launcherName": "Campainha",
-  "startUrl": "/campainha-digital-full/",
+  "display": "standalone",
   "themeColor": "#4F46E5",
-  "navigationColor": "#090D16",
-  "navigationColorDark": "#090D16",
-  "navigationColorLegacy": "#090D16",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
   "backgroundColor": "#090D16",
   "enableNotifications": true,
-  "appVersionCode": 1,
-  "appVersion": "1.0.0",
-  "orientation": "default",
+  "startUrl": "/campainha-digital-full/",
+  "iconUrl": "https://palmeirape-atribuicoes.github.io/campainha-digital-full/logo.png",
+  "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "./android.keystore",
     "alias": "android-alias"
   },
-  "splashScreenFadeOutDuration": 300,
-  "features": {
-    "shortcuts": [],
-    "webShareTarget": {}
-  },
+  "appVersionName": "1",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://palmeirape-atribuicoes.github.io/campainha-digital-full/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
   "alphaDependencies": {
     "enabled": false
   },
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
-  "shortcuts": [],
-  "fingerprints": [
-    {
-      "relation": "delegate_permission/common.handle_all_urls",
-      "fingerprint": "58:82:6E:0C:04:AF:60:F6:FC:07:DF:B6:06:B2:B3:F6:D3:3D:24:C4:76:2D:3D:DD:E4:9E:C0:5E:90:06:0C:C2"
-    }
-  ]
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://palmeirape-atribuicoes.github.io/campainha-digital-full/",
+  "minSdkVersion": 21,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1"
 }

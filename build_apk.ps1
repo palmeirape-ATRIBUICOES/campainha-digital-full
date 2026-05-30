@@ -1,6 +1,10 @@
 # Script de Compilação e Assinatura Automatizada do App Android (Campainha Digital)
 $ErrorActionPreference = "Stop"
 
+# Configura variaveis de ambiente locais para a compilacao
+$env:JAVA_HOME = "C:\Users\thiag\.bubblewrap\jdk\jdk-17.0.11+9"
+$env:PATH = "C:\Users\thiag\.bubblewrap\jdk\jdk-17.0.11+9\bin;" + $env:PATH
+
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host " INICIANDO COMPILACAO DO APP ANDROID (CAMPAINHA DIGITAL)" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
