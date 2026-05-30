@@ -2954,6 +2954,94 @@ app.put('/api/properties/:propertyId/mailbox/:msgId', async (req, res) => {
   }
 });
 
+// ─── Reservas de Áreas Comuns (Inspirado no uCondo) ─────────────────────────
+
+// Criar nova reserva
+app.post('/api/properties/:propertyId/bookings', async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    const { unitId, areaName, bookingDate } = req.body;
+
+    if (!unitId || !areaName || !bookingDate) {
+      return res.status(400).json({ error: 'Dados incompletos para a reserva.' });
+    }
+
+    const dateObj = new Date(bookingDate);
+    const startOfDay = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), 23, 59, 59, 999);
+
+    // Verifica se já existe reserva aprovada para esta área no mesmo dia
+    const existing = await prisma.commonAreaBooking.findFirst({
+      where: {
+        propertyId,
+        areaName,
+        status: 'approved',
+        bookingDate: {
+          gte: startOfDay,
+          lte: endOfDay
+        }
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: 'Este espaço já está reservado nesta data.' });
+    }
+
+    const booking = await prisma.commonAreaBooking.create({
+      data: {
+        id: crypto.randomUUID(),
+        propertyId,
+        unitId,
+        areaName,
+        bookingDate: startOfDay,
+        status: 'approved'
+      }
+    });
+
+    // Avisa em tempo real via Socket.io
+    io.emit('new_booking', { propertyId, booking });
+
+    res.status(201).json(booking);
+  } catch (err) {
+    console.error('Booking creation error:', err);
+    res.status(500).json({ error: 'Erro ao criar reserva.' });
+  }
+});
+
+// Listar todas as reservas da propriedade
+app.get('/api/properties/:propertyId/bookings', async (req, res) => {
+  try {
+    const bookings = await prisma.commonAreaBooking.findMany({
+      where: { propertyId: req.params.propertyId },
+      include: { unit: true },
+      orderBy: { bookingDate: 'asc' }
+    });
+    res.json(bookings);
+  } catch (err) {
+    console.error('Fetch bookings error:', err);
+    res.status(500).json({ error: 'Erro ao buscar reservas.' });
+  }
+});
+
+// Cancelar reserva
+app.delete('/api/properties/:propertyId/bookings/:bookingId', async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    await prisma.commonAreaBooking.delete({
+      where: { id: bookingId }
+    });
+
+    // Avisa em tempo real via Socket.io
+    io.emit('cancel_booking', { propertyId: req.params.propertyId, bookingId });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete booking error:', err);
+    res.status(500).json({ error: 'Erro ao cancelar reserva.' });
+  }
+});
+
+
 
 // ─── Alertas Visuais de Unidade (Flashing Mini Blocks) ───────────────────────
 

@@ -135,6 +135,7 @@ model Property {
   alerts          UnitAlert[]
   connections     InternalConnection[]
   vilaMessages    VilaMessage[]
+  bookings        CommonAreaBooking[]
   
   // VoIP Domain Configuration
   dominio_pbx     String?
@@ -156,6 +157,7 @@ model Unit {
   sentConnections     InternalConnection[] @relation("SenderConnection")
   receivedConnections InternalConnection[] @relation("ReceiverConnection")
   visitorCodes        VisitorCode[]
+  bookings            CommonAreaBooking[]
   
   // VoIP ring group configuration
   ramal_grupo         String?
@@ -272,5 +274,17 @@ model VoipCallLog {
   status       String   @default("ringing") // "ringing" | "answered" | "missed" | "rejected"
   duration     Int      @default(0) // duration in seconds
   createdAt    DateTime @default(now())
+}
+
+model CommonAreaBooking {
+  id          String   @id @default(uuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unitId      String
+  unit        Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  areaName    String   // "Salão de Festas" | "Churrasqueira" | "Piscina"
+  bookingDate DateTime // Data agendada
+  status      String   @default("approved") // "approved" | "cancelled" | "pending"
+  createdAt   DateTime @default(now())
 }
 
