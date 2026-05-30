@@ -182,8 +182,9 @@ class VoipService {
         configText += `type=endpoint\n`;
         configText += `context=from-internal\n`;
         configText += `disallow=all\n`;
-        configText += `allow=opus,ulaw,alaw,g722\n`;
+        configText += `allow=g722,ulaw,alaw\n`;
         configText += `webrtc=yes\n`;
+        configText += `transport=transport-wss\n`;
         configText += `dtls_auto_use=yes\n`;
         configText += `auth=${u.ramal_webrtc}\n`;
         configText += `outbound_auth=${u.ramal_webrtc}\n`;
