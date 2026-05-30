@@ -3659,8 +3659,8 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
     // Emitir via socket para a sala da propriedade
     io.to(`vila_${propertyId}`).emit('broadcast_message', msg);
     
-    // Buscar moradores alvo para mandar notificação push
-    let residentIds = new Set();
+    // Buscar moradores alvo para mandar notificação push com seus respectivos unitIds
+    let residentsToNotify = []; // Array de { id, unitId }
     
     if (!targetType || targetType === 'all') {
       const units = await prisma.unit.findMany({
@@ -3670,7 +3670,7 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
       for (const unit of units) {
         for (const resident of unit.residents) {
           if (!resident.trialEndsAt || new Date(resident.trialEndsAt) >= new Date()) {
-            residentIds.add(resident.id);
+            residentsToNotify.push({ id: resident.id, unitId: unit.id });
           }
         }
       }
@@ -3689,7 +3689,7 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
         if (selectedBlocks.some(b => uBlock.includes(b) || b.includes(uBlock))) {
           for (const resident of unit.residents) {
             if (!resident.trialEndsAt || new Date(resident.trialEndsAt) >= new Date()) {
-              residentIds.add(resident.id);
+              residentsToNotify.push({ id: resident.id, unitId: unit.id });
             }
           }
         }
@@ -3702,25 +3702,32 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
       if (unit) {
         for (const resident of unit.residents) {
           if (!resident.trialEndsAt || new Date(resident.trialEndsAt) >= new Date()) {
-            residentIds.add(resident.id);
+            residentsToNotify.push({ id: resident.id, unitId: unit.id });
           }
         }
       }
     } else if (targetType === 'resident' && targetResidentId) {
-      residentIds.add(targetResidentId);
+      const user = await prisma.user.findUnique({
+        where: { id: targetResidentId },
+        include: { units: true }
+      });
+      if (user) {
+        const uId = user.units?.[0]?.id || '';
+        residentsToNotify.push({ id: user.id, unitId: uId });
+      }
     }
     
-    const payload = {
-      title: `📢 ${title || 'Aviso do Condomínio'}`,
-      body: body.trim(),
-      data: {
-        url: `/#/morador/${propertyId}?tab=messages`
-      }
-    };
-    
     // Executa o disparo em background sem travar o request HTTP
-    Promise.all([...residentIds].map(residentId => sendPushToUser(residentId, payload)))
-      .catch(err => console.error('[Broadcast Push] Erro ao enviar pushes:', err));
+    Promise.all(residentsToNotify.map(r => {
+      const userPayload = {
+        title: `📢 ${title || 'Aviso do Condomínio'}`,
+        body: body.trim(),
+        data: {
+          url: `/#/morador/${r.unitId}?tab=messages`
+        }
+      };
+      return sendPushToUser(r.id, userPayload);
+    })).catch(err => console.error('[Broadcast Push] Erro ao enviar pushes:', err));
       
     res.json(msg);
   } catch (err) {

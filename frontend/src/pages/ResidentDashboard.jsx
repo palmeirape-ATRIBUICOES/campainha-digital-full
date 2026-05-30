@@ -1600,8 +1600,16 @@ export default function ResidentDashboard() {
             <ShoppingBag size={20} color={tab === 'services' ? '#0369A1' : '#64748B'} /> Parceiros da Região
           </button>
 
-          <button onClick={() => { setTab('messages'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'messages' ? '#F0F9FF' : 'transparent', color: tab === 'messages' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
-            <Bell size={20} color={tab === 'messages' ? '#0369A1' : '#64748B'} /> Mensagens & Comunicados
+          <button onClick={() => { setTab('messages'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'messages' ? '#F0F9FF' : 'transparent', color: tab === 'messages' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left', width: '100%', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Bell size={20} color={tab === 'messages' ? '#0369A1' : '#64748B'} />
+              <span>Mensagens & Comunicados</span>
+            </div>
+            {unreadCount > 0 && (
+              <span style={{ background: '#EF4444', color: '#FFF', borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 800 }}>
+                {unreadCount}
+              </span>
+            )}
           </button>
 
           {/* Códigos de Visitante: todos exceto dependentes */}
@@ -2298,8 +2306,7 @@ export default function ResidentDashboard() {
                     </form>
                   </div>
 
-                  {/* Mensagens do condomínio - colapssável */}
-                  <MessagesPanel messages={broadcastMessages} unreadCount={unreadCount} onClear={markMessagesRead}/>
+
                 </>
               )}
 
