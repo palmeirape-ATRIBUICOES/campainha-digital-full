@@ -395,43 +395,28 @@ export default function AuthPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#050811', fontFamily: 'var(--font-body)', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#F8FAFC', position: 'relative', overflow: 'hidden' }}>
       
-      {/* Cosmic Mesh Gradient Auroras */}
-      <div className="cosmic-aurora aurora-1"></div>
-      <div className="cosmic-aurora aurora-2"></div>
-      <div className="cosmic-aurora aurora-3"></div>
+      {/* Aurora Background Decor */}
+      <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }}></div>
+      <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: '60vw', height: '60vw', background: 'radial-gradient(circle, rgba(16,185,129,0.04) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }}></div>
 
       <div style={{ position: 'absolute', top: '32px', left: '32px', zIndex: 10 }}>
-         <Link to="/" style={{ 
-           color: '#94A3B8', 
-           textDecoration: 'none', 
-           display: 'flex', 
-           alignItems: 'center', 
-           gap: '8px', 
-           fontSize: '14px', 
-           fontWeight: 600, 
-           padding: '10px 18px', 
-           background: 'rgba(255, 255, 255, 0.03)', 
-           borderRadius: '100px', 
-           border: '1px solid rgba(255, 255, 255, 0.08)', 
-           boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-           transition: 'var(--transition-fast)'
-         }} className="hover-color-white">
+         <Link to="/" style={{ color: '#64748B', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, padding: '10px 18px', background: '#FFF', borderRadius: '100px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
             <ChevronLeft size={16} /> Voltar
          </Link>
       </div>
 
-      <div className="lux-glass fade-in" style={{ width: '100%', maxWidth: '420px', padding: '40px', position: 'relative', zIndex: 1, boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+      <div className="glass-panel fade-in" style={{ width: '100%', maxWidth: '400px', padding: '40px' }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <Logo />
-          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#FFF', marginTop: '24px', lineHeight: 1.2, fontFamily: 'var(--font-heading)' }}>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0F172A', marginTop: '24px', lineHeight: 1.2 }}>
             {view === 'register' 
               ? (signUpStep === 1 ? 'Crie sua conta' : (signUpStep === 2 ? 'Onde você mora?' : 'Escolha o plano'))
               : (view === 'reset' ? 'Nova Senha' : 'Bem-vindo de volta')
             }
           </h1>
-          <p style={{ color: '#94A3B8', marginTop: '8px', fontSize: '14px' }}>
+          <p style={{ color: '#64748B', marginTop: '8px', fontSize: '14px' }}>
             {view === 'register'
               ? (signUpStep === 1 ? 'Comece a proteger sua residência hoje.' : (signUpStep === 2 ? 'Selecione o tipo de imóvel para o seu painel.' : 'Selecione sua ativação (15 dias grátis ou anual)'))
               : (view === 'reset' ? 'Defina sua nova senha de acesso.' : 'Acesse o painel da sua campainha digital')
@@ -441,9 +426,9 @@ export default function AuthPage() {
           {/* Step Indicator Dot bar (only for signup) */}
           {view === 'register' && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '20px' }}>
-              <div style={{ width: '24px', height: '6px', borderRadius: '3px', background: signUpStep >= 1 ? 'var(--primary)' : 'rgba(255, 255, 255, 0.06)', transition: 'all 0.3s' }} />
-              <div style={{ width: '24px', height: '6px', borderRadius: '3px', background: signUpStep >= 2 ? 'var(--primary)' : 'rgba(255, 255, 255, 0.06)', transition: 'all 0.3s' }} />
-              <div style={{ width: '24px', height: '6px', borderRadius: '3px', background: signUpStep >= 3 ? 'var(--primary)' : 'rgba(255, 255, 255, 0.06)', transition: 'all 0.3s' }} />
+              <div style={{ width: '24px', height: '6px', borderRadius: '3px', background: signUpStep >= 1 ? 'var(--primary)' : '#E2E8F0', transition: 'all 0.3s' }} />
+              <div style={{ width: '24px', height: '6px', borderRadius: '3px', background: signUpStep >= 2 ? 'var(--primary)' : '#E2E8F0', transition: 'all 0.3s' }} />
+              <div style={{ width: '24px', height: '6px', borderRadius: '3px', background: signUpStep >= 3 ? 'var(--primary)' : '#E2E8F0', transition: 'all 0.3s' }} />
             </div>
           )}
         </div>
@@ -468,7 +453,7 @@ export default function AuthPage() {
             {view === 'login' && (
               <>
                 {/* Seletor de Tipo de Login (Apenas na Tela de Login) */}
-                <div style={{ display: 'flex', gap: '8px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', padding: '4px', borderRadius: '12px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', background: '#F1F5F9', padding: '4px', borderRadius: '12px', marginBottom: '8px' }}>
                   <button
                     type="button"
                     onClick={() => setLoginType('email')}
@@ -480,9 +465,9 @@ export default function AuthPage() {
                       fontSize: '13px',
                       fontWeight: 700,
                       cursor: 'pointer',
-                      background: loginType === 'email' ? 'linear-gradient(135deg, var(--primary) 0%, #4F46E5 100%)' : 'transparent',
-                      color: loginType === 'email' ? '#FFF' : '#94A3B8',
-                      boxShadow: loginType === 'email' ? '0 4px 12px rgba(99, 102, 241, 0.2)' : 'none',
+                      background: loginType === 'email' ? '#FFF' : 'transparent',
+                      color: loginType === 'email' ? '#1E293B' : '#64748B',
+                      boxShadow: loginType === 'email' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
                       transition: 'all 0.2s'
                     }}
                   >
@@ -499,9 +484,9 @@ export default function AuthPage() {
                       fontSize: '13px',
                       fontWeight: 700,
                       cursor: 'pointer',
-                      background: loginType === 'code' ? 'linear-gradient(135deg, var(--primary) 0%, #4F46E5 100%)' : 'transparent',
-                      color: loginType === 'code' ? '#FFF' : '#94A3B8',
-                      boxShadow: loginType === 'code' ? '0 4px 12px rgba(99, 102, 241, 0.2)' : 'none',
+                      background: loginType === 'code' ? '#FFF' : 'transparent',
+                      color: loginType === 'code' ? '#1E293B' : '#64748B',
+                      boxShadow: loginType === 'code' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
                       transition: 'all 0.2s'
                     }}
                   >
@@ -511,6 +496,7 @@ export default function AuthPage() {
 
                 {loginType === 'code' ? (
                   <div className="input-group">
+                    <span className="input-icon"><KeyRound size={20} /></span>
                     <input
                       type="text"
                       placeholder="Seu Código de Acesso (Ex: ABCD12)"
@@ -524,22 +510,24 @@ export default function AuthPage() {
                 ) : (
                   <>
                     <div className="input-group">
+                      <span className="input-icon">{identifier.includes('@') ? <Mail size={20} /> : <Phone size={20} />}</span>
                       <input type="text" placeholder="E-mail ou Celular" className="input-glass" value={identifier} onChange={e => setIdentifier(e.target.value)} required />
                     </div>
 
                     <div className="input-group">
+                      <span className="input-icon"><Lock size={20} /></span>
                       <input type="password" placeholder="Senha" className="input-glass" value={password} onChange={e => setPassword(e.target.value)} required />
                     </div>
                   </>
                 )}
 
-                <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '8px' }}>
+                <button type="submit" disabled={loading} className="btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '8px' }}>
                   {loading ? 'Processando...' : 'ENTRAR NO PAINEL'}
                   {!loading && <ArrowRight size={16} />}
                 </button>
 
                 {loginType === 'email' && (
-                  <button type="button" onClick={handleForgotPassword} style={{ background: 'none', border: 'none', color: '#818CF8', fontSize: '13px', fontWeight: 700, cursor: 'pointer', textAlign: 'center', transition: 'color 0.2s' }} className="hover-color-white">
+                  <button type="button" onClick={handleForgotPassword} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}>
                     Esqueci minha senha
                   </button>
                 )}
@@ -550,14 +538,17 @@ export default function AuthPage() {
             {view === 'register' && signUpStep === 1 && (
               <>
                 <div className="input-group">
+                  <span className="input-icon"><User size={20} /></span>
                   <input type="text" placeholder="Seu Nome Completo" className="input-glass" value={name} onChange={e => setName(e.target.value)} onKeyDown={handleKeyDown} required />
                 </div>
                 
                 <div className="input-group">
+                  <span className="input-icon">{identifier.includes('@') ? <Mail size={20} /> : <Phone size={20} />}</span>
                   <input type="text" placeholder="E-mail ou Celular" className="input-glass" value={identifier} onChange={e => setIdentifier(e.target.value)} onKeyDown={handleKeyDown} required />
                 </div>
 
                 <div className="input-group">
+                  <span className="input-icon"><Lock size={20} /></span>
                   <input type="password" placeholder="Senha de acesso" className="input-glass" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown} required />
                 </div>
 
@@ -571,7 +562,7 @@ export default function AuthPage() {
                     setSignUpStep(2);
                   }}
                   className="btn-primary" 
-                  style={{ marginTop: '12px' }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px' }}
                 >
                   Próximo Passo <ArrowRight size={16} />
                 </button>
@@ -587,32 +578,33 @@ export default function AuthPage() {
                   style={{
                     padding: '24px',
                     borderRadius: '20px',
-                    border: residenceType === 'house' ? '2px solid #6366F1' : '1px solid rgba(255, 255, 255, 0.06)',
-                    background: residenceType === 'house' ? 'rgba(99, 102, 241, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                    border: residenceType === 'house' ? '2.5px solid #2563EB' : '1px solid #E2E8F0',
+                    background: residenceType === 'house' ? '#F0F9FF' : '#FFF',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '20px',
                     transition: 'all 0.25s',
-                    boxShadow: residenceType === 'house' ? '0 8px 24px rgba(99, 102, 241, 0.15)' : 'none'
+                    boxShadow: residenceType === 'house' ? '0 8px 24px rgba(37,99,235,0.08)' : '0 2px 8px rgba(0,0,0,0.02)'
                   }}
+                  className="hover-scale"
                 >
                   <div style={{ 
-                    width: '56px', 
-                    height: '56px', 
-                    borderRadius: '16px', 
-                    background: residenceType === 'house' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)', 
-                    color: '#818CF8', 
+                    width: '64px', 
+                    height: '64px', 
+                    borderRadius: '18px', 
+                    background: residenceType === 'house' ? 'rgba(37,99,235,0.1)' : '#F8FAFC', 
+                    color: '#2563EB', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                    border: '1px solid rgba(37,99,235,0.1)'
                   }}>
-                    <Home size={28} />
+                    <Home size={32} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#FFF', margin: 0, fontFamily: 'var(--font-heading)' }}>Sou Morador de Casa</h4>
-                    <p style={{ fontSize: '12px', color: '#94A3B8', margin: '4px 0 0', lineHeight: 1.4 }}>Para casas de rua, condomínios horizontais ou individuais.</p>
+                    <h4 style={{ fontSize: '17px', fontWeight: 800, color: '#1E293B', margin: 0 }}>Sou Morador de Casa</h4>
+                    <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0', lineHeight: 1.4 }}>Para casas de rua, condomínios horizontais ou individuais.</p>
                   </div>
                 </div>
 
@@ -622,39 +614,40 @@ export default function AuthPage() {
                   style={{
                     padding: '24px',
                     borderRadius: '20px',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
-                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid #E2E8F0',
+                    background: '#FFF',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '20px',
-                    transition: 'all 0.25s'
+                    transition: 'all 0.25s',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
                   }}
+                  className="hover-scale"
                 >
                   <div style={{ 
-                    width: '56px', 
-                    height: '56px', 
-                    borderRadius: '16px', 
-                    background: 'rgba(255, 255, 255, 0.04)', 
-                    color: '#34D399', 
+                    width: '64px', 
+                    height: '64px', 
+                    borderRadius: '18px', 
+                    background: '#F8FAFC', 
+                    color: '#10B981', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                    border: '1px solid rgba(16,185,129,0.1)'
                   }}>
-                    <Building2 size={28} />
+                    <Building2 size={32} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#FFF', margin: 0, fontFamily: 'var(--font-heading)' }}>Sou Morador de Condomínio</h4>
-                    <p style={{ fontSize: '12px', color: '#94A3B8', margin: '4px 0 0', lineHeight: 1.4 }}>Para apartamentos de edifícios, prédios ou vilas fechadas.</p>
+                    <h4 style={{ fontSize: '17px', fontWeight: 800, color: '#1E293B', margin: 0 }}>Sou Morador de Condomínio</h4>
+                    <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0', lineHeight: 1.4 }}>Para apartamentos de edifícios, prédios ou vilas fechadas.</p>
                   </div>
                 </div>
 
                 <button 
                   type="button" 
                   onClick={() => setSignUpStep(1)} 
-                  style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '12px' }}
-                  className="hover-color-white"
+                  style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '12px' }}
                 >
                   ← Voltar para dados cadastrais
                 </button>
@@ -666,16 +659,16 @@ export default function AuthPage() {
                 <div style={{ 
                   display: 'inline-flex', 
                   padding: '20px', 
-                  background: 'rgba(99, 102, 241, 0.08)', 
+                  background: 'rgba(59,130,246,0.06)', 
                   borderRadius: '24px', 
-                  border: '1px solid rgba(255, 255, 255, 0.08)', 
+                  border: '1px solid var(--border-subtle)', 
                   marginBottom: '20px',
-                  color: '#818CF8'
+                  color: 'var(--primary)'
                 }}>
-                  <Building2 size={44} />
+                  <Building2 size={48} />
                 </div>
-                <h3 style={{ fontSize: '19px', fontWeight: 800, color: '#FFF', marginBottom: '12px', fontFamily: 'var(--font-heading)' }}>Acesso por Código Único</h3>
-                <p style={{ color: '#94A3B8', fontSize: '14px', lineHeight: 1.6, marginBottom: '24px', maxWidth: '320px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '12px' }}>Acesso por Código Único</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '14px', lineHeight: 1.6, marginBottom: '24px', maxWidth: '320px' }}>
                   Moradores de condomínios fechados ou vilas **não precisam criar uma conta administrativa**! 
                   <br/><br/>
                   O cadastro da sua residência é feito diretamente pelo administrador ou síndico do seu condomínio. Peça a ele o seu **Código de Acesso Único**.
@@ -689,7 +682,7 @@ export default function AuthPage() {
                     setSignUpStep(1);
                   }} 
                   className="btn-primary" 
-                  style={{ width: '100%', padding: '14px', borderRadius: '12px', fontWeight: 700 }}
+                  style={{ width: '100%', padding: '16px', borderRadius: '14px', fontWeight: 700 }}
                 >
                   Entrar com Código Único
                 </button>
@@ -697,8 +690,7 @@ export default function AuthPage() {
                 <button 
                   type="button" 
                   onClick={() => setSignUpStep(2)} 
-                  style={{ display: 'block', margin: '20px auto 0', background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}
-                  className="hover-color-white"
+                  style={{ display: 'block', margin: '20px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}
                 >
                   ← Voltar para Opções
                 </button>
@@ -714,34 +706,35 @@ export default function AuthPage() {
                   style={{
                     padding: '20px',
                     borderRadius: '20px',
-                    border: planType === 'trial' ? '2px solid #10B981' : '1px solid rgba(255, 255, 255, 0.06)',
-                    background: planType === 'trial' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                    border: planType === 'trial' ? '2.5px solid #10B981' : '1px solid #E2E8F0',
+                    background: planType === 'trial' ? '#F0FDF4' : '#FFF',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '16px',
                     transition: 'all 0.2s',
-                    boxShadow: planType === 'trial' ? '0 4px 16px rgba(16,185,129,0.15)' : 'none'
+                    boxShadow: planType === 'trial' ? '0 4px 16px rgba(16,185,129,0.06)' : 'none'
                   }}
+                  className="hover-scale"
                 >
                   <div style={{ 
-                    width: '44px', 
-                    height: '44px', 
-                    borderRadius: '12px', 
-                    background: planType === 'trial' ? 'rgba(16,185,129,0.15)' : 'rgba(255, 255, 255, 0.04)', 
-                    color: '#34D399', 
+                    width: '48px', 
+                    height: '48px', 
+                    borderRadius: '14px', 
+                    background: planType === 'trial' ? 'rgba(16,185,129,0.15)' : '#F8FAFC', 
+                    color: '#10B981', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center'
                   }}>
-                    <Sparkles size={22} />
+                    <Sparkles size={24} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyIntent: 'space-between' }}>
-                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#FFF', margin: 0, fontFamily: 'var(--font-heading)' }}>Testar Grátis</h4>
-                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: 'rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: '100px' }}>15 DIAS TRIAL</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#1E293B', margin: 0 }}>Testar Grátis</h4>
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '2px 8px', borderRadius: '100px' }}>15 DIAS TRIAL</span>
                     </div>
-                    <p style={{ fontSize: '12px', color: '#94A3B8', margin: '4px 0 0', lineHeight: 1.3 }}>Acesso total e completo a todas as funções por 15 dias sem compromisso.</p>
+                    <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0', lineHeight: 1.3 }}>Acesso total e completo a todas as funções por 15 dias sem compromisso.</p>
                   </div>
                 </div>
 
@@ -751,38 +744,39 @@ export default function AuthPage() {
                   style={{
                     padding: '20px',
                     borderRadius: '20px',
-                    border: planType === 'annual' ? '2px solid #6366F1' : '1px solid rgba(255, 255, 255, 0.06)',
-                    background: planType === 'annual' ? 'rgba(99, 102, 241, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                    border: planType === 'annual' ? '2.5px solid #2563EB' : '1px solid #E2E8F0',
+                    background: planType === 'annual' ? '#F0F9FF' : '#FFF',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '16px',
                     transition: 'all 0.2s',
-                    boxShadow: planType === 'annual' ? '0 4px 16px rgba(99, 102, 241, 0.15)' : 'none'
+                    boxShadow: planType === 'annual' ? '0 4px 16px rgba(37,99,235,0.06)' : 'none'
                   }}
+                  className="hover-scale"
                 >
                   <div style={{ 
-                    width: '44px', 
-                    height: '44px', 
-                    borderRadius: '12px', 
-                    background: planType === 'annual' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.04)', 
-                    color: '#818CF8', 
+                    width: '48px', 
+                    height: '48px', 
+                    borderRadius: '14px', 
+                    background: planType === 'annual' ? 'rgba(37,99,235,0.15)' : '#F8FAFC', 
+                    color: '#2563EB', 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center'
                   }}>
-                    <ShieldCheck size={22} />
+                    <ShieldCheck size={24} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyIntent: 'space-between' }}>
-                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#FFF', margin: 0, fontFamily: 'var(--font-heading)' }}>Plano Anual</h4>
-                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#818CF8' }}>R$ {planPrice.replace('.', ',')} / ano</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#1E293B', margin: 0 }}>Plano Anual</h4>
+                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#2563EB' }}>R$ {planPrice.replace('.', ',')} / ano</span>
                     </div>
-                    <p style={{ fontSize: '12px', color: '#94A3B8', margin: '4px 0 0', lineHeight: 1.3 }}>Menos de R$ 3,33 por mês. Campainha ativa garantida pelo ano inteiro.</p>
+                    <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0', lineHeight: 1.3 }}>Menos de R$ 3,33 por mês. Campainha ativa garantida pelo ano inteiro.</p>
                   </div>
                 </div>
 
-                <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '12px' }}>
+                <button type="submit" disabled={loading} className="btn-primary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
                   {loading ? 'Processando...' : 'FINALIZAR E IR PARA O PAINEL'}
                   {!loading && <ArrowRight size={16} />}
                 </button>
@@ -790,8 +784,7 @@ export default function AuthPage() {
                 <button 
                   type="button" 
                   onClick={() => setSignUpStep(2)} 
-                  style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                  className="hover-color-white"
+                  style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                 >
                   ← Voltar para tipo de moradia
                 </button>
@@ -801,7 +794,7 @@ export default function AuthPage() {
             {/* Toggle view link (only displayed on step 1 of registration, or on login screen) */}
             {(view === 'login' || (view === 'register' && signUpStep === 1)) && (
               <div style={{ textAlign: 'center', marginTop: '8px' }}>
-                <span style={{ color: '#94A3B8', fontSize: '14px' }}>
+                <span style={{ color: '#64748B', fontSize: '14px' }}>
                   {view === 'register' ? 'Já possui uma conta?' : 'Não possui uma conta?'}
                 </span>
                 <button 
@@ -811,7 +804,7 @@ export default function AuthPage() {
                     setView(view === 'register' ? 'login' : 'register');
                     setSignUpStep(1);
                   }}
-                  style={{ marginLeft: '8px', fontWeight: 700, color: '#818CF8', border: 'none', background: 'none', cursor: 'pointer' }}
+                  style={{ marginLeft: '8px', fontWeight: 700, color: 'var(--primary)' }}
                 >
                   {view === 'register' ? 'Faça login' : 'Cadastre-se grátis'}
                 </button>

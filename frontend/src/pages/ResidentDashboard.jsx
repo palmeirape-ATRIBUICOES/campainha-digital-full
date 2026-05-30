@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import JsSIP from 'jssip';
 import { io } from 'socket.io-client';
-import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag, BellOff, BellRing, Users, Calendar, Package, FileText, Send, Folder, X, MessageSquare, ChevronRight } from 'lucide-react';
+import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag, BellOff, BellRing, Users } from 'lucide-react';
 import { HistoryPanel, SettingsPanel, DEFAULT_CATEGORIES } from './ResidentPanels';
 import Logo from '../components/Logo';
 import MessagesPanel from '../components/resident/MessagesPanel';
@@ -13,7 +13,6 @@ import VisitorCodesPanel from '../components/resident/VisitorCodesPanel';
 import ResidentsPanel from '../components/resident/ResidentsPanel';
 import FamilyChat from '../components/resident/FamilyChat';
 import { startDoorbell, stopDoorbell, warmUpAudio, isPending, tryResumePending } from '../hooks/useDoorbellAlert';
-import { ReservasPanel, EncomendasPanel, MuralPanel, OcorrenciasPanel, DocumentosPanel, VizinhosPanel, UmoraAiWidget } from './ResidentuCondoPanels';
 
 import { API } from '../config';
 const DEFAULT_ICE = {
@@ -134,335 +133,6 @@ export default function ResidentDashboard() {
   const [openGateLoading, setOpenGateLoading] = useState(false);
   const [entryNotification, setEntryNotification] = useState(null);
   const [callDuration, setCallDuration] = useState(0);
-
-  // ─── Estados uCondo v3.0 (Reservas, Encomendas, Ocorrências, Documentos, Vizinhos, uMora IA) ───
-  const [bookings, setBookings] = useState([]);
-  const [bookingLoading, setBookingLoading] = useState(false);
-  const [newBookingArea, setNewBookingArea] = useState('Churrasqueira');
-  const [newBookingDate, setNewBookingDate] = useState('');
-  
-  const [unitAlerts, setUnitAlerts] = useState([]);
-  const [alertsLoading, setAlertsLoading] = useState(false);
-  
-  const [tickets, setTickets] = useState([]);
-  const [ticketsLoading, setTicketsLoading] = useState(false);
-  const [newTicketSubject, setNewTicketSubject] = useState('');
-  const [newTicketBody, setNewTicketBody] = useState('');
-  const [newTicketCategory, setNewTicketCategory] = useState('Manutenção');
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [ticketReplyText, setTicketReplyText] = useState('');
-
-  const [connections, setConnections] = useState([]);
-  const [neighborsList, setNeighborsList] = useState([]);
-  const [searchNeighborQuery, setSearchNeighborQuery] = useState('');
-  const [activeConnection, setActiveConnection] = useState(null);
-  const [connectionMessages, setConnectionMessages] = useState([]);
-  const [activeConnMsgText, setActiveConnMsgText] = useState('');
-
-  // uMora IA widget states
-  const [isUmoraOpen, setIsUmoraOpen] = useState(false);
-  const [umoraMessages, setUmoraMessages] = useState([
-    { sender: 'umora', text: 'Olá! Sou a uMora, sua Inteligência Artificial Condominial. Como posso ajudar você hoje?' }
-  ]);
-  const [umoraInput, setUmoraInput] = useState('');
-  const [isUmoraTyping, setIsUmoraTyping] = useState(false);
-
-  // ─── Funções de Carga uCondo v3.0 ──────────────────────────────────────────
-
-  const fetchBookings = useCallback(async () => {
-    const propId = propertyId || localStorage.getItem('residentPropertyId');
-    if (!propId) return;
-    setBookingLoading(true);
-    try {
-      const res = await fetch(`${API}/api/properties/${propId}/bookings`);
-      if (res.ok) {
-        const data = await res.json();
-        setBookings(data);
-      }
-    } catch (err) {
-      console.error('[Reservas] Erro ao buscar reservas:', err);
-    } finally {
-      setBookingLoading(false);
-    }
-  }, [propertyId]);
-
-  const createBooking = async () => {
-    const propId = propertyId || localStorage.getItem('residentPropertyId');
-    const uId = savedUnitId || localStorage.getItem('residentUnitId');
-    if (!propId || !uId) return;
-    if (!newBookingDate) {
-      alert('Selecione uma data para a reserva.');
-      return;
-    }
-    setBookingLoading(true);
-    try {
-      const res = await fetch(`${API}/api/properties/${propId}/bookings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unitId: uId, areaName: newBookingArea, bookingDate: newBookingDate })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert(`Reserva de ${newBookingArea} realizada com sucesso para o dia ${new Date(newBookingDate).toLocaleDateString('pt-BR')}!`);
-        setNewBookingDate('');
-        fetchBookings();
-      } else {
-        alert(data.error || 'Erro ao criar reserva.');
-      }
-    } catch (err) {
-      console.error('[Reservas] Erro:', err);
-      alert('Erro de conexão ao criar reserva.');
-    } finally {
-      setBookingLoading(false);
-    }
-  };
-
-  const cancelBooking = async (bookingId) => {
-    if (!window.confirm('Tem certeza de que deseja cancelar esta reserva?')) return;
-    const propId = propertyId || localStorage.getItem('residentPropertyId');
-    if (!propId) return;
-    setBookingLoading(true);
-    try {
-      const res = await fetch(`${API}/api/properties/${propId}/bookings/${bookingId}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        alert('Reserva cancelada com sucesso.');
-        fetchBookings();
-      } else {
-        alert('Erro ao cancelar reserva.');
-      }
-    } catch (err) {
-      console.error('[Reservas] Erro ao cancelar:', err);
-      alert('Erro de conexão ao cancelar reserva.');
-    } finally {
-      setBookingLoading(false);
-    }
-  };
-
-  const fetchUnitAlerts = useCallback(async () => {
-    const propId = propertyId || localStorage.getItem('residentPropertyId');
-    const uId = savedUnitId || localStorage.getItem('residentUnitId');
-    if (!propId || !uId) return;
-    setAlertsLoading(true);
-    try {
-      const res = await fetch(`${API}/api/properties/${propId}/alerts`);
-      if (res.ok) {
-        const data = await res.json();
-        // Filtra os alertas ativos da unidade do morador atual
-        const myAlerts = data.filter(a => a.unitId === uId && a.active);
-        setUnitAlerts(myAlerts);
-      }
-    } catch (err) {
-      console.error('[Encomendas] Erro ao buscar:', err);
-    } finally {
-      setAlertsLoading(false);
-    }
-  }, [propertyId, savedUnitId]);
-
-  const fetchTickets = useCallback(async () => {
-    const propId = propertyId || localStorage.getItem('residentPropertyId');
-    const uId = savedUnitId || localStorage.getItem('residentUnitId');
-    if (!propId || !uId) return;
-    setTicketsLoading(true);
-    try {
-      const res = await fetch(`${API}/api/properties/${propId}/mailbox`);
-      if (res.ok) {
-        const data = await res.json();
-        // Filtra ocorrências da unidade atual
-        const myTickets = data.filter(t => t.unitId === uId);
-        setTickets(myTickets);
-      }
-    } catch (err) {
-      console.error('[Ocorrências] Erro ao buscar:', err);
-    } finally {
-      setTicketsLoading(false);
-    }
-  }, [propertyId, savedUnitId]);
-
-  const createTicket = async (e) => {
-    if (e) e.preventDefault();
-    const propId = propertyId || localStorage.getItem('residentPropertyId');
-    const uId = savedUnitId || localStorage.getItem('residentUnitId');
-    if (!propId || !uId) return;
-    if (!newTicketSubject.trim() || !newTicketBody.trim()) {
-      alert('Assunto e Descrição são obrigatórios.');
-      return;
-    }
-    setTicketsLoading(true);
-    try {
-      const res = await fetch(`${API}/api/properties/${propId}/mailbox`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          unitId: uId,
-          subject: `[${newTicketCategory}] ${newTicketSubject.trim()}`,
-          body: newTicketBody.trim()
-        })
-      });
-      if (res.ok) {
-        alert('Ocorrência registrada com sucesso!');
-        setNewTicketSubject('');
-        setNewTicketBody('');
-        fetchTickets();
-      } else {
-        alert('Erro ao registrar ocorrência.');
-      }
-    } catch (err) {
-      console.error('[Ocorrências] Erro ao criar:', err);
-      alert('Erro de conexão ao registrar ocorrência.');
-    } finally {
-      setTicketsLoading(false);
-    }
-  };
-
-  const fetchConnections = useCallback(async () => {
-    const uId = savedUnitId || localStorage.getItem('residentUnitId');
-    if (!uId) return;
-    try {
-      const res = await fetch(`${API}/api/units/${uId}/connections`);
-      if (res.ok) {
-        const data = await res.json();
-        setConnections(data);
-      }
-    } catch (err) {
-      console.error('[Vizinhos] Erro ao buscar conexões:', err);
-    }
-  }, [savedUnitId]);
-
-  const searchNeighbors = async () => {
-    const propId = propertyId || localStorage.getItem('residentPropertyId');
-    if (!propId || !searchNeighborQuery.trim()) return;
-    try {
-      const res = await fetch(`${API}/api/properties/${propId}/search-unit?q=${searchNeighborQuery}`);
-      if (res.ok) {
-        const data = await res.json();
-        const myUnitId = savedUnitId || localStorage.getItem('residentUnitId');
-        setNeighborsList(data.filter(n => n.id !== myUnitId));
-      }
-    } catch (err) {
-      console.error('[Vizinhos] Erro ao buscar:', err);
-    }
-  };
-
-  const requestConnection = async (targetUnitId) => {
-    const uId = savedUnitId || localStorage.getItem('residentUnitId');
-    const propId = propertyId || localStorage.getItem('residentPropertyId');
-    if (!uId || !propId) return;
-    try {
-      const res = await fetch(`${API}/api/units/${uId}/connections`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUnitId, propertyId: propId })
-      });
-      if (res.ok) {
-        alert('Solicitação de conversa enviada ao vizinho!');
-        fetchConnections();
-      } else {
-        alert('Erro ao enviar solicitação.');
-      }
-    } catch (err) {
-      console.error('[Vizinhos] Erro ao conectar:', err);
-    }
-  };
-
-  const updateConnectionStatus = async (connId, status) => {
-    const uId = savedUnitId || localStorage.getItem('residentUnitId');
-    if (!uId) return;
-    try {
-      const res = await fetch(`${API}/api/units/${uId}/connections/${connId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      if (res.ok) {
-        alert(status === 'connected' ? 'Conversa iniciada!' : 'Conversa bloqueada.');
-        fetchConnections();
-      }
-    } catch (err) {
-      console.error('[Vizinhos] Erro ao atualizar status:', err);
-    }
-  };
-
-  const fetchConnectionMessages = async (connId) => {
-    const uId = savedUnitId || localStorage.getItem('residentUnitId');
-    if (!uId) return;
-    try {
-      const res = await fetch(`${API}/api/units/${uId}/connections/${connId}/messages`);
-      if (res.ok) {
-        const data = await res.json();
-        setConnectionMessages(data);
-      }
-    } catch (err) {
-      console.error('[Vizinhos] Erro ao carregar mensagens:', err);
-    }
-  };
-
-  const sendNeighborMessage = async () => {
-    if (!activeConnection || !activeConnMsgText.trim()) return;
-    const uId = savedUnitId || localStorage.getItem('residentUnitId');
-    if (!uId) return;
-    try {
-      const res = await fetch(`${API}/api/units/${uId}/connections/${activeConnection.id}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: activeConnMsgText.trim() })
-      });
-      if (res.ok) {
-        setActiveConnMsgText('');
-        fetchConnectionMessages(activeConnection.id);
-      }
-    } catch (err) {
-      console.error('[Vizinhos] Erro ao enviar mensagem:', err);
-    }
-  };
-
-  const handleUmoraSend = async () => {
-    if (!umoraInput.trim()) return;
-    const userMsg = umoraInput.trim();
-    setUmoraMessages(prev => [...prev, { sender: 'resident', text: userMsg }]);
-    setUmoraInput('');
-    setIsUmoraTyping(true);
-
-    setTimeout(() => {
-      let reply = 'Interessante! Estou analisando seu pedido de acordo com as regras do nosso condomínio e a nossa base de dados inteligente...';
-      const cleanMsg = userMsg.toLowerCase();
-
-      if (cleanMsg.includes('reserv') || cleanMsg.includes('churrasqueir') || cleanMsg.includes('festa') || cleanMsg.includes('piscin')) {
-        reply = 'Para fazer uma reserva do Salão de Festas, Churrasqueira ou Piscina, basta acessar a nossa aba 📅 **Reservas** no menu lateral. Escolha a data de sua preferência e clique em agendar. O valor e regras estão definidos no regimento interno!';
-      } else if (cleanMsg.includes('silêncio') || cleanMsg.includes('silencio') || cleanMsg.includes('horário') || cleanMsg.includes('barulho')) {
-        reply = 'De acordo com o Regimento Interno do condomínio, o horário de silêncio oficial vigora das **22h às 08h** de segunda-feira a sábado. Aos domingos e feriados nacionais, o silêncio é exigido durante todo o dia para o descanso de todos.';
-      } else if (cleanMsg.includes('encomenda') || cleanMsg.includes('pacote') || cleanMsg.includes('mercado livre') || cleanMsg.includes('amazon')) {
-        reply = 'Você pode visualizar suas encomendas pendentes na aba 📦 **Encomendas**! Assim que a portaria receber e registrar uma correspondência ou encomenda para a sua unidade, você receberá um alerta em tempo real e o pacote constará lá.';
-      } else if (cleanMsg.includes('portão') || cleanMsg.includes('portao') || cleanMsg.includes('abrir') || cleanMsg.includes('sonoff') || cleanMsg.includes('liberar')) {
-        reply = 'Para abrir os portões remotamente, acesse a aba 🏠 **Início** e utilize os botões **Abrir Portão Social** ou **Abrir Garagem**. Os acionamentos são feitos instantaneamente por meio dos relés inteligentes Sonoff integrados!';
-      } else if (cleanMsg.includes('documento') || cleanMsg.includes('ata') || cleanMsg.includes('regimento')) {
-        reply = 'Todos os regimentos internos, atas de assembleias condominiais e relatórios financeiros mensais estão disponíveis na aba 📄 **Documentos** em formato PDF para visualização e download imediato!';
-      } else if (cleanMsg.includes('vizinho') || cleanMsg.includes('conversar') || cleanMsg.includes('chat')) {
-        reply = 'Quer falar com algum morador do condomínio? Vá na aba 👥 **Vizinhos**, busque pelo bloco ou número da unidade desejada, e envie uma solicitação de conexão de chat. Assim que aceito, vocês poderão conversar de forma privada e segura!';
-      } else if (cleanMsg.includes('ocorrencia') || cleanMsg.includes('ocorrência') || cleanMsg.includes('reclamar') || cleanMsg.includes('problema') || cleanMsg.includes('suporte')) {
-        reply = 'Para abrir um chamado ou reportar algum problema de manutenção no condomínio, vá em 💬 **Ocorrências** e preencha o formulário informando a categoria e descrição. O síndico e a administração serão notificados e responderão por lá!';
-      } else {
-        reply = 'Como assistente virtual do seu condomínio, posso ajudar você com regras de silêncio, reservas de áreas comuns, rastreamento de correspondências ou na abertura de chamados para o síndico. Como posso ajudar com relação a isso?';
-      }
-
-      setUmoraMessages(prev => [...prev, { sender: 'umora', text: reply }]);
-      setIsUmoraTyping(false);
-    }, 1500); // 1.5s delay to simulate typing
-  };
-
-  useEffect(() => {
-    if (tab === 'reservas') {
-      fetchBookings();
-    } else if (tab === 'encomendas') {
-      fetchUnitAlerts();
-    } else if (tab === 'ocorrencias') {
-      fetchTickets();
-    } else if (tab === 'vizinhos') {
-      fetchConnections();
-    }
-  }, [tab, fetchBookings, fetchUnitAlerts, fetchTickets, fetchConnections]);
-
 
   useEffect(() => {
     let timer = null;
@@ -2023,330 +1693,148 @@ export default function ResidentDashboard() {
 
   return (
     <div 
-      style={{ minHeight: '100vh', background: '#050811', color: 'var(--text-main)', position: 'relative', overflowX: 'hidden', display: 'flex' }} 
+      style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', paddingBottom: '72px' }} 
       onClick={handleUserInteraction}
       onTouchStart={handleUserInteraction}
     >
       <style>{`
-        .cosmic-aurora {
-          position: fixed;
-          border-radius: 50%;
-          filter: blur(120px);
-          opacity: 0.12;
-          pointer-events: none;
-          z-index: 0;
-          transition: all 1s ease-in-out;
-          animation: auroraPulse 12s infinite alternate;
+        @keyframes pulse-blue {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+          100% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
         }
-        .aurora-1 { width: 350px; height: 350px; background: #6366F1; top: -100px; left: -100px; }
-        .aurora-2 { width: 450px; height: 450px; background: #8B5CF6; bottom: -150px; right: -100px; }
-        .aurora-3 { width: 300px; height: 300px; background: #10B981; top: 30%; right: 10%; }
-        
-        .lux-glass {
-          background: rgba(13, 20, 38, 0.7) !important;
-          backdrop-filter: blur(24px) !important;
-          -webkit-backdrop-filter: blur(24px) !important;
-          border: 1px solid rgba(255, 255, 255, 0.07) !important;
-          box-shadow: 0 20px 50px rgba(0,0,0,0.4) !important;
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
-
-        .lux-glow-btn {
-          background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%) !important;
-          color: #FFF !important;
-          border: none !important;
-          box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
-          cursor: pointer;
+        @keyframes scale-up {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
         }
-        .lux-glow-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 25px rgba(99, 102, 241, 0.45) !important;
-        }
-        .lux-glow-btn:active {
-          transform: translateY(0) scale(0.96) !important;
-        }
-        
-        @keyframes auroraPulse {
-          0% { transform: scale(1) translate(0, 0); opacity: 0.12; }
-          100% { transform: scale(1.1) translate(20px, -15px); opacity: 0.16; }
-        }
-        
-        .sidebar-btn {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 14px 18px;
-          border-radius: 14px;
-          border: 1px solid transparent;
-          background: transparent;
-          color: #94A3B8;
-          font-weight: 600;
-          font-size: 14px;
-          cursor: pointer;
-          transition: all 0.3s;
-          text-align: left;
-          font-family: var(--font-heading);
-        }
-        .sidebar-btn:hover {
-          color: #FFF;
-          background: rgba(255,255,255,0.03);
-          border-color: rgba(255,255,255,0.05);
-        }
-        .sidebar-btn.active {
-          color: #FFF;
-          background: rgba(99, 102, 241, 0.12);
-          border-color: rgba(99, 102, 241, 0.35);
-          box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
-        }
-
-        .hover-card-bg:hover {
-          background: rgba(255,255,255,0.05) !important;
-          border-color: rgba(99, 102, 241, 0.25) !important;
-          transform: translateY(-2px);
-          box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important;
-        }
-
-        @media (min-width: 1024px) {
-          .desktop-sidebar-pane {
-            display: flex !important;
-          }
-          .mobile-header-pane {
-            display: none !important;
-          }
-          .mobile-nav-pane {
-            display: none !important;
-          }
-          .main-content-layout {
-            padding: 40px !important;
-            padding-bottom: 40px !important;
-          }
-          .main-wrapper-pane {
-            padding-bottom: 0 !important;
-          }
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
         }
       `}</style>
 
-      {/* Cosmic Mesh Gradient Auroras */}
-      <div className="cosmic-aurora aurora-1"></div>
-      <div className="cosmic-aurora aurora-2"></div>
-      <div className="cosmic-aurora aurora-3"></div>
-
-      {/* Persistent Left Sidebar on Desktop */}
-      <div className="desktop-sidebar-pane" style={{
-        width: '290px',
-        flexShrink: 0,
-        height: '100vh',
-        background: 'rgba(9, 13, 28, 0.7)',
-        backdropFilter: 'blur(30px)',
-        borderRight: '1px solid rgba(255, 255, 255, 0.06)',
-        display: 'none',
-        flexDirection: 'column',
-        padding: '30px 24px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        overflowY: 'auto'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '32px' }}>
-          <Logo size={36} />
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.04)', marginBottom: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isTrialExpired ? '#EF4444' : '#10B981', boxShadow: isTrialExpired ? '0 0 8px #EF4444' : '0 0 8px #10B981' }} />
-            <div>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: '#FFF' }}>{unitName}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                {isTrialExpired ? 'Campainha OFF' : 'Disponível'}
+      {/* OVERLAY DE BLOQUEIO POR EXPIRAÇÃO DO TRIAL */}
+      {isTrialExpired && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(15,23,42,0.92)',
+          backdropFilter: 'blur(12px)',
+          zIndex: 9998,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '24px', fontFamily: "'Inter', sans-serif"
+        }}>
+          <div style={{
+            background: '#FFF', borderRadius: '24px', padding: '36px 32px',
+            width: '100%', maxWidth: '400px', textAlign: 'center',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            display: 'flex', flexDirection: 'column', gap: '24px'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)',
+                border: '2px solid #FCA5A5',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 8px 20px rgba(239, 68, 68, 0.15)'
+              }}>
+                <span style={{ fontSize: '28px' }}>⛔</span>
               </div>
+              <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: 0 }}>Período de Testes Expirado</h3>
+              <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6, margin: 0 }}>
+                Sua campainha digital está inativa. O período de 15 dias grátis terminou em <strong>{formattedExpiryDate}</strong>.
+              </p>
+            </div>
+
+            <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Plano Anual Premium</span>
+              <span style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>R$ {planPrice.replace('.', ',')}/ano</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={() => setShowPaymentModal(true)}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '14px',
+                  background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                  color: '#fff', border: 'none', fontWeight: 800, fontSize: '15px',
+                  cursor: 'pointer', boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                }}
+              >
+                💳 Ativar Assinatura Pro
+              </button>
+
+              <button
+                onClick={() => {
+                  [
+                    'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+                    'residentIsVila', 'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+                    'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+                    'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+                    'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+                  ].forEach(k => localStorage.removeItem(k));
+                  navigate('/');
+                }}
+                style={{
+                  width: '100%', padding: '12px', borderRadius: '12px',
+                  background: '#F1F5F9', color: '#475569', border: 'none',
+                  fontWeight: 700, fontSize: '13px', cursor: 'pointer'
+                }}
+              >
+                Sair da Conta
+              </button>
             </div>
           </div>
         </div>
+      )}
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '1px', marginBottom: '8px', textTransform: 'uppercase' }}>Condomínio</span>
-          
-          <button onClick={() => setTab('home')} className={`sidebar-btn ${tab === 'home' ? 'active' : ''}`}>
-            <Home size={18} /> Início
+      {/* Header (Premium Sticky) */}
+      <div style={{ 
+        padding: '16px 24px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        background: 'rgba(255, 255, 255, 0.8)', 
+        backdropFilter: 'blur(12px)', 
+        position: 'sticky', 
+        top: 0, 
+        zIndex: 90,
+        borderBottom: '1px solid #F1F5F9'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button onClick={() => setShowMenu(true)} style={{ background: '#0F172A', color: '#FFF', border: 'none', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '20px' }}>
+              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+              <div style={{ height: '2px', width: '60%', background: '#FFF', borderRadius: '2px' }} />
+            </div>
           </button>
-
-          <button onClick={() => setTab('reservas')} className={`sidebar-btn ${tab === 'reservas' ? 'active' : ''}`}>
-            <Calendar size={18} /> Reservas
-          </button>
-
-          <button onClick={() => setTab('encomendas')} className={`sidebar-btn ${tab === 'encomendas' ? 'active' : ''}`}>
-            <Package size={18} /> Encomendas
-          </button>
-
-          <button onClick={() => setTab('messages')} className={`sidebar-btn ${tab === 'messages' ? 'active' : ''}`}>
-            <Mail size={18} /> Mural de Avisos
-          </button>
-
-          <button onClick={() => setTab('ocorrencias')} className={`sidebar-btn ${tab === 'ocorrencias' ? 'active' : ''}`}>
-            <MessageSquare size={18} /> Ocorrências
-          </button>
-
-          <button onClick={() => setTab('documentos')} className={`sidebar-btn ${tab === 'documentos' ? 'active' : ''}`}>
-            <FileText size={18} /> Documentos
-          </button>
-
-          <button onClick={() => setTab('vizinhos')} className={`sidebar-btn ${tab === 'vizinhos' ? 'active' : ''}`}>
-            <Users size={18} /> Vizinhos
-          </button>
-
-          <button onClick={() => setTab('family')} className={`sidebar-btn ${tab === 'family' ? 'active' : ''}`}>
-            <MessageCircle size={18} /> Família
-          </button>
-
-          <button onClick={() => setTab('history')} className={`sidebar-btn ${tab === 'history' ? 'active' : ''}`}>
-            <History size={18} /> Atividades
-          </button>
-
-          <button onClick={() => setTab('settings')} className={`sidebar-btn ${tab === 'settings' ? 'active' : ''}`}>
-            <Settings size={18} /> Configurações
-          </button>
+          <div>
+            <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#0F172A' }}>{unitName}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#94A3B8' : (status === 'idle' ? '#10B981' : '#EF4444') }} />
+              <span style={{ fontSize: '11px', color: isTrialExpired ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
+                {isTrialExpired ? 'Campainha OFF' : (status === 'idle' ? 'Disponível' : 'Em Chamada')}
+              </span>
+            </div>
+          </div>
         </div>
-
-        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <button onClick={() => {
-            [
-              'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
-              'residentIsVila', 'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
-              'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
-              'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
-              'cd_admin_name', 'cd_admin_password', 'cd_property_type'
-            ].forEach(k => localStorage.removeItem(k));
-            navigate('/');
-          }} className="sidebar-btn" style={{ color: '#EF4444' }}>
-            <LogOut size={18} /> Sair do App
-          </button>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {installPrompt && (
+            <button onClick={async () => { installPrompt.prompt(); const r = await installPrompt.userChoice; if (r.outcome === 'accepted') setInstallPrompt(null); }}
+              style={{ background: '#F1F5F9', color: '#1E293B', border: 'none', padding: '8px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Download size={14} /> Instalar
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Main Viewport Container */}
-      <div className="main-wrapper-pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'relative', zIndex: 1, paddingBottom: '72px' }}>
-        
-        {/* OVERLAY DE BLOQUEIO POR EXPIRAÇÃO DO TRIAL */}
-        {isTrialExpired && (
-          <div style={{
-            position: 'fixed', inset: 0,
-            background: 'rgba(5, 8, 17, 0.95)',
-            backdropFilter: 'blur(16px)',
-            zIndex: 9998,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '24px'
-          }}>
-            <div style={{
-              background: 'rgba(13, 20, 38, 0.8)', borderRadius: '24px', padding: '40px 32px',
-              width: '100%', maxWidth: '400px', textAlign: 'center',
-              border: '1px solid rgba(255,255,255,0.06)',
-              boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
-              display: 'flex', flexDirection: 'column', gap: '24px'
-            }} className="lux-glass">
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '64px', height: '64px', borderRadius: '50%',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '2px solid rgba(239, 68, 68, 0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <span style={{ fontSize: '28px' }}>⛔</span>
-                </div>
-                <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#FFF', margin: 0, fontFamily: 'var(--font-heading)' }}>Período de Testes Expirado</h3>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
-                  Sua campainha digital está inativa. O período de 15 dias grátis terminou em <strong>{formattedExpiryDate}</strong>.
-                </p>
-              </div>
-
-              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>Plano Anual Premium</span>
-                <span style={{ fontSize: '16px', fontWeight: 800, color: '#FFF' }}>R$ {planPrice.replace('.', ',')}/ano</span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <button
-                  onClick={() => setShowPaymentModal(true)}
-                  className="lux-glow-btn"
-                  style={{
-                    width: '100%', padding: '14px', borderRadius: '14px',
-                    fontWeight: 800, fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                  }}
-                >
-                  💳 Ativar Assinatura Pro
-                </button>
-
-                <button
-                  onClick={() => {
-                    [
-                      'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
-                      'residentIsVila', 'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
-                      'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
-                      'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
-                      'cd_admin_name', 'cd_admin_password', 'cd_property_type'
-                    ].forEach(k => localStorage.removeItem(k));
-                    navigate('/');
-                  }}
-                  style={{
-                    width: '100%', padding: '12px', borderRadius: '12px',
-                    background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.06)',
-                    fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s'
-                  }}
-                >
-                  Sair da Conta
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Header (Hidden on Desktop via media query) */}
-        <div className="mobile-header-pane" style={{ 
-          padding: '16px 24px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          background: 'rgba(5, 8, 17, 0.7)', 
-          backdropFilter: 'blur(20px)', 
-          position: 'sticky', 
-          top: 0, 
-          zIndex: 90,
-          borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button onClick={() => setShowMenu(true)} style={{ background: 'rgba(255,255,255,0.05)', color: '#FFF', border: '1px solid rgba(255,255,255,0.08)', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '18px' }}>
-                <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
-                <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
-                <div style={{ height: '2px', width: '60%', background: '#FFF', borderRadius: '2px' }} />
-              </div>
-            </button>
-            <div>
-              <h2 style={{ fontSize: '14px', fontWeight: 800, margin: 0, color: '#FFF' }}>{unitName}</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#EF4444' : (status === 'idle' ? '#10B981' : '#EF4444') }} />
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                  {isTrialExpired ? 'Campainha OFF' : (status === 'idle' ? 'Disponível' : 'Em Chamada')}
-                </span>
-              </div>
-            </div>
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {installPrompt && (
-              <button onClick={async () => { installPrompt.prompt(); const r = await installPrompt.userChoice; if (r.outcome === 'accepted') setInstallPrompt(null); }}
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: '#FFF', padding: '8px 12px', borderRadius: '10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Download size={13} /> Instalar
-              </button>
-            )}
-          </div>
-        </div>
-
-        {audioError && <div style={{ margin: '12px 24px 0', background: '#EF4444', color: '#fff', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, display: 'flex', gap: '8px', alignItems: 'center' }}><AlertCircle size={16} />Toque na tela para ativar o som!</div>}
-
-        {/* Content Pane Wrapper */}
-        <div className="main-content-layout" style={{ flex: 1, padding: '24px', position: 'relative', zIndex: 1 }}>
-
+      {audioError && <div style={{ margin: '12px 24px 0', background: '#EF4444', color: '#fff', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, display: 'flex', gap: '8px', alignItems: 'center' }}><AlertCircle size={16} />Toque na tela para ativar o som!</div>}
 
 
 
@@ -3341,86 +2829,6 @@ export default function ResidentDashboard() {
 
       {tab === 'settings' && <SettingsPanel unitName={unitName} setUnitName={setUnitName} onSave={saveSettings} unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
 
-      {tab === 'reservas' && (
-        <ReservasPanel
-          bookings={bookings}
-          bookingLoading={bookingLoading}
-          createBooking={createBooking}
-          cancelBooking={cancelBooking}
-          newBookingArea={newBookingArea}
-          setNewBookingArea={setNewBookingArea}
-          newBookingDate={newBookingDate}
-          setNewBookingDate={setNewBookingDate}
-        />
-      )}
-
-      {tab === 'encomendas' && (
-        <EncomendasPanel
-          unitAlerts={unitAlerts}
-          alertsLoading={alertsLoading}
-          visitorOrPackageName={visitorOrPackageName}
-          setVisitorOrPackageName={setVisitorOrPackageName}
-          dispatchAlertLoading={dispatchAlertLoading}
-          dispatchAlert={dispatchAlert}
-        />
-      )}
-
-      {tab === 'ocorrencias' && (
-        <OcorrenciasPanel
-          tickets={tickets}
-          ticketsLoading={ticketsLoading}
-          createTicket={createTicket}
-          newTicketSubject={newTicketSubject}
-          setNewTicketSubject={setNewTicketSubject}
-          newTicketBody={newTicketBody}
-          setNewTicketBody={setNewTicketBody}
-          newTicketCategory={newTicketCategory}
-          setNewTicketCategory={setNewTicketCategory}
-          selectedTicket={selectedTicket}
-          setSelectedTicket={setSelectedTicket}
-          ticketReplyText={ticketReplyText}
-          setTicketReplyText={setTicketReplyText}
-          API={API}
-          token={token}
-          fetchTickets={fetchTickets}
-        />
-      )}
-
-      {tab === 'documentos' && <DocumentosPanel />}
-
-      {tab === 'vizinhos' && (
-        <VizinhosPanel
-          connections={connections}
-          neighborsList={neighborsList}
-          searchNeighborQuery={searchNeighborQuery}
-          setSearchNeighborQuery={setSearchNeighborQuery}
-          searchNeighbors={searchNeighbors}
-          requestConnection={requestConnection}
-          updateConnectionStatus={updateConnectionStatus}
-          activeConnection={activeConnection}
-          setActiveConnection={setActiveConnection}
-          connectionMessages={connectionMessages}
-          fetchConnectionMessages={fetchConnectionMessages}
-          activeConnMsgText={activeConnMsgText}
-          setActiveConnMsgText={setActiveConnMsgText}
-          sendNeighborMessage={sendNeighborMessage}
-          savedUnitId={savedUnitId || id}
-        />
-      )}
-
-      </div>
-
-      {/* Floating uMora AI Assistant */}
-      <UmoraAiWidget
-        isUmoraOpen={isUmoraOpen}
-        setIsUmoraOpen={setIsUmoraOpen}
-        umoraMessages={umoraMessages}
-        umoraInput={umoraInput}
-        setUmoraInput={setUmoraInput}
-        isUmoraTyping={isUmoraTyping}
-        handleUmoraSend={handleUmoraSend}
-      />
-
       <HamburgerMenu />
       <NavBar />
 
@@ -3720,7 +3128,6 @@ export default function ResidentDashboard() {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }

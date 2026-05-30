@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { LogOut, Building2, Phone, PhoneCall, PhoneOff, Search, KeyRound, CheckCircle2, MessageSquare, Send, X, ShieldCheck, Sun, Moon, Package } from 'lucide-react';
+import { LogOut, Building2, Phone, PhoneCall, PhoneOff, Search, KeyRound, CheckCircle2, MessageSquare, Send, X, ShieldCheck, Sun, Moon } from 'lucide-react';
 import Logo from '../components/Logo';
 
 import { API } from '../config';
@@ -31,60 +31,6 @@ export default function PorteiroDashboard() {
 
   // ─── Suporte a Modo Noturno (Dark Mode) ───
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('cd_dark_mode') === 'true');
-
-  // ─── Novos Recursos uCondo v3.0 (Encomendas e Reservas) ───
-  const [pkgUnit, setPkgUnit] = useState(null);
-  const [pkgText, setPkgText] = useState('');
-  const [pkgLoading, setPkgLoading] = useState(false);
-
-  const [bookings, setBookings] = useState([]);
-  const [bookingLoading, setBookingLoading] = useState(false);
-  const [showBookingsModal, setShowBookingsModal] = useState(false);
-
-  const fetchBookings = React.useCallback(async () => {
-    if (!propertyId) return;
-    setBookingLoading(true);
-    try {
-      const res = await fetch(`${API}/api/properties/${propertyId}/bookings`);
-      if (res.ok) {
-        const data = await res.json();
-        setBookings(data);
-      }
-    } catch (err) {
-      console.error('[Doorman] Error fetching bookings:', err);
-    } finally {
-      setBookingLoading(false);
-    }
-  }, [propertyId]);
-
-  const logPackage = async (unit) => {
-    if (!pkgText.trim()) return;
-    setPkgLoading(true);
-    try {
-      const res = await fetch(`${API}/api/properties/${propertyId}/alerts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          unitId: unit.id,
-          type: 'package',
-          title: '📦 Nova Encomenda Recebida!',
-          description: pkgText.trim()
-        })
-      });
-      if (res.ok) {
-        alert('Encomenda registrada e morador notificado em tempo real!');
-        setPkgText('');
-        setPkgUnit(null);
-      } else {
-        alert('Erro ao registrar encomenda.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Erro de conexão ao registrar encomenda.');
-    } finally {
-      setPkgLoading(false);
-    }
-  };
 
   const [activeCall, setActiveCall] = useState(null); // { residentSocketId, callerName, unitId, isIncoming, status: 'calling'|'talking'|'ended' }
   const [callDuration, setCallDuration] = useState(0);
@@ -1071,80 +1017,6 @@ export default function PorteiroDashboard() {
           </div>
         )}
 
-        {/* MODAL: QUADRO DE RESERVAS (Inspirado no uCondo) */}
-        {showBookingsModal && (
-          <div style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 999
-          }}>
-            <div style={{
-              background: bgSurface,
-              border: `1px solid ${borderSubtle}`,
-              borderRadius: '24px',
-              padding: '32px',
-              width: '90%',
-              maxWidth: '650px',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
-              position: 'relative'
-            }} className="lux-glass">
-              <button 
-                onClick={() => setShowBookingsModal(false)} 
-                style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFF', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                ✕
-              </button>
-
-              <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', color: '#FFF' }}>
-                📅 Quadro de Reservas de Áreas Comuns
-              </h3>
-              <p style={{ fontSize: '12px', color: textMuted, marginBottom: '20px' }}>
-                Consulte a lista de agendamentos autorizados para Churrasqueira, Piscina e Salão de Festas.
-              </p>
-
-              <div style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {bookingLoading ? (
-                  <div style={{ textAlign: 'center', padding: '20px', color: textMuted }}>Buscando reservas...</div>
-                ) : bookings.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '30px', color: textMuted, fontSize: '13px' }}>
-                    Nenhuma reserva ativa registrada no condomínio.
-                  </div>
-                ) : (
-                  bookings.map(b => (
-                    <div 
-                      key={b.id} 
-                      style={{ 
-                        padding: '14px 20px', 
-                        background: 'rgba(255,255,255,0.02)', 
-                        border: `1px solid ${borderSubtle}`, 
-                        borderRadius: '16px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '14px', color: '#FFF' }}>{b.areaName}</div>
-                        <div style={{ fontSize: '11px', color: textMuted, marginTop: '4px' }}>
-                          Unidade: <strong>{b.unit ? b.unit.name : 'Morador'}</strong>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--primary)' }}>
-                        {new Date(b.bookingDate).toLocaleDateString('pt-BR')}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* SEÇÃO 1: PAINEL SONOFF DUAL */}
         <div style={{
           background: bgSurface,
@@ -1249,29 +1121,6 @@ export default function PorteiroDashboard() {
               onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.filter = 'none'; }}
             >
               🚗 Portão Garagem
-            </button>
-
-            <button 
-              onClick={() => { setShowBookingsModal(true); fetchBookings(); }} 
-              style={{ 
-                background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', 
-                color: '#FFF', 
-                border: 'none', 
-                padding: '14px 24px', 
-                borderRadius: '12px', 
-                fontSize: '14px', 
-                fontWeight: 800, 
-                cursor: 'pointer', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '8px',
-                boxShadow: '0 4px 12px rgba(139, 92, 246, 0.2)',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.filter = 'brightness(1.1)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.filter = 'none'; }}
-            >
-              📅 Ver Reservas
             </button>
           </div>
         </div>
@@ -1521,15 +1370,15 @@ export default function PorteiroDashboard() {
                             justifyContent: 'center', 
                             gap: '6px', 
                             cursor: 'pointer', 
-                            fontSize: '12px', 
+                            fontSize: '13px', 
                             boxShadow: '0 4px 12px rgba(16,185,129,0.2)' 
                           }}
                         >
-                          <Phone size={13} /> Chamar
+                          <Phone size={14} /> Chamar
                         </button>
                         
                         <button 
-                          onClick={() => { setMsgUnit(msgUnit === unit.id ? null : unit.id); setMsgText(''); setPkgUnit(null); }} 
+                          onClick={() => { setMsgUnit(msgUnit === unit.id ? null : unit.id); setMsgText(''); }} 
                           style={{ 
                             flex: 1, 
                             padding: '12px 14px', 
@@ -1543,32 +1392,10 @@ export default function PorteiroDashboard() {
                             justifyContent: 'center', 
                             gap: '6px', 
                             cursor: 'pointer', 
-                            fontSize: '12px' 
+                            fontSize: '13px' 
                           }}
                         >
-                          {msgUnit === unit.id ? <><X size={12}/>Fechar</> : <><MessageSquare size={13}/>Mensagem</>}
-                        </button>
-
-                        <button 
-                          onClick={() => { setPkgUnit(pkgUnit === unit.id ? null : unit.id); setPkgText(''); setMsgUnit(null); }} 
-                          style={{ 
-                            flex: 1, 
-                            padding: '12px 14px', 
-                            borderRadius: '10px', 
-                            background: pkgUnit === unit.id ? bgSurfaceElevated : 'linear-gradient(135deg,#F59E0B,#D97706)', 
-                            border: 'none', 
-                            color: pkgUnit === unit.id ? textMuted : '#fff', 
-                            fontWeight: 800, 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
-                            gap: '6px', 
-                            cursor: 'pointer', 
-                            fontSize: '12px',
-                            boxShadow: pkgUnit === unit.id ? 'none' : '0 4px 12px rgba(245,158,11,0.2)'
-                          }}
-                        >
-                          {pkgUnit === unit.id ? <><X size={12}/>Fechar</> : <><Package size={13}/>Encomenda</>}
+                          {msgUnit === unit.id ? <><X size={13}/>Fechar</> : <><MessageSquare size={14}/>Mensagem</>}
                         </button>
                       </div>
 
@@ -1616,48 +1443,6 @@ export default function PorteiroDashboard() {
                             }}
                           >
                             {msgSent ? '✓ Enviada' : <><Send size={12}/>Enviar</>}
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Área de Encomenda Inline */}
-                      {pkgUnit === unit.id && (
-                        <div style={{ marginTop: '12px', animation: 'fadeIn 0.2s ease-out' }}>
-                          <input
-                            type="text"
-                            placeholder="Ex: Amazon / Pacote / Correspondência"
-                            value={pkgText}
-                            onChange={e => setPkgText(e.target.value)}
-                            style={{ 
-                              width: '100%', 
-                              padding: '10px 12px', 
-                              borderRadius: '8px', 
-                              border: `1px solid ${borderSubtle}`, 
-                              fontSize: '13px', 
-                              color: textMain,
-                              outline: 'none', 
-                              background: bgDeep,
-                              boxSizing: 'border-box'
-                            }}
-                          />
-                          <button 
-                            onClick={() => logPackage(unit)} 
-                            disabled={!pkgText.trim() || pkgLoading} 
-                            style={{ 
-                              width: '100%', 
-                              marginTop: '6px', 
-                              padding: '10.5px', 
-                              borderRadius: '8px', 
-                              border: 'none', 
-                              background: 'linear-gradient(135deg,#F59E0B,#D97706)', 
-                              color: '#fff', 
-                              fontWeight: 800, 
-                              fontSize: '12.5px', 
-                              cursor: pkgText.trim() ? 'pointer' : 'default', 
-                              opacity: pkgText.trim() ? 1 : 0.6 
-                            }}
-                          >
-                            {pkgLoading ? 'Registrando...' : 'Confirmar Encomenda'}
                           </button>
                         </div>
                       )}
