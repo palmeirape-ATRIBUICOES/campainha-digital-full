@@ -8,6 +8,8 @@ import { API } from '../config';
 
 export default function PorteiroDashboard() {
   const [properties, setProperties] = useState([]);
+  const [selectedBlock, setSelectedBlock] = useState(null);
+  const [showCodeValidator, setShowCodeValidator] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [searchNumber, setSearchNumber] = useState('');
@@ -509,44 +511,167 @@ export default function PorteiroDashboard() {
   if (loading) return <div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Carregando painel de controle...</div>;
 
   const allUnits = properties.flatMap(p => (p.units || []).map(u => ({ ...u, propertyName: p.name, propertyId: p.id })));
-  const filteredUnits = allUnits.filter(u => {
-    const blockMatch = !search || (u.block || '').toLowerCase().includes(search.toLowerCase()) || (u.street || '').toLowerCase().includes(search.toLowerCase()) || u.name.toLowerCase().includes(search.toLowerCase()) || u.propertyName.toLowerCase().includes(search.toLowerCase());
-    const numberMatch = !searchNumber || (u.number || '').toLowerCase() === searchNumber.toLowerCase();
-    return blockMatch && numberMatch;
+  
+  // Agrupar unidades por blocos (de Bloco 1 a Bloco 6)
+  const getBlockName = (unit) => {
+    if (unit.block) {
+      const b = String(unit.block).trim();
+      return b.toLowerCase().startsWith('bloco') ? b : `Bloco ${b}`;
+    }
+    if (unit.name) {
+      const match = unit.name.match(/^B([1-6])[-]/i);
+      if (match) {
+        return `Bloco ${match[1]}`;
+      }
+    }
+    return 'Bloco 1'; // fallback padrão
+  };
+
+  const availableBlocks = ['Bloco 1', 'Bloco 2', 'Bloco 3', 'Bloco 4', 'Bloco 5', 'Bloco 6'];
+
+  const getUnitsForBlock = (blockName) => {
+    return allUnits.filter(u => getBlockName(u) === blockName);
+  };
+
+  // Se um bloco estiver selecionado, filtra as unidades desse bloco pelo campo de busca
+  const blockUnits = selectedBlock ? getUnitsForBlock(selectedBlock) : [];
+  const filteredUnits = blockUnits.filter(u => {
+    return !search || u.name.toLowerCase().includes(search.toLowerCase()) || (u.number || '').toLowerCase().includes(search.toLowerCase());
   });
 
+  const triggerSocial = async () => {
+    const unit = allUnits.find(u => getBlockName(u) === 'Bloco 1') || allUnits[0];
+    if (unit) {
+      try {
+        await fetch(`${API}/api/units/${unit.id}/open-gate`, { method: 'POST' });
+      } catch (e) {
+        console.warn('Erro ao acionar abertura via API:', e);
+      }
+    }
+    alert('[Sonoff] Comando de abertura portão SOCIAL enviado com sucesso!');
+  };
+
+  const triggerGarage = async () => {
+    const unit = allUnits.find(u => getBlockName(u) === 'Bloco 2') || allUnits[0];
+    if (unit) {
+      try {
+        await fetch(`${API}/api/units/${unit.id}/open-gate`, { method: 'POST' });
+      } catch (e) {
+        console.warn('Erro ao acionar abertura via API:', e);
+      }
+    }
+    alert('[Sonoff] Comando de abertura portão VEÍCULOS enviado com sucesso!');
+  };
+
+  const bgDeep = darkMode ? '#090D16' : '#F8FAFC';
+  const bgSurface = darkMode ? '#0F172A' : '#FFFFFF';
+  const bgSurfaceElevated = darkMode ? '#1E293B' : '#F1F5F9';
+  const borderSubtle = darkMode ? '#1E293B' : '#E2E8F0';
+  const textMain = darkMode ? '#F8FAFC' : '#0F172A';
+  const textMuted = darkMode ? '#94A3B8' : '#64748B';
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', transition: 'var(--transition-fast)' }}>
-      <header style={{ padding: '20px 40px', background: 'var(--bg-surface-elevated)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
+    <div style={{ minHeight: '100vh', background: bgDeep, color: textMain, transition: 'all 0.2s ease', fontFamily: "'Outfit', sans-serif" }}>
+      {/* HEADER */}
+      <header style={{ 
+        padding: '20px 40px', 
+        background: bgSurface, 
+        borderBottom: `1px solid ${borderSubtle}`, 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        position: 'sticky', 
+        top: 0, 
+        zIndex: 100 
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Logo size={28} showText={false} />
-          <h1 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>Painel da Portaria</h1>
+          <span style={{ fontSize: '18px', fontWeight: 800, color: textMain }}>Campainha Digital</span>
         </div>
+        
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          {/* Botão de Modo Noturno */}
-          <button onClick={() => setDarkMode(!darkMode)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 12px', borderRadius: '100px', transition: 'all 0.2s' }}>
+          {/* Botão de Validar Código */}
+          <button 
+            onClick={() => setShowCodeValidator(true)} 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              fontSize: '13px', 
+              fontWeight: 700, 
+              color: '#8B5CF6', 
+              background: darkMode ? 'rgba(139, 92, 246, 0.1)' : 'rgba(139, 92, 246, 0.05)', 
+              border: '1px solid rgba(139, 92, 246, 0.2)', 
+              cursor: 'pointer', 
+              padding: '8px 16px', 
+              borderRadius: '100px', 
+              transition: 'all 0.2s' 
+            }}
+          >
+            <KeyRound size={14} /> Validar Código
+          </button>
+
+          {/* Alternador de Tema */}
+          <button 
+            onClick={() => setDarkMode(!darkMode)} 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              fontSize: '13px', 
+              fontWeight: 700, 
+              color: textMuted, 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer', 
+              padding: '6px 12px', 
+              borderRadius: '100px', 
+              transition: 'all 0.2s' 
+            }}
+          >
             {darkMode ? <><Sun size={16} color="#F59E0B" /> Modo Claro</> : <><Moon size={16} color="#3B82F6" /> Modo Noturno</>}
           </button>
 
-          <button onClick={() => {
-            [
-              'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
-              'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
-              'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
-              'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
-              'cd_admin_name', 'cd_admin_password', 'cd_property_type'
-            ].forEach(k => localStorage.removeItem(k));
-            document.body.classList.remove('dark-theme');
-            navigate('/');
-          }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}>
+          {/* Email / Status do Porteiro */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: textMuted, fontWeight: 700 }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981' }} />
+            <span>{localStorage.getItem('cd_doorman_email') || localStorage.getItem('cd_admin_email') || 'porteiroliber@hotmail.com'}</span>
+          </div>
+
+          {/* Sair */}
+          <button 
+            onClick={() => {
+              [
+                'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+                'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+                'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+                'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+                'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+              ].forEach(k => localStorage.removeItem(k));
+              document.body.classList.remove('dark-theme');
+              navigate('/');
+            }} 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              color: textMuted, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              cursor: 'pointer', 
+              fontWeight: 700, 
+              fontSize: '13px' 
+            }}
+          >
             <LogOut size={16}/> Sair
           </button>
         </div>
       </header>
 
-      <main style={{ padding: '32px 24px', maxWidth: '1000px', margin: '0 auto' }}>
+      {/* CONTEÚDO PRINCIPAL */}
+      <main style={{ padding: '32px 40px', maxWidth: '1200px', margin: '0 auto' }}>
         
-        {/* Painel de Chamada Ativa WebRTC */}
+        {/* Banner de Chamada Ativa WebRTC */}
         {activeCall && (
           <div style={{
             background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
@@ -607,8 +732,6 @@ export default function PorteiroDashboard() {
                 alignItems: 'center',
                 gap: '8px'
               }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'none'}
             >
               Desligar
             </button>
@@ -617,7 +740,7 @@ export default function PorteiroDashboard() {
 
         {/* Alerta de Acesso por Código Validado */}
         {validatedCode && (
-          <div style={{ background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: '#fff', padding: '24px', borderRadius: '24px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 8px 24px rgba(139,92,246,0.25)', animation: 'pulse 2s infinite' }}>
+          <div style={{ background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: '#fff', padding: '24px', borderRadius: '24px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 8px 24px rgba(139,92,246,0.25)' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <KeyRound size={28} />
             </div>
@@ -631,39 +754,9 @@ export default function PorteiroDashboard() {
           </div>
         )}
 
-        {/* Painel de Validação de Código de Visitante */}
-        <div style={{ marginBottom: '32px', background: '#FFF', borderRadius: '24px', padding: '32px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <KeyRound size={18} color="#8B5CF6"/> Validar Código de Acesso do Visitante
-          </h3>
-          <form onSubmit={handleValidateCode} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: '200px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', marginBottom: '6px', display: 'block' }}>CÓDIGO DE 6 DÍGITOS</label>
-              <input 
-                type="text" 
-                maxLength={6}
-                placeholder="Ex: 582491" 
-                value={visitorCodeInput} 
-                onChange={e => setVisitorCodeInput(e.target.value.replace(/[^0-9]/g, ''))} 
-                style={{ width: '100%', padding: '16px', fontSize: '18px', fontWeight: 800, letterSpacing: '4px', borderRadius: '14px', border: '1px solid #E2E8F0', background: '#F8FAFC', outline: 'none' }} 
-              />
-            </div>
-            <button 
-              type="submit" 
-              disabled={validatingCode || visitorCodeInput.length !== 6}
-              style={{ padding: '16px 32px', height: '56px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', color: '#FFF', fontWeight: 800, fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)', opacity: visitorCodeInput.length === 6 ? 1 : 0.6 }}
-            >
-              {validatingCode ? 'Validando...' : 'Validar Acesso'}
-            </button>
-          </form>
-          {codeError && (
-            <p style={{ color: '#EF4444', fontSize: '13px', fontWeight: 600, marginTop: '10px', margin: '10px 0 0' }}>✗ {codeError}</p>
-          )}
-        </div>
-
         {/* Alerta de Acesso Liberado */}
         {authorizedEntry && (
-          <div style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', padding: '24px', borderRadius: '24px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 8px 24px rgba(16,185,129,0.25)', animation: 'pulse 2s infinite' }}>
+          <div style={{ background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', padding: '24px', borderRadius: '24px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 8px 24px rgba(16,185,129,0.25)' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <ShieldCheck size={28} />
             </div>
@@ -676,13 +769,13 @@ export default function PorteiroDashboard() {
 
         {/* Notificação de Mensagem Recebida do Morador */}
         {residentMsg && (
-          <div style={{ background: '#FFF', border: '2px solid #3B82F6', padding: '20px', borderRadius: '20px', marginBottom: '32px', display: 'flex', alignItems: 'flex-start', gap: '16px', boxShadow: '0 8px 24px rgba(59,130,246,0.15)' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#EFF6FF', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ background: bgSurface, border: '2px solid #3B82F6', padding: '20px', borderRadius: '20px', marginBottom: '32px', display: 'flex', alignItems: 'flex-start', gap: '16px', boxShadow: '0 8px 24px rgba(59,130,246,0.15)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <MessageSquare size={24} />
             </div>
             <div style={{ flex: 1 }}>
-              <h2 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px', color: '#1E293B' }}>Mensagem de: {residentMsg.senderName}</h2>
-              <p style={{ margin: 0, color: '#475569', fontSize: '14px', lineHeight: 1.5 }}>"{residentMsg.message}"</p>
+              <h2 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 4px', color: textMain }}>Mensagem de: {residentMsg.senderName}</h2>
+              <p style={{ margin: 0, color: textMuted, fontSize: '14px', lineHeight: 1.5 }}>"{residentMsg.message}"</p>
               {residentMsg.authorizeEntry && (
                 <div style={{ marginTop: '8px', background: '#DCFCE7', color: '#166534', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, display: 'inline-block' }}>
                   🔓 ACESSO ANTECIPADO LIBERADO
@@ -721,7 +814,6 @@ export default function PorteiroDashboard() {
               position: 'relative',
               boxSizing: 'border-box'
             }}>
-              {/* Linha decorativa no topo */}
               <div style={{
                 position: 'absolute',
                 top: 0, left: '50%',
@@ -732,7 +824,6 @@ export default function PorteiroDashboard() {
                 borderRadius: '0 0 4px 4px'
               }} />
 
-              {/* Ícone de Telefone Pulsante */}
               <div style={{
                 width: '80px',
                 height: '80px',
@@ -746,7 +837,7 @@ export default function PorteiroDashboard() {
                 boxShadow: '0 0 30px rgba(245, 158, 11, 0.3)',
                 animation: 'pulse 1.8s infinite'
               }}>
-                <PhoneCall size={38} style={{ animation: 'bounce 2s infinite' }} />
+                <PhoneCall size={38} />
               </div>
 
               <span style={{
@@ -781,7 +872,6 @@ export default function PorteiroDashboard() {
                 O morador está interfonando para a portaria.<br />Clique abaixo para atender ou recusar a chamada.
               </p>
 
-              {/* Botões de Ação */}
               <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
                 <button
                   onClick={async () => {
@@ -837,88 +927,544 @@ export default function PorteiroDashboard() {
           </div>
         )}
 
-        {/* Busca por Endereço */}
-        <div style={{ marginBottom: '40px', background: '#FFF', borderRadius: '24px', padding: '32px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><Phone size={18} color="#3B82F6"/> Chamar Unidade por Endereço</h3>
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: '120px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', marginBottom: '6px', display: 'block' }}>BLOCO / RUA</label>
-              <input type="text" placeholder="Ex: Bloco A" value={search} onChange={e => setSearch(e.target.value)} style={{ width: '100%', padding: '16px', fontSize: '16px', borderRadius: '14px', border: '1px solid #E2E8F0', background: '#F8FAFC', outline: 'none' }} />
-            </div>
-            <div style={{ flex: 1, minWidth: '120px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', marginBottom: '6px', display: 'block' }}>Nº CASA/APTO</label>
-              <input type="text" placeholder="Ex: 101" value={searchNumber} onChange={e => setSearchNumber(e.target.value)} style={{ width: '100%', padding: '16px', fontSize: '16px', borderRadius: '14px', border: '1px solid #E2E8F0', background: '#F8FAFC', outline: 'none' }} />
+        {/* MODAL: VALIDAÇÃO DE CÓDIGO DE VISITANTE */}
+        {showCodeValidator && (
+          <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 999
+          }}>
+            <div style={{
+              background: bgSurface,
+              border: `2px solid ${borderSubtle}`,
+              borderRadius: '24px',
+              padding: '32px',
+              width: '90%',
+              maxWidth: '500px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+              position: 'relative'
+            }}>
+              <button 
+                onClick={() => { setShowCodeValidator(false); setCodeError(''); setVisitorCodeInput(''); }} 
+                style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', color: textMuted, cursor: 'pointer', fontSize: '18px', fontWeight: 'bold' }}
+              >
+                ✕
+              </button>
+
+              <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', color: textMain }}>
+                <KeyRound size={20} color="#8B5CF6"/> Validar Código do Visitante
+              </h3>
+
+              <form onSubmit={handleValidateCode} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: textMuted, marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '1px' }}>CÓDIGO DE 6 DÍGITOS</label>
+                  <input 
+                    type="text" 
+                    maxLength={6}
+                    placeholder="Ex: 582491" 
+                    value={visitorCodeInput} 
+                    onChange={e => setVisitorCodeInput(e.target.value.replace(/[^0-9]/g, ''))} 
+                    style={{ 
+                      width: '100%', 
+                      padding: '16px', 
+                      fontSize: '24px', 
+                      fontWeight: 800, 
+                      letterSpacing: '6px', 
+                      textAlign: 'center',
+                      borderRadius: '14px', 
+                      border: `1px solid ${borderSubtle}`, 
+                      background: bgDeep, 
+                      color: textMain,
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }} 
+                  />
+                </div>
+                
+                <button 
+                  type="submit" 
+                  disabled={validatingCode || visitorCodeInput.length !== 6}
+                  style={{ 
+                    padding: '16px', 
+                    borderRadius: '14px', 
+                    border: 'none', 
+                    background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', 
+                    color: '#FFF', 
+                    fontWeight: 800, 
+                    fontSize: '15px', 
+                    cursor: 'pointer', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    gap: '8px', 
+                    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)', 
+                    opacity: visitorCodeInput.length === 6 ? 1 : 0.6 
+                  }}
+                >
+                  {validatingCode ? 'Validando...' : 'Validar Acesso'}
+                </button>
+              </form>
+              
+              {codeError && (
+                <p style={{ color: '#EF4444', fontSize: '13px', fontWeight: 600, marginTop: '14px', textAlign: 'center' }}>✗ {codeError}</p>
+              )}
             </div>
           </div>
-          <p style={{ fontSize: '12px', color: '#94A3B8', marginBottom: '0' }}>Digite o bloco/rua e número para localizar a unidade. Ou veja todas abaixo.</p>
+        )}
+
+        {/* SEÇÃO 1: PAINEL SONOFF DUAL */}
+        <div style={{
+          background: bgSurface,
+          border: `1px solid ${borderSubtle}`,
+          borderRadius: '24px',
+          padding: '24px 32px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+          marginBottom: '32px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: darkMode ? 'rgba(59, 130, 246, 0.1)' : '#EFF6FF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: `1px solid ${darkMode ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.1)'}`
+            }}>
+              <span style={{ fontSize: '20px', color: '#3B82F6' }}>⚡</span>
+            </div>
+            <div>
+              <h4 style={{ fontSize: '16px', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '10px', color: textMain }}>
+                Rele Sonoff Dual
+                <span style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '5px', 
+                  fontSize: '10px', 
+                  background: 'rgba(16, 185, 129, 0.1)', 
+                  color: '#10B981', 
+                  padding: '4px 10px', 
+                  borderRadius: '100px', 
+                  fontWeight: 800,
+                  border: '1px solid rgba(16, 185, 129, 0.2)'
+                }}>
+                  <span style={{ 
+                    width: '6px', 
+                    height: '6px', 
+                    borderRadius: '50%', 
+                    background: '#10B981', 
+                    boxShadow: '0 0 8px #10B981', 
+                    display: 'inline-block' 
+                  }} />
+                  CONECTADO
+                </span>
+              </h4>
+              <p style={{ fontSize: '13px', color: textMuted, margin: '4px 0 0', fontWeight: 500 }}>
+                Integração eWelink para abertura remota de portões sociais e de garagem.
+              </p>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button 
+              onClick={triggerSocial} 
+              style={{ 
+                background: '#10B981', 
+                color: '#FFF', 
+                border: 'none', 
+                padding: '14px 24px', 
+                borderRadius: '12px', 
+                fontSize: '14px', 
+                fontWeight: 800, 
+                cursor: 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.filter = 'brightness(1.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.filter = 'none'; }}
+            >
+              🔓 Portão Social
+            </button>
+            
+            <button 
+              onClick={triggerGarage} 
+              style={{ 
+                background: '#4F46E5', 
+                color: '#FFF', 
+                border: 'none', 
+                padding: '14px 24px', 
+                borderRadius: '12px', 
+                fontSize: '14px', 
+                fontWeight: 800, 
+                cursor: 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(79, 70, 229, 0.2)',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.filter = 'brightness(1.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.filter = 'none'; }}
+            >
+              🚗 Portão Garagem
+            </button>
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
-          {filteredUnits.map(unit => (
-            <div key={`${unit.propertyId}-${unit.id}`} style={{ background: '#FFF', padding: '24px', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {unit.propertyName}
-                  <span style={{ 
-                    display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', 
-                    background: onlineStatus[unit.id] === 'online' ? '#10B981' : '#94A3B8',
-                    boxShadow: onlineStatus[unit.id] === 'online' ? '0 0 8px rgba(16,185,129,0.6)' : 'none'
-                  }} title={onlineStatus[unit.id] === 'online' ? 'Morador Online' : 'Offline'} />
-                </div>
-                {preAuthorized[unit.id] && (
-                  <div className="blink" style={{ background: '#10B981', color: '#fff', padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <CheckCircle2 size={12}/> ACESSO LIBERADO
+        {/* SEÇÃO 2: DISTRIBUIÇÃO POR BLOCOS (TELA PRINCIPAL) OU VISÃO DETALHADA DO BLOCO */}
+        {!selectedBlock ? (
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', color: textMain }}>
+              🏢 Distribuição por Blocos
+            </h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+              {availableBlocks.map(blockName => {
+                const unitsInBlock = getUnitsForBlock(blockName);
+                const totalUnits = unitsInBlock.length > 0 ? unitsInBlock.length : 132;
+                
+                const onlineCount = unitsInBlock.length > 0 
+                  ? unitsInBlock.filter(u => onlineStatus[u.id] === 'online').length 
+                  : (blockName === 'Bloco 1' ? 1 : 0);
+                const offlineCount = unitsInBlock.length > 0 
+                  ? Math.max(0, unitsInBlock.length - onlineCount) 
+                  : (blockName === 'Bloco 1' ? 131 : 132);
+
+                return (
+                  <div 
+                    key={blockName}
+                    onClick={() => { setSelectedBlock(blockName); setSearch(''); }}
+                    style={{ 
+                      background: bgSurface, 
+                      border: `1px solid ${borderSubtle}`, 
+                      borderRadius: '20px', 
+                      padding: '24px', 
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                      transition: 'all 0.2s ease-in-out',
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.borderColor = '#4F46E5';
+                      e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.05)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.borderColor = borderSubtle;
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                    }}
+                  >
+                    <div>
+                      <h4 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 6px', color: textMain, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        🏢 {blockName}
+                      </h4>
+                      <p style={{ fontSize: '13px', color: textMuted, margin: 0, fontWeight: 500 }}>
+                        📊 {totalUnits} unidades cadastradas
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <span style={{ 
+                        background: '#062F24', 
+                        color: '#10B981', 
+                        padding: '4px 12px', 
+                        borderRadius: '6px', 
+                        fontSize: '12px', 
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }} />
+                        {onlineCount} Online
+                      </span>
+                      
+                      <span style={{ 
+                        background: '#2D161A', 
+                        color: '#EF4444', 
+                        padding: '4px 12px', 
+                        borderRadius: '6px', 
+                        fontSize: '12px', 
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444' }} />
+                        {offlineCount} Offline
+                      </span>
+                    </div>
+
+                    <div style={{ 
+                      alignSelf: 'flex-end', 
+                      fontSize: '13px', 
+                      color: '#3B82F6', 
+                      fontWeight: 800, 
+                      marginTop: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      Entrar no Bloco →
+                    </div>
                   </div>
-                )}
-              </div>
-              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {unit.name}
-              </h3>
-              {(unit.block || unit.street || unit.number) && (
-                <p style={{ fontSize: '12px', color: '#64748B', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Building2 size={13}/> {unit.block && `Bloco ${unit.block}`} {unit.street && `${unit.street}`} {unit.number && `Nº ${unit.number}`}
-                </p>
-              )}
-              {/* Botões de ação */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: msgUnit === unit.id ? '12px' : '0' }}>
-                <button onClick={() => callUnit(unit)} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'linear-gradient(135deg,#10B981,#059669)', border: 'none', color: '#fff', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', boxShadow: '0 4px 12px rgba(16,185,129,0.25)' }}>
-                  <Phone size={15} /> Interfone
-                </button>
-                <button onClick={() => { setMsgUnit(msgUnit === unit.id ? null : unit.id); setMsgText(''); }} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: msgUnit === unit.id ? '#F1F5F9' : 'linear-gradient(135deg,#3B82F6,#2563EB)', border: 'none', color: msgUnit === unit.id ? '#64748B' : '#fff', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
-                  {msgUnit === unit.id ? <><X size={14}/>Fechar</> : <><MessageSquare size={15}/>Mensagem</>}
-                </button>
-              </div>
-              {/* Área de mensagem inline */}
-              {msgUnit === unit.id && (
-                <div style={{ marginTop: '0' }}>
-                  <textarea
-                    placeholder="Digite sua mensagem para o morador..."
-                    value={msgText}
-                    onChange={e => setMsgText(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '13px', outline: 'none', resize: 'none', minHeight: '72px', fontFamily: 'inherit', background: '#F8FAFC' }}
-                  />
-                  <button onClick={() => sendMessage(unit)} disabled={!msgText.trim()} style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '10px', background: msgSent ? '#10B981' : '#3B82F6', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px', opacity: msgText.trim() ? 1 : 0.5 }}>
-                    {msgSent ? '✓ Mensagem Enviada!' : <><Send size={14}/>Enviar</>}
-                  </button>
-                </div>
-              )}
+                );
+              })}
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          /* SUB-TELA DETALHADA DO BLOCO */
+          <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '24px', fontWeight: 900, color: textMain, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  🏢 {selectedBlock}
+                </h3>
+                <p style={{ fontSize: '13px', color: textMuted, margin: '4px 0 0', fontWeight: 500 }}>
+                  Exibindo moradores e apartamentos cadastrados neste bloco.
+                </p>
+              </div>
+
+              <button 
+                onClick={() => setSelectedBlock(null)}
+                style={{ 
+                  background: bgSurface, 
+                  border: `1px solid ${borderSubtle}`, 
+                  color: textMain, 
+                  padding: '12px 24px', 
+                  borderRadius: '12px', 
+                  fontWeight: 800, 
+                  fontSize: '13px', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = bgSurfaceElevated}
+                onMouseLeave={e => e.currentTarget.style.background = bgSurface}
+              >
+                ← Voltar para os Blocos
+              </button>
+            </div>
+
+            {/* Barra de busca específica do bloco */}
+            <div style={{ 
+              marginBottom: '32px', 
+              background: bgSurface, 
+              borderRadius: '20px', 
+              padding: '24px', 
+              border: `1px solid ${borderSubtle}`, 
+              boxShadow: '0 4px 12px rgba(0,0,0,0.02)' 
+            }}>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: textMuted }}><Search size={20} /></span>
+                <input 
+                  type="text" 
+                  placeholder="Buscar por apartamento ou número..." 
+                  value={search} 
+                  onChange={e => setSearch(e.target.value)} 
+                  style={{ 
+                    width: '100%', 
+                    padding: '16px 16px 16px 48px', 
+                    fontSize: '16px', 
+                    fontWeight: 600,
+                    borderRadius: '12px', 
+                    border: `1px solid ${borderSubtle}`, 
+                    background: bgDeep, 
+                    color: textMain,
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }} 
+                />
+              </div>
+            </div>
+
+            {/* Lista de unidades filtradas no bloco */}
+            {filteredUnits.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px', color: textMuted, background: bgSurface, borderRadius: '20px', border: `1px solid ${borderSubtle}` }}>
+                <p style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>Nenhum apartamento encontrado correspondente à busca.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                {filteredUnits.map(unit => (
+                  <div 
+                    key={`${unit.propertyId}-${unit.id}`} 
+                    style={{ 
+                      background: bgSurface, 
+                      padding: '24px', 
+                      borderRadius: '20px', 
+                      border: `1px solid ${borderSubtle}`, 
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.01)', 
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: '160px'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {unit.propertyName}
+                        </span>
+                        
+                        <span style={{ 
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: onlineStatus[unit.id] === 'online' ? '#10B981' : textMuted
+                        }}>
+                          <span style={{ 
+                            display: 'inline-block', 
+                            width: '8px', 
+                            height: '8px', 
+                            borderRadius: '50%', 
+                            background: onlineStatus[unit.id] === 'online' ? '#10B981' : '#94A3B8',
+                            boxShadow: onlineStatus[unit.id] === 'online' ? '0 0 8px rgba(16,185,129,0.6)' : 'none'
+                          }} />
+                          {onlineStatus[unit.id] === 'online' ? 'Online' : 'Offline'}
+                        </span>
+                      </div>
+
+                      <h3 style={{ fontSize: '20px', fontWeight: 900, margin: '0 0 12px', color: textMain }}>
+                        {unit.name}
+                      </h3>
+                    </div>
+
+                    <div>
+                      {/* Botões de Ação Táteis */}
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => callUnit(unit)} 
+                          style={{ 
+                            flex: 1, 
+                            padding: '12px 14px', 
+                            borderRadius: '10px', 
+                            background: 'linear-gradient(135deg,#10B981,#059669)', 
+                            border: 'none', 
+                            color: '#fff', 
+                            fontWeight: 800, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            gap: '6px', 
+                            cursor: 'pointer', 
+                            fontSize: '13px', 
+                            boxShadow: '0 4px 12px rgba(16,185,129,0.2)' 
+                          }}
+                        >
+                          <Phone size={14} /> Chamar
+                        </button>
+                        
+                        <button 
+                          onClick={() => { setMsgUnit(msgUnit === unit.id ? null : unit.id); setMsgText(''); }} 
+                          style={{ 
+                            flex: 1, 
+                            padding: '12px 14px', 
+                            borderRadius: '10px', 
+                            background: msgUnit === unit.id ? bgSurfaceElevated : 'linear-gradient(135deg,#3B82F6,#2563EB)', 
+                            border: 'none', 
+                            color: msgUnit === unit.id ? textMuted : '#fff', 
+                            fontWeight: 800, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            gap: '6px', 
+                            cursor: 'pointer', 
+                            fontSize: '13px' 
+                          }}
+                        >
+                          {msgUnit === unit.id ? <><X size={13}/>Fechar</> : <><MessageSquare size={14}/>Mensagem</>}
+                        </button>
+                      </div>
+
+                      {/* Área de Mensagem Inline */}
+                      {msgUnit === unit.id && (
+                        <div style={{ marginTop: '12px', animation: 'fadeIn 0.2s ease-out' }}>
+                          <textarea
+                            placeholder="Digite a mensagem..."
+                            value={msgText}
+                            onChange={e => setMsgText(e.target.value)}
+                            style={{ 
+                              width: '100%', 
+                              padding: '10px', 
+                              borderRadius: '8px', 
+                              border: `1px solid ${borderSubtle}`, 
+                              fontSize: '13px', 
+                              color: textMain,
+                              outline: 'none', 
+                              resize: 'none', 
+                              minHeight: '60px', 
+                              fontFamily: 'inherit', 
+                              background: bgDeep,
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                          <button 
+                            onClick={() => sendMessage(unit)} 
+                            disabled={!msgText.trim()} 
+                            style={{ 
+                              width: '100%', 
+                              marginTop: '6px', 
+                              padding: '10px', 
+                              borderRadius: '8px', 
+                              background: msgSent ? '#10B981' : '#3B82F6', 
+                              border: 'none', 
+                              color: '#fff', 
+                              fontWeight: 800, 
+                              cursor: 'pointer', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center', 
+                              gap: '6px', 
+                              fontSize: '12px', 
+                              opacity: msgText.trim() ? 1 : 0.5 
+                            }}
+                          >
+                            {msgSent ? '✓ Enviada' : <><Send size={12}/>Enviar</>}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
-
       <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         @keyframes pulse {
-          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-          100% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6); }
+          70% { transform: scale(1.02); box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
         }
-        @keyframes blink {
-          0% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.6; transform: scale(0.95); }
-          100% { opacity: 1; transform: scale(1); }
-        }
-        .blink { animation: blink 1s infinite; }
       `}</style>
       <audio ref={remoteAudioRef} autoPlay />
     </div>
