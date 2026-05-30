@@ -215,9 +215,14 @@ export default function ResidentDashboard() {
         session.on('peerconnection', (event) => {
           const pc = event.peerconnection;
           pc.addEventListener('track', (e) => {
+            console.log('[VoIP] Remote track received:', e.track.kind);
             if (localAudioElementRef.current && e.track.kind === 'audio') {
-              const stream = new MediaStream([e.track]);
-              localAudioElementRef.current.srcObject = stream;
+              let remoteStream = e.streams && e.streams[0];
+              if (!remoteStream) {
+                console.log('[VoIP] e.streams[0] is null/empty. Constructing new MediaStream from track.');
+                remoteStream = new MediaStream([e.track]);
+              }
+              localAudioElementRef.current.srcObject = remoteStream;
               localAudioElementRef.current.play().catch(err => {
                 console.error('[VoIP] Erro ao reproduzir áudio remoto:', err);
               });
@@ -2811,7 +2816,7 @@ export default function ResidentDashboard() {
       <NavBar />
 
       {/* VoIP Elements */}
-      <audio ref={localAudioElementRef} autoPlay />
+      <audio ref={localAudioElementRef} autoPlay playsInline style={{ display: 'none' }} />
 
       {voipStatus !== 'idle' && (
         <div style={{
