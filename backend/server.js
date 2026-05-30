@@ -3977,7 +3977,9 @@ io.on('connection', (socket) => {
         const now = new Date();
         const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
-        let shouldRing = resident.doorbellEnabled !== false;
+        const isDoorman = isDoormanCall || callerName === 'Portaria';
+        let shouldRing = isDoorman || resident.doorbellEnabled !== false;
+        
         if (resident.quietModeStart && resident.quietModeEnd) {
           if (resident.quietModeStart < resident.quietModeEnd) {
             if (currentTime >= resident.quietModeStart && currentTime <= resident.quietModeEnd) shouldRing = false;
@@ -3991,9 +3993,12 @@ io.on('connection', (socket) => {
           continue;
         }
 
+        const pushTitle = isDoorman ? '📞 Chamada da Portaria!' : '🔔 Alguém na sua porta!';
+        const pushBody = isDoorman ? 'A portaria está interfonando. Toque para atender.' : `${callerName || 'Visitante'} está chamando. Toque para atender.`;
+
         await sendPushToUser(resident.id, {
-          title: '🔔 Alguém na sua porta!',
-          body: `${callerName || 'Visitante'} está chamando. Toque para atender.`,
+          title: pushTitle,
+          body: pushBody,
           icon: `${baseUrl}/logo.png`,
           badge: `${baseUrl}/badge.png`,
           tag: 'incoming-call',

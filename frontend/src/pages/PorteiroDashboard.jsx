@@ -35,18 +35,16 @@ export default function PorteiroDashboard() {
 
   useEffect(() => {
     let timer = null;
-    if (activeCall && activeCall.status === 'talking') {
-      setCallDuration(0);
+    setCallDuration(0);
+    if (activeCall && (activeCall.status === 'talking' || activeCall.status === 'calling')) {
       timer = setInterval(() => {
         setCallDuration(prev => prev + 1);
       }, 1000);
-    } else {
-      setCallDuration(0);
     }
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [activeCall]);
+  }, [activeCall && activeCall.status]);
 
   const fmtDuration = (secs) => {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -548,7 +546,9 @@ export default function PorteiroDashboard() {
                   {activeCall.callerName}
                 </h3>
                 <p style={{ fontSize: '13px', margin: 0, color: '#CBD5E1', fontWeight: 600 }}>
-                  {activeCall.status === 'calling' ? '🔔 Campainha tocando no celular do morador...' : `🎙️ Comunicação de voz ativa — ${fmtDuration(callDuration)}`}
+                  {activeCall.status === 'calling' 
+                    ? `🔔 Chamando morador... (${fmtDuration(callDuration)})` 
+                    : `🎙️ Comunicação de voz ativa — ${fmtDuration(callDuration)}`}
                 </p>
               </div>
             </div>
