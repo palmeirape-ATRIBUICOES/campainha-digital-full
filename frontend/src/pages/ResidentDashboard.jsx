@@ -184,11 +184,13 @@ export default function ResidentDashboard() {
     try {
       console.log('[VoIP] Inicializando JsSIP UA no ramal:', creds.ramal_webrtc);
       const socket = new JsSIP.WebSocketInterface(`wss://${creds.dominio_pbx}:8089/ws`);
+      const pcConfig = voipIceConfigRef.current || { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
       const configuration = {
         sockets: [socket],
         uri: `sip:${creds.ramal_webrtc}@${creds.dominio_pbx}`,
         password: creds.senha_sip,
-        display_name: creds.name || 'Morador'
+        display_name: creds.name || 'Morador',
+        pcConfig: pcConfig
       };
 
       const ua = new JsSIP.UA(configuration);
@@ -2831,7 +2833,19 @@ export default function ResidentDashboard() {
       <NavBar />
 
       {/* VoIP Elements */}
-      <audio ref={localAudioElementRef} autoPlay playsInline style={{ display: 'none' }} />
+      <audio 
+        ref={localAudioElementRef} 
+        autoPlay 
+        playsInline 
+        style={{
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          opacity: 0,
+          pointerEvents: 'none',
+          overflow: 'hidden'
+        }} 
+      />
 
       {voipStatus !== 'idle' && (
         <div style={{
