@@ -1,31 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 :root {
   --bg-deep: #F8FAFC;
   --bg-surface: #FFFFFF;
   --bg-surface-elevated: #FFFFFF;
   --primary: #3B82F6;
-  --primary-glow: rgba(59, 130, 246, 0.2);
+  --primary-glow: rgba(59, 130, 246, 0.15);
   --text-main: #0F172A;
   --text-muted: #64748B;
   --border-subtle: #E2E8F0;
   --border-highlight: #CBD5E1;
   
-  --transition-smooth: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-fast: all 0.3s ease;
+  --transition-smooth: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: all 0.25s ease;
+  --font-title: 'Outfit', sans-serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Modo Noturno (Dark Mode) - Suporte a classe .dark-theme ou atributo data-theme */
+/* Modo Noturno (Dark Mode) de Luxo */
 body.dark-theme, :root[data-theme="dark"] {
-  --bg-deep: #0F172A;
-  --bg-surface: #1E293B;
-  --bg-surface-elevated: #334155;
-  --primary: #3B82F6;
-  --primary-glow: rgba(59, 130, 246, 0.35);
+  --bg-deep: #060913;
+  --bg-surface: rgba(15, 23, 42, 0.55);
+  --bg-surface-elevated: rgba(30, 41, 59, 0.7);
+  --primary: #00F2FE;
+  --primary-glow: rgba(0, 242, 254, 0.25);
   --text-main: #F8FAFC;
   --text-muted: #94A3B8;
-  --border-subtle: #334155;
-  --border-highlight: #475569;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-highlight: rgba(255, 255, 255, 0.15);
 }
 
 * {
@@ -35,7 +37,7 @@ body.dark-theme, :root[data-theme="dark"] {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-body);
   background-color: var(--bg-deep);
   color: var(--text-main);
   line-height: 1.5;
@@ -502,3 +504,131 @@ body {
   animation: neon-pulse-yellow 1.6s infinite ease-in-out;
   border: 2px solid #F59E0B !important;
 }
+
+/* ── SISTEMA DE DESIGN PREMIUM LUXURY ── */
+
+.lux-bg-glow {
+  position: fixed;
+  top: -10%; left: -10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.12) 0%, rgba(6, 9, 19, 0) 70%);
+  filter: blur(100px);
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+  animation: mesh-pulse 15s infinite alternate ease-in-out;
+}
+
+.lux-bg-glow-right {
+  position: fixed;
+  bottom: -10%; right: -10%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(0, 242, 254, 0.08) 0%, rgba(6, 9, 19, 0) 70%);
+  filter: blur(100px);
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+  animation: mesh-pulse 18s infinite alternate-reverse ease-in-out;
+}
+
+.lux-glass {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-radius: 28px;
+  transition: var(--transition-smooth);
+}
+
+.lux-card {
+  background: rgba(30, 41, 59, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 24px;
+  padding: 24px;
+  transition: var(--transition-smooth);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.lux-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(0, 242, 254, 0.25);
+  box-shadow: 0 20px 48px rgba(0, 242, 254, 0.12);
+  background: rgba(30, 41, 59, 0.45);
+}
+
+.lux-gradient-text {
+  background: linear-gradient(135deg, #FFFFFF 30%, #94A3B8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: var(--font-title);
+  font-weight: 800;
+}
+
+.lux-gradient-text-primary {
+  background: linear-gradient(135deg, #00F2FE 0%, #4F46E5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: var(--font-title);
+  font-weight: 800;
+}
+
+.lux-glow-btn {
+  background: linear-gradient(135deg, #00F2FE 0%, #4F46E5 100%);
+  color: #060913 !important;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 16px;
+  font-weight: 800;
+  font-size: 15px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  box-shadow: 0 8px 24px rgba(0, 242, 254, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.lux-glow-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(0, 242, 254, 0.45);
+  filter: brightness(1.15);
+}
+
+.lux-glow-btn-danger {
+  background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
+  color: #FFF !important;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 16px;
+  font-weight: 800;
+  font-size: 15px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.lux-glow-btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(239, 68, 68, 0.35);
+  filter: brightness(1.1);
+}
+
+.lux-avatar-ring {
+  border: 2px solid transparent;
+  background-image: linear-gradient(var(--bg-deep), var(--bg-deep)), linear-gradient(135deg, #00F2FE 0%, #4F46E5 100%);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+

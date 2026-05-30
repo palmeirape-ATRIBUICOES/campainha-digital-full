@@ -1741,59 +1741,59 @@ export default function ResidentDashboard() {
     <>
       <div 
         onClick={() => setShowMenu(false)}
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 1000, opacity: showMenu ? 1 : 0, visibility: showMenu ? 'visible' : 'hidden', transition: 'all 0.3s' }} 
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 1000, opacity: showMenu ? 1 : 0, visibility: showMenu ? 'visible' : 'hidden', transition: 'all 0.3s' }} 
       />
-      <div style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '280px', background: '#FFF', zIndex: 1001, transform: showMenu ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)', padding: '32px 24px', display: 'flex', flexDirection: 'column', boxShadow: '8px 0 32px rgba(0,0,0,0.1)' }}>
+      <div style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '280px', background: 'var(--bg-surface-elevated)', backdropFilter: 'blur(20px)', borderRight: '1px solid var(--border-subtle)', zIndex: 1001, transform: showMenu ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)', padding: '32px 24px', display: 'flex', flexDirection: 'column', boxShadow: '8px 0 32px rgba(0,0,0,0.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <Logo size={32} />
-          <button onClick={() => setShowMenu(false)} style={{ background: '#F1F5F9', border: 'none', padding: '8px', borderRadius: '12px', cursor: 'pointer' }}><Settings size={20} color="#64748B" /></button>
+          <button onClick={() => setShowMenu(false)} style={{ background: 'var(--border-subtle)', border: 'none', padding: '8px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Settings size={20} color="var(--text-muted)" /></button>
         </div>
         
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', marginBottom: '8px' }}>FUNCIONALIDADES</p>
+          <p style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '1px', marginBottom: '8px' }}>FUNCIONALIDADES</p>
           
           {(!isHouseResident || residentIsVila) && (
-            <button onClick={() => { setTab('intercom'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'intercom' ? '#F0F9FF' : 'transparent', color: tab === 'intercom' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
-              <Building2 size={20} color={tab === 'intercom' ? '#0369A1' : '#64748B'} /> Interfone Digital
+            <button onClick={() => { setTab('intercom'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'intercom' ? 'rgba(0, 242, 254, 0.1)' : 'transparent', color: tab === 'intercom' ? 'var(--primary)' : 'var(--text-main)', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+              <Building2 size={20} color={tab === 'intercom' ? 'var(--primary)' : 'var(--text-muted)'} /> Interfone Digital
             </button>
           )}
 
-          <button onClick={() => { setTab('services'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'services' ? '#F0F9FF' : 'transparent', color: tab === 'services' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
-            <ShoppingBag size={20} color={tab === 'services' ? '#0369A1' : '#64748B'} /> Parceiros da Região
+          <button onClick={() => { setTab('services'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'services' ? 'rgba(0, 242, 254, 0.1)' : 'transparent', color: tab === 'services' ? 'var(--primary)' : 'var(--text-main)', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+            <ShoppingBag size={20} color={tab === 'services' ? 'var(--primary)' : 'var(--text-muted)'} /> Parceiros da Região
           </button>
 
           {/* Códigos de Visitante: todos exceto dependentes */}
           {!isDependent && (
-            <button onClick={() => { setTab('visitor-codes'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'visitor-codes' ? '#F0F9FF' : 'transparent', color: tab === 'visitor-codes' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
-              <KeyRound size={20} color={tab === 'visitor-codes' ? '#0369A1' : '#64748B'} /> Códigos de Visitante
+            <button onClick={() => { setTab('visitor-codes'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'visitor-codes' ? 'rgba(0, 242, 254, 0.1)' : 'transparent', color: tab === 'visitor-codes' ? 'var(--primary)' : 'var(--text-main)', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+              <KeyRound size={20} color={tab === 'visitor-codes' ? 'var(--primary)' : 'var(--text-muted)'} /> Códigos de Visitante
             </button>
           )}
 
           {/* Moradores & Acessos: todos exceto dependentes */}
           {!isDependent && (
-            <button onClick={() => { setTab('residents'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'residents' ? '#F0F9FF' : 'transparent', color: tab === 'residents' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
-              <Users size={20} color={tab === 'residents' ? '#0369A1' : '#64748B'} /> Moradores & Acessos
+            <button onClick={() => { setTab('residents'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'residents' ? 'rgba(0, 242, 254, 0.1)' : 'transparent', color: tab === 'residents' ? 'var(--primary)' : 'var(--text-main)', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+              <Users size={20} color={tab === 'residents' ? 'var(--primary)' : 'var(--text-muted)'} /> Moradores & Acessos
             </button>
           )}
 
-          <div style={{ height: '1px', background: '#F1F5F9', margin: '8px 0' }} />
+          <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '8px 0' }} />
           
-          <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', marginBottom: '8px' }}>CONTA</p>
+          <p style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '1px', marginBottom: '8px' }}>CONTA</p>
           
-          <button onClick={() => { setTab('settings'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'settings' ? '#F8FAFC' : 'transparent', color: '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
-            <Settings size={20} color="#64748B" /> Configurações
+          <button onClick={() => { setTab('settings'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'settings' ? 'rgba(255,255,255,0.05)' : 'transparent', color: 'var(--text-main)', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+            <Settings size={20} color="var(--text-muted)" /> Configurações
           </button>
 
-          <button onClick={() => { setShowPaymentModal(true); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', color: '#B45309', fontWeight: 700, fontSize: '15px', cursor: 'pointer', textAlign: 'left', border: '1px solid #FCD34D', marginTop: '8px' }}>
+          <button onClick={() => { setShowPaymentModal(true); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(251,191,36,0.1) 100%)', color: '#F59E0B', fontWeight: 700, fontSize: '15px', cursor: 'pointer', textAlign: 'left', border: '1px solid rgba(245,158,11,0.3)', marginTop: '8px', transition: 'all 0.2s' }}>
             <span>👑 Torne-se Pro</span>
           </button>
         </div>
 
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {userContact && (
-            <div style={{ padding: '12px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Logado como:</span>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', wordBreak: 'break-all' }}>{userContact}</span>
+            <div style={{ padding: '12px 16px', background: 'var(--bg-deep)', borderRadius: '14px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Logado como:</span>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', wordBreak: 'break-all' }}>{userContact}</span>
             </div>
           )}
 
@@ -1859,6 +1859,10 @@ export default function ResidentDashboard() {
       onClick={handleUserInteraction}
       onTouchStart={handleUserInteraction}
     >
+      {/* ── LUXURY NEON GLOW DECORATIONS ── */}
+      <div className="lux-bg-glow" />
+      <div className="lux-bg-glow-right" />
+
       <style>{`
         @keyframes pulse-blue {
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
@@ -1960,23 +1964,23 @@ export default function ResidentDashboard() {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'space-between', 
-        background: 'rgba(255, 255, 255, 0.8)', 
-        backdropFilter: 'blur(12px)', 
+        background: 'var(--bg-surface)', 
+        backdropFilter: 'blur(16px)', 
         position: 'sticky', 
         top: 0, 
         zIndex: 90,
-        borderBottom: '1px solid #F1F5F9'
+        borderBottom: '1px solid var(--border-subtle)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => setShowMenu(true)} style={{ background: '#0F172A', color: '#FFF', border: 'none', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <button onClick={() => setShowMenu(true)} style={{ background: 'var(--text-main)', color: 'var(--bg-deep)', border: 'none', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '20px' }}>
-              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
-              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
-              <div style={{ height: '2px', width: '60%', background: '#FFF', borderRadius: '2px' }} />
+              <div style={{ height: '2px', width: '100%', background: 'var(--bg-deep)', borderRadius: '2px' }} />
+              <div style={{ height: '2px', width: '100%', background: 'var(--bg-deep)', borderRadius: '2px' }} />
+              <div style={{ height: '2px', width: '60%', background: 'var(--bg-deep)', borderRadius: '2px' }} />
             </div>
           </button>
           <div>
-            <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#0F172A' }}>{unitName}</h2>
+            <h2 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: 'var(--text-main)', fontFamily: 'var(--font-title)' }}>{unitName}</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#94A3B8' : (status === 'idle' ? '#10B981' : '#EF4444') }} />
               <span style={{ fontSize: '11px', color: isTrialExpired ? '#94A3B8' : '#64748B', fontWeight: 600 }}>

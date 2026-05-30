@@ -534,10 +534,13 @@ export default function PorteiroDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', transition: 'var(--transition-fast)' }}>
-      <header style={{ padding: '20px 40px', background: 'var(--bg-surface-elevated)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
+      {/* ── LUXURY NEON GLOW DECORATIONS ── */}
+      <div className="lux-bg-glow" />
+      <div className="lux-bg-glow-right" />
+      <header style={{ padding: '20px 40px', background: 'var(--bg-surface)', backdropFilter: 'blur(16px)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Logo size={28} showText={false} />
-          <h1 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>Painel da Portaria</h1>
+          <h1 style={{ fontSize: '18px', fontWeight: 800, margin: 0, fontFamily: 'var(--font-title)' }}>Painel da Portaria</h1>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           {/* Botão de Modo Noturno */}
@@ -563,11 +566,9 @@ export default function PorteiroDashboard() {
 
       <main style={{ padding: '32px 24px', maxWidth: '1000px', margin: '0 auto' }}>
         
-        {/* Painel de Chamada Ativa WebRTC */}
+        {/* Painel de Chamada Ativa WebRTC/VoIP */}
         {activeCall && (
-          <div style={{
-            background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
-            border: '2px solid #3B82F6',
+          <div className="lux-glass" style={{
             padding: '24px',
             borderRadius: '24px',
             marginBottom: '32px',
@@ -575,7 +576,8 @@ export default function PorteiroDashboard() {
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '20px',
-            boxShadow: '0 10px 30px rgba(59,130,246,0.2)',
+            border: '1px solid rgba(0, 242, 254, 0.25)',
+            boxShadow: '0 24px 64px rgba(0, 242, 254, 0.1)',
             animation: activeCall.status === 'calling' ? 'pulse 2.5s infinite' : 'none',
             color: '#fff'
           }}>
@@ -859,12 +861,12 @@ export default function PorteiroDashboard() {
           <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><Phone size={18} color="#3B82F6"/> Chamar Unidade por Endereço</h3>
           <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: '120px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', marginBottom: '6px', display: 'block' }}>BLOCO / RUA</label>
-              <input type="text" placeholder="Ex: Bloco A" value={search} onChange={e => setSearch(e.target.value)} style={{ width: '100%', padding: '16px', fontSize: '16px', borderRadius: '14px', border: '1px solid #E2E8F0', background: '#F8FAFC', outline: 'none' }} />
+              <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>BLOCO / RUA</label>
+              <input type="text" placeholder="Ex: Bloco A" value={search} onChange={e => setSearch(e.target.value)} style={{ width: '100%', padding: '16px', fontSize: '16px', borderRadius: '14px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', outline: 'none' }} />
             </div>
             <div style={{ flex: 1, minWidth: '120px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', marginBottom: '6px', display: 'block' }}>Nº CASA/APTO</label>
-              <input type="text" placeholder="Ex: 101" value={searchNumber} onChange={e => setSearchNumber(e.target.value)} style={{ width: '100%', padding: '16px', fontSize: '16px', borderRadius: '14px', border: '1px solid #E2E8F0', background: '#F8FAFC', outline: 'none' }} />
+              <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>Nº CASA/APTO</label>
+              <input type="text" placeholder="Ex: 101" value={searchNumber} onChange={e => setSearchNumber(e.target.value)} style={{ width: '100%', padding: '16px', fontSize: '16px', borderRadius: '14px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', outline: 'none' }} />
             </div>
           </div>
           <p style={{ fontSize: '12px', color: '#94A3B8', marginBottom: '0' }}>Digite o bloco/rua e número para localizar a unidade. Ou veja todas abaixo.</p>
@@ -872,13 +874,13 @@ export default function PorteiroDashboard() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
           {filteredUnits.map(unit => (
-            <div key={`${unit.propertyId}-${unit.id}`} style={{ background: '#FFF', padding: '24px', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}>
+            <div key={`${unit.propertyId}-${unit.id}`} className="lux-card" style={{ padding: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-title)' }}>
                   {unit.propertyName}
                   <span style={{ 
                     display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', 
-                    background: onlineStatus[unit.id] === 'online' ? '#10B981' : '#94A3B8',
+                    background: onlineStatus[unit.id] === 'online' ? '#10B981' : 'var(--text-muted)',
                     boxShadow: onlineStatus[unit.id] === 'online' ? '0 0 8px rgba(16,185,129,0.6)' : 'none'
                   }} title={onlineStatus[unit.id] === 'online' ? 'Morador Online' : 'Offline'} />
                 </div>
@@ -888,20 +890,20 @@ export default function PorteiroDashboard() {
                   </div>
                 )}
               </div>
-              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font-title)', color: 'var(--text-main)' }}>
                 {unit.name}
               </h3>
               {(unit.block || unit.street || unit.number) && (
-                <p style={{ fontSize: '12px', color: '#64748B', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Building2 size={13}/> {unit.block && `Bloco ${unit.block}`} {unit.street && `${unit.street}`} {unit.number && `Nº ${unit.number}`}
                 </p>
               )}
               {/* Botões de ação */}
               <div style={{ display: 'flex', gap: '8px', marginBottom: msgUnit === unit.id ? '12px' : '0' }}>
-                <button onClick={() => callUnit(unit)} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'linear-gradient(135deg,#10B981,#059669)', border: 'none', color: '#fff', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', boxShadow: '0 4px 12px rgba(16,185,129,0.25)' }}>
+                <button onClick={() => callUnit(unit)} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'linear-gradient(135deg,#10B981,#059669)', border: 'none', color: '#fff', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', boxShadow: '0 8px 24px rgba(16,185,129,0.2)', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={e => e.currentTarget.style.transform = 'none'}>
                   <Phone size={15} /> Interfone
                 </button>
-                <button onClick={() => { setMsgUnit(msgUnit === unit.id ? null : unit.id); setMsgText(''); }} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: msgUnit === unit.id ? '#F1F5F9' : 'linear-gradient(135deg,#3B82F6,#2563EB)', border: 'none', color: msgUnit === unit.id ? '#64748B' : '#fff', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' }}>
+                <button onClick={() => { setMsgUnit(msgUnit === unit.id ? null : unit.id); setMsgText(''); }} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: msgUnit === unit.id ? 'var(--border-subtle)' : 'linear-gradient(135deg,var(--primary),#2563EB)', border: 'none', color: msgUnit === unit.id ? 'var(--text-muted)' : '#000', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={e => e.currentTarget.style.transform = 'none'}>
                   {msgUnit === unit.id ? <><X size={14}/>Fechar</> : <><MessageSquare size={15}/>Mensagem</>}
                 </button>
               </div>
@@ -912,9 +914,9 @@ export default function PorteiroDashboard() {
                     placeholder="Digite sua mensagem para o morador..."
                     value={msgText}
                     onChange={e => setMsgText(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '13px', outline: 'none', resize: 'none', minHeight: '72px', fontFamily: 'inherit', background: '#F8FAFC' }}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border-subtle)', fontSize: '13px', outline: 'none', resize: 'none', minHeight: '72px', fontFamily: 'inherit', background: 'var(--bg-deep)', color: 'var(--text-main)' }}
                   />
-                  <button onClick={() => sendMessage(unit)} disabled={!msgText.trim()} style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '10px', background: msgSent ? '#10B981' : '#3B82F6', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px', opacity: msgText.trim() ? 1 : 0.5 }}>
+                  <button onClick={() => sendMessage(unit)} disabled={!msgText.trim()} style={{ width: '100%', marginTop: '8px', padding: '12px', borderRadius: '10px', background: msgSent ? '#10B981' : 'var(--primary)', border: 'none', color: msgSent ? '#fff' : '#000', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px', opacity: msgText.trim() ? 1 : 0.5, transition: 'all 0.2s' }}>
                     {msgSent ? '✓ Mensagem Enviada!' : <><Send size={14}/>Enviar</>}
                   </button>
                 </div>
