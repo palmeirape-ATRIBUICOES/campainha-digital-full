@@ -61,6 +61,15 @@ model User {
   
   // Assinaturas de Push Notification (um por aparelho)
   pushSubscriptions PushSubscription[]
+
+  // VoIP WebRTC & SIP Configuration
+  ramal_webrtc      String?
+  ramal_sip         String?
+  senha_sip         String?
+
+  // Chamadas VoIP realizadas ou recebidas
+  voipCallsSent     VoipCallLog[] @relation("VoipCallSender")
+  voipCallsReceived VoipCallLog[] @relation("VoipCallReceiver")
 }
 
 model FamilyMessage {
@@ -126,6 +135,9 @@ model Property {
   alerts          UnitAlert[]
   connections     InternalConnection[]
   vilaMessages    VilaMessage[]
+  
+  // VoIP Domain Configuration
+  dominio_pbx     String?
 }
 
 model Unit {
@@ -144,6 +156,9 @@ model Unit {
   sentConnections     InternalConnection[] @relation("SenderConnection")
   receivedConnections InternalConnection[] @relation("ReceiverConnection")
   visitorCodes        VisitorCode[]
+  
+  // VoIP ring group configuration
+  ramal_grupo         String?
 }
 
 model Visitor {
@@ -245,5 +260,17 @@ model VilaMessage {
   content     String
   read        Boolean  @default(false)
   createdAt   DateTime @default(now())
+}
+
+model VoipCallLog {
+  id           String   @id @default(uuid())
+  senderId     String?
+  sender       User?    @relation("VoipCallSender", fields: [senderId], references: [id], onDelete: SetNull)
+  receiverId   String?
+  receiver     User?    @relation("VoipCallReceiver", fields: [receiverId], references: [id], onDelete: SetNull)
+  callerName   String   @default("Interfone")
+  status       String   @default("ringing") // "ringing" | "answered" | "missed" | "rejected"
+  duration     Int      @default(0) // duration in seconds
+  createdAt    DateTime @default(now())
 }
 

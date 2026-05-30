@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import JsSIP from 'jssip';
 import { io } from 'socket.io-client';
 import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag, BellOff, BellRing, Users } from 'lucide-react';
 import { HistoryPanel, SettingsPanel, DEFAULT_CATEGORIES } from './ResidentPanels';
@@ -147,6 +148,210 @@ export default function ResidentDashboard() {
       if (timer) clearInterval(timer);
     };
   }, [status]);
+
+  // ─── VoIP WebRTC / JsSIP Integration ──────────────────────────────────────
+  const [voipCall, setVoipCall] = useState(null);
+  const [voipStatus, setVoipStatus] = useState('idle'); // idle | ringing | active
+  const [voipCredentials, setVoipCredentials] = useState(null);
+  const [voipCallDuration, setVoipCallDuration] = useState(0);
+  const [voipIncoming, setVoipIncoming] = useState(false);
+  const [voipCaller, setVoipCaller] = useState('Portaria');
+  const [voipActiveCallId, setVoipActiveCallId] = useState(null);
+
+  const voipUARef = useRef(null);
+  const voipSessionRef = useRef(null);
+  const localAudioElementRef = useRef(null);
+
+  const initVoipJsSIP = useCallback((creds) => {
+    if (voipUARef.current) {
+      console.log('[VoIP] UA já existe, parando anterior...');
+      try { voipUARef.current.stop(); } catch(e){}
+    }
+    if (!creds.ramal_webrtc || !creds.senha_sip || !creds.dominio_pbx) {
+      console.warn('[VoIP] Credenciais incompletas para provisionar JsSIP UA');
+      return;
+    }
+    try {
+      console.log('[VoIP] Inicializando JsSIP UA no ramal:', creds.ramal_webrtc);
+      const socket = new JsSIP.WebSocketInterface(`wss://${creds.dominio_pbx}:8089/ws`);
+      const configuration = {
+        sockets: [socket],
+        uri: `sip:${creds.ramal_webrtc}@${creds.dominio_pbx}`,
+        password: creds.senha_sip,
+        display_name: creds.name || 'Morador'
+      };
+
+      const ua = new JsSIP.UA(configuration);
+      voipUARef.current = ua;
+
+      ua.on('registered', () => {
+        console.log('[VoIP] Extension registered successfully:', creds.ramal_webrtc);
+      });
+
+      ua.on('unregistered', () => {
+        console.log('[VoIP] UA unregistered');
+      });
+
+      ua.on('registrationFailed', (data) => {
+        console.error('[VoIP] Registration failed:', data.cause);
+      });
+
+      ua.on('newRTCSession', (data) => {
+        console.log('[VoIP] Nova sessão WebRTC detectada');
+        const session = data.session;
+        voipSessionRef.current = session;
+        setVoipCall(session);
+
+        if (session.direction === 'incoming') {
+          setVoipIncoming(true);
+          setVoipStatus('ringing');
+          setVoipCaller(session.remote_identity.display_name || session.remote_identity.uri.user || 'Portaria');
+          
+          if (navigator.vibrate) {
+            navigator.vibrate([200, 100, 200, 100, 200, 100, 200, 100, 500]);
+          }
+        }
+
+        session.on('peerconnection', (event) => {
+          const pc = event.peerconnection;
+          pc.addEventListener('track', (e) => {
+            if (localAudioElementRef.current && e.track.kind === 'audio') {
+              const stream = new MediaStream([e.track]);
+              localAudioElementRef.current.srcObject = stream;
+              localAudioElementRef.current.play().catch(err => {
+                console.error('[VoIP] Erro ao reproduzir áudio remoto:', err);
+              });
+            }
+          });
+        });
+
+        session.on('accepted', () => {
+          setVoipStatus('active');
+          setVoipIncoming(false);
+        });
+
+        session.on('failed', (e) => {
+          console.warn('[VoIP] Sessão falhou:', e.cause);
+          setVoipStatus('idle');
+          setVoipCall(null);
+          voipSessionRef.current = null;
+          if (localAudioElementRef.current) localAudioElementRef.current.srcObject = null;
+        });
+
+        session.on('ended', () => {
+          setVoipStatus('idle');
+          setVoipCall(null);
+          voipSessionRef.current = null;
+          if (localAudioElementRef.current) localAudioElementRef.current.srcObject = null;
+        });
+      });
+
+      ua.start();
+    } catch (err) {
+      console.error('[VoIP] Falha crítica ao construir JsSIP UA:', err);
+    }
+  }, []);
+
+  const loadVoipCredentials = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API}/api/voip/credentials`, {
+        headers: { 'Authorization': token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setVoipCredentials(data);
+          initVoipJsSIP(data);
+        }
+      }
+    } catch (err) {
+      console.error('[VoIP] Erro ao carregar credenciais VoIP:', err);
+    }
+  }, [token, initVoipJsSIP]);
+
+  useEffect(() => {
+    loadVoipCredentials();
+    return () => {
+      if (voipUARef.current) {
+        try { voipUARef.current.stop(); } catch(e){}
+      }
+    };
+  }, [loadVoipCredentials]);
+
+  // Trata incoming call vindo da query string (Push awakening)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('incoming') === 'true') {
+      const callerName = params.get('caller') || 'Portaria';
+      const cId = params.get('callId');
+      setVoipIncoming(true);
+      setVoipCaller(decodeURIComponent(callerName));
+      setVoipActiveCallId(cId);
+      setVoipStatus('ringing');
+    }
+  }, [location]);
+
+  const acceptVoipCall = useCallback(() => {
+    if (voipSessionRef.current) {
+      console.log('[VoIP] Atendendo chamada...');
+      const options = {
+        mediaConstraints: { audio: true, video: false }
+      };
+      voipSessionRef.current.answer(options);
+
+      if (voipActiveCallId) {
+        fetch(`${API}/api/voip/call/${voipActiveCallId}/status`, {
+          method: 'POST',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: 'answered' })
+        }).catch(err => console.error('[VoIP] Erro ao atualizar status atendido:', err));
+      }
+    }
+  }, [voipActiveCallId, token]);
+
+  const declineVoipCall = useCallback(() => {
+    if (voipSessionRef.current) {
+      console.log('[VoIP] Rejeitando chamada...');
+      voipSessionRef.current.terminate({
+        status_code: 603,
+        reason_phrase: 'Decline'
+      });
+
+      if (voipActiveCallId) {
+        fetch(`${API}/api/voip/call/${voipActiveCallId}/status`, {
+          method: 'POST',
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: 'rejected' })
+        }).catch(err => console.error('[VoIP] Erro ao atualizar status rejeitado:', err));
+      }
+    } else {
+      setVoipStatus('idle');
+      setVoipIncoming(false);
+    }
+  }, [voipActiveCallId, token]);
+
+  useEffect(() => {
+    let timer = null;
+    if (voipStatus === 'active') {
+      setVoipCallDuration(0);
+      timer = setInterval(() => {
+        setVoipCallDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setVoipCallDuration(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [voipStatus]);
+
 
   const fmtDuration = (secs) => {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -2545,7 +2750,30 @@ export default function ResidentDashboard() {
       {tab === 'intercom' && (
         <div style={{ padding: '20px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px' }}>Interfone Digital</h2>
-          {propertyId && <IntercomPanel propertyId={propertyId} unitId={id} socketRef={socketRef} unitName={unitName} onCall={handleIntercomCall}/>}
+          {propertyId && (
+            <IntercomPanel 
+              propertyId={propertyId} 
+              unitId={id} 
+              socketRef={socketRef} 
+              unitName={unitName} 
+              onCall={handleIntercomCall}
+              onCallDoorman={() => {
+                if (voipUARef.current && voipCredentials?.ramal_webrtc) {
+                  console.log('[VoIP] Disparando chamada VoIP para Portaria (9000)...');
+                  const session = voipUARef.current.call(`sip:9000@${voipCredentials.dominio_pbx}`, {
+                    mediaConstraints: { audio: true, video: false }
+                  });
+                  voipSessionRef.current = session;
+                  setVoipCall(session);
+                  setVoipCaller('Portaria');
+                  setVoipStatus('active');
+                } else {
+                  console.warn('[VoIP] JsSIP UA ou credenciais não prontas. Usando chamada legada via Socket...');
+                  handleIntercomCall({ id: 'doorman', name: 'Portaria' });
+                }
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -2581,6 +2809,163 @@ export default function ResidentDashboard() {
 
       <HamburgerMenu />
       <NavBar />
+
+      {/* VoIP Elements */}
+      <audio ref={localAudioElementRef} autoPlay />
+
+      {voipStatus !== 'idle' && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(9, 13, 22, 0.98)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#F9FAFB',
+          fontFamily: "'Plus Jakarta Sans', sans-serif"
+        }}>
+          <div style={{
+            width: '100%',
+            maxWidth: '400px',
+            padding: '40px 24px',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            height: '80%'
+          }}>
+            <div style={{ marginTop: '40px' }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                border: '1px solid rgba(79, 70, 229, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 24px',
+                animation: voipStatus === 'ringing' ? 'float 2s ease-in-out infinite' : 'none'
+              }}>
+                <Phone size={36} color="#6366F1" />
+              </div>
+              <h2 style={{
+                fontFamily: "'Outfit', sans-serif",
+                fontSize: '28px',
+                fontWeight: 600,
+                letterSpacing: '-0.02em',
+                marginBottom: '8px'
+              }}>
+                {voipCaller}
+              </h2>
+              <p style={{
+                fontSize: '14px',
+                color: '#9CA3AF',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase'
+              }}>
+                {voipStatus === 'ringing' ? 'Interfone Chamando...' : 'Chamada VoIP'}
+              </p>
+            </div>
+
+            <div style={{ margin: '40px 0' }}>
+              {voipStatus === 'active' ? (
+                <div style={{
+                  fontFamily: "'Outfit', sans-serif",
+                  fontSize: '48px',
+                  fontWeight: 400,
+                  color: '#F9FAFB'
+                }}>
+                  {fmtDuration(voipCallDuration)}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4F46E5' }}></span>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4F46E5', opacity: 0.6 }}></span>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4F46E5', opacity: 0.3 }}></span>
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '32px',
+              width: '100%',
+              marginBottom: '40px'
+            }}>
+              {voipStatus === 'ringing' ? (
+                <>
+                  <button 
+                    onClick={declineVoipCall}
+                    style={{
+                      width: '64px',
+                      height: '64px',
+                      borderRadius: '50%',
+                      backgroundColor: '#EF4444',
+                      border: 'none',
+                      color: '#FFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)'
+                    }}
+                  >
+                    <PhoneOff size={24} />
+                  </button>
+                  
+                  <button 
+                    onClick={acceptVoipCall}
+                    style={{
+                      width: '64px',
+                      height: '64px',
+                      borderRadius: '50%',
+                      backgroundColor: '#10B981',
+                      border: 'none',
+                      color: '#FFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
+                    }}
+                  >
+                    <Phone size={24} />
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={declineVoipCall}
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    backgroundColor: '#EF4444',
+                    border: 'none',
+                    color: '#FFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)'
+                  }}
+                >
+                  <PhoneOff size={24} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
       {showPaymentModal && (
         <PaymentModal 

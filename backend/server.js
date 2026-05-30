@@ -4168,11 +4168,239 @@ io.on('connection', (socket) => {
   });
 });
 
+// ─── VoIP WebRTC/Asterisk Routes ──────────────────────────────────────────
+const VoipService = require('./VoipService');
+
+// 1. Get current user's VoIP credentials and auto-provision if missing
+app.get('/api/voip/credentials', authenticate, async (req, res) => {
+  try {
+    // 1. Sync User credentials
+    const user = await VoipService.syncUserCredentials(req.user.id);
+    
+    // 2. Find and sync unit ring group if resident
+    let unit = null;
+    let property = null;
+    
+    const residentUnit = await prisma.unit.findFirst({
+      where: { residents: { some: { id: req.user.id } } },
+      include: { property: true }
+    });
+    
+    if (residentUnit) {
+      unit = await VoipService.syncUnitRingGroup(residentUnit.id);
+      property = await VoipService.syncPropertyPbxDomain(residentUnit.propertyId);
+    } else {
+      // Check if manages property as admin
+      const adminProp = await prisma.property.findFirst({
+        where: { adminId: req.user.id }
+      });
+      if (adminProp) {
+        property = await VoipService.syncPropertyPbxDomain(adminProp.id);
+      }
+    }
+    
+    res.json({
+      success: true,
+      ramal_webrtc: user.ramal_webrtc,
+      ramal_sip: user.ramal_sip,
+      senha_sip: user.senha_sip,
+      dominio_pbx: property?.dominio_pbx || 'pbx.campainhadigital.com.br',
+      ramal_grupo: unit?.ramal_grupo,
+      name: user.name
+    });
+  } catch (err) {
+    console.error('[VoIP API] Erro ao sincronizar credenciais:', err.message);
+    res.status(500).json({ error: 'Erro ao sincronizar credenciais VoIP.', details: err.message });
+  }
+});
+
+// 2. Get list of all synced extensions (Admin only)
+app.get('/api/voip/extensions', authenticate, async (req, res) => {
+  try {
+    if (!req.user.isAdmin && !req.user.isSuperAdmin) {
+      return res.status(403).json({ error: 'Acesso negado.' });
+    }
+    
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { ramal_webrtc: { not: null } },
+          { ramal_sip: { not: null } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        ramal_webrtc: true,
+        ramal_sip: true,
+        isResident: true,
+        isDoorman: true
+      }
+    });
+    
+    const units = await prisma.unit.findMany({
+      where: { ramal_grupo: { not: null } },
+      select: {
+        id: true,
+        name: true,
+        block: true,
+        ramal_grupo: true
+      }
+    });
+    
+    res.json({ success: true, users, units });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. Export Asterisk chan_pjsip configuration (Admin only)
+app.post('/api/voip/export-config', authenticate, async (req, res) => {
+  try {
+    if (!req.user.isAdmin && !req.user.isSuperAdmin) {
+      return res.status(403).json({ error: 'Acesso negado.' });
+    }
+    
+    const result = await VoipService.exportAsteriskPjsipConfig();
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao exportar configuração.', details: err.message });
+  }
+});
+
+// 4. Initiate a call from Doorman or Web interface to an apartment ring group
+// Sets up background push wakeup and returns SIP/WebRTC target credentials
+app.post('/api/voip/call/apartamento', authenticate, async (req, res) => {
+  const { unitId } = req.body;
+  if (!unitId) return res.status(400).json({ error: 'ID da unidade é obrigatório.' });
+  
+  try {
+    const unit = await prisma.unit.findUnique({
+      where: { id: unitId },
+      include: { 
+        property: true,
+        residents: { 
+          include: { pushSubscriptions: true } 
+        } 
+      }
+    });
+    
+    if (!unit) return res.status(404).json({ error: 'Unidade não encontrada.' });
+    
+    // Sync unit ring group if not already done
+    const syncedUnit = await VoipService.syncUnitRingGroup(unit.id);
+    
+    // Sincroniza credenciais para moradores que não têm
+    const activeResidents = [];
+    for (const r of unit.residents) {
+      const syncedResident = await VoipService.syncUserCredentials(r.id);
+      if (syncedResident.ramal_webrtc) {
+        activeResidents.push(syncedResident);
+      }
+    }
+    
+    const callLog = await VoipService.logCall({
+      senderId: req.user.id,
+      receiverId: activeResidents[0]?.id || null, // logs main resident
+      callerName: req.user.name || 'Portaria',
+      status: 'ringing'
+    });
+    
+    // Base URL resolving matching push diagnostics
+    let baseUrl = process.env.FRONTEND_URL || 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    if (baseUrl.includes('palmeirape-atribuicoes.github.io') && !baseUrl.includes('campainha-digital-full')) {
+      baseUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    }
+    
+    // Construct absolute, priority background despertar payload
+    const pushPayload = {
+      title: '📞 Interfone Chamando!',
+      body: `A portaria está interfonando. Unidade: ${unit.name} ${unit.block ? '(' + unit.block + ')' : ''}. Toque para atender.`,
+      icon: `${baseUrl}/logo.png`,
+      badge: `${baseUrl}/badge.png`,
+      tag: `voip-call-${unit.id}`,
+      renotify: true,
+      requireInteraction: true,
+      vibrate: [200, 100, 200, 100, 200, 100, 200, 100, 500],
+      data: {
+        url: `${baseUrl}/#/morador/voip?incoming=true&unitId=${unit.id}&callId=${callLog.id}&caller=${encodeURIComponent(req.user.name || 'Portaria')}&ramalGrupo=${syncedUnit.ramal_grupo}`,
+        unitId: unit.id,
+        callId: callLog.id,
+        caller: req.user.name || 'Portaria',
+        ramalGrupo: syncedUnit.ramal_grupo
+      }
+    };
+    
+    // Dispara push prioritário para cada morador em background
+    for (const resident of activeResidents) {
+      await sendPushToUser(resident.id, pushPayload);
+    }
+    
+    // Emit immediate WebSocket alert for users currently active/online
+    io.to(`user_${unit.id}`).emit('incoming_voip_call', {
+      callId: callLog.id,
+      callerName: req.user.name || 'Portaria',
+      ramalGrupo: syncedUnit.ramal_grupo,
+      unitId: unit.id
+    });
+    
+    res.json({
+      success: true,
+      callId: callLog.id,
+      ramal_grupo: syncedUnit.ramal_grupo,
+      dominio_pbx: unit.property.dominio_pbx || 'pbx.campainhadigital.com.br',
+      residents: activeResidents.map(r => ({ name: r.name, extension: r.ramal_webrtc }))
+    });
+  } catch (err) {
+    console.error('[VoIP Call API] Erro ao iniciar chamada:', err.message);
+    res.status(500).json({ error: 'Erro ao processar chamada VoIP.', details: err.message });
+  }
+});
+
+// 5. Update call status
+app.post('/api/voip/call/:id/status', authenticate, async (req, res) => {
+  const { status, duration } = req.body; // 'answered', 'rejected', 'missed'
+  try {
+    const updated = await prisma.voipCallLog.update({
+      where: { id: req.params.id },
+      data: {
+        status,
+        duration: duration != null ? parseInt(duration, 10) : undefined
+      }
+    });
+    
+    // Inform active listeners via socket
+    io.emit('voip_call_status_changed', { callId: updated.id, status: updated.status });
+    
+    res.json({ success: true, call: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. Get VoIP call history
+app.get('/api/voip/calls', authenticate, async (req, res) => {
+  try {
+    const calls = await prisma.voipCallLog.findMany({
+      where: {
+        OR: [
+          { senderId: req.user.id },
+          { receiverId: req.user.id }
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    });
+    res.json({ success: true, calls });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Health Check (Keep-Alive)
 app.get('/api/ping', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 
 // Catch-all para o Frontend (React Router)
-
 app.use( (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });

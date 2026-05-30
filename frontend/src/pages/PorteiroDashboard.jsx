@@ -452,8 +452,8 @@ export default function PorteiroDashboard() {
     setTimeout(() => { setMsgSent(false); setMsgUnit(null); setMsgText(''); }, 2000);
   };
 
-  const callUnit = (unit) => {
-    if (!socketRef.current || activeCall) return;
+  const callUnit = async (unit) => {
+    if (activeCall) return;
     setActiveCall({
       residentSocketId: null,
       callerName: unit.name,
@@ -461,11 +461,49 @@ export default function PorteiroDashboard() {
       isIncoming: false,
       status: 'calling'
     });
-    socketRef.current.emit('doorman_call', {
-      unitId: unit.id,
-      propertyId: unit.propertyId,
-      callerName: 'Portaria'
-    });
+
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/voip/call/apartamento`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
+        body: JSON.stringify({ unitId: unit.id })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          console.log('[VoIP Control] Chamada VoIP iniciada para o grupo:', data.ramal_grupo);
+          setActiveCall({
+            residentSocketId: null,
+            callerName: `${unit.name} (Grupo ${data.ramal_grupo})`,
+            unitId: unit.id,
+            isIncoming: false,
+            status: 'calling',
+            callId: data.callId
+          });
+        }
+      } else {
+        if (socketRef.current) {
+          socketRef.current.emit('doorman_call', {
+            unitId: unit.id,
+            propertyId: unit.propertyId,
+            callerName: 'Portaria'
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[VoIP Control] Erro ao chamar via VoIP, usando chamada socket legada...', err);
+      if (socketRef.current) {
+        socketRef.current.emit('doorman_call', {
+          unitId: unit.id,
+          propertyId: unit.propertyId,
+          callerName: 'Portaria'
+        });
+      }
+    }
   };
 
   if (loading) return <div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Carregando painel de controle...</div>;
