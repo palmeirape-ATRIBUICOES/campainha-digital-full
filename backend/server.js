@@ -4330,13 +4330,24 @@ app.post('/api/voip/call/apartamento', authenticate, async (req, res) => {
       startedAt: callLog.startedAt
     });
 
-    // Disparar push prioritário para cada morador para acordar o PWA
+    // Obter URL do frontend baseado no ambiente para o redirecionamento
+    let baseUrl = process.env.FRONTEND_URL || 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    if (baseUrl.includes('palmeirape-atribuicoes.github.io') && !baseUrl.includes('campainha-digital-full')) {
+      baseUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    }
+
+    // Disparar push prioritário com as exatas configurações de background test que funcionam perfeitamente
     const payload = {
       title: '📞 Chamada da Portaria!',
       body: 'A portaria está interfonando. Toque para atender.',
+      icon: `${baseUrl}/logo.png`,
+      badge: `${baseUrl}/badge.png`,
       tag: 'voip-incoming-call',
+      renotify: true,
+      requireInteraction: true,
+      vibrate: [400, 200, 400, 200, 800],
       data: {
-        url: `${req.protocol}://${req.get('host')}/resident-dashboard`,
+        url: `${baseUrl}/#/morador/${unit.id}?callId=${callLog.id}&type=voip&origem_ramal=9000&destino_ramal=${destination}`,
         type: 'VOIP_INCOMING_CALL',
         callId: callLog.id,
         origem_ramal: '9000',
