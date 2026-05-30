@@ -9,8 +9,8 @@ Write-Host "==========================================================" -Foregro
 Write-Host " INICIANDO COMPILACAO DO APP ANDROID (CAMPAINHA DIGITAL)" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-# 1. Garante que a Keystore existe
-$keystorePath = "C:\Users\thiag\OneDrive\Área de Trabalho\campainha digital\android.keystore"
+# 1. Garante que a Keystore existe (usa caminho relativo para evitar problemas com acentos)
+$keystorePath = "android.keystore"
 $keytoolPath = "C:\Users\thiag\.bubblewrap\jdk\jdk-17.0.11+9\bin\keytool.exe"
 
 if (!(Test-Path $keystorePath)) {
@@ -21,64 +21,16 @@ if (!(Test-Path $keystorePath)) {
     Write-Host "[KEYSTORE] android.keystore ja existe. Prosseguindo..." -ForegroundColor Green
 }
 
-# 2. Prepara as respostas automatizadas para o 'bubblewrap init'
-Write-Host "[INIT] Inicializando o projeto Android Bubblewrap..." -ForegroundColor Yellow
-
-# Respostas para as perguntas interativas do init:
-# 1. Domain (press Enter)
-# 2. URL path (press Enter)
-# 3. Application name (press Enter)
-# 4. Short name (press Enter)
-# 5. Package ID: br.com.campainhadigital.app (customizado!)
-# 6. Version name (press Enter)
-# 7. Version code (press Enter)
-# 8. Display mode (press Enter)
-# 9. Orientation (press Enter)
-# 10. Theme color (press Enter)
-# 11. Background color (press Enter)
-# 12. Navigation color (press Enter)
-# 13. Navigation color dark (press Enter)
-# 14. Navigation color legacy (press Enter)
-# 15. Splash screen fade duration (press Enter)
-# 16. Site settings shortcut (press Enter)
-# 17. Include dark theme support (press Enter)
-# 18. Enable notifications (press Enter)
-# 19. Include Play Billing (press Enter)
-# 20. Signing key path: ./android.keystore
-# 21. Key alias: android-alias
-$initInputs = @(
-    "", 
-    "", 
-    "", 
-    "", 
-    "br.com.campainhadigital.app", 
-    "", 
-    "", 
-    "", 
-    "", 
-    "", 
-    "", 
-    "", 
-    "", 
-    "", 
-    "", 
-    "", 
-    "", 
-    "", 
-    "", 
-    "./android.keystore", 
-    "android-alias"
-)
-$initInputString = [string]::Join("`r`n", $initInputs) + "`r`n"
-
-# Remove twa-manifest.json antigo se houver para evitar loops de reconfiguração
-if (Test-Path "twa-manifest.json") {
-    Remove-Item "twa-manifest.json" -Force
+# 2. Verifica se o projeto já está inicializado (se twa-manifest.json existe)
+if (!(Test-Path "twa-manifest.json")) {
+    Write-Host "[INIT] twa-manifest.json nao encontrado! Restaurando do Git..." -ForegroundColor Yellow
+    & git checkout twa-manifest.json
+    if (!(Test-Path "twa-manifest.json")) {
+        Write-Error "Nao foi possivel encontrar ou restaurar o twa-manifest.json"
+    }
+} else {
+    Write-Host "[INIT] twa-manifest.json encontrado. Ignorando 'bubblewrap init' para usar configuracao existente." -ForegroundColor Green
 }
-
-$initInputString | npx @bubblewrap/cli init --manifest=https://palmeirape-atribuicoes.github.io/campainha-digital-full/manifest.json
-
-Write-Host "[INIT] Projeto Android inicializado com sucesso!" -ForegroundColor Green
 
 # 3. Prepara as senhas automatizadas para o 'bubblewrap build'
 Write-Host "[BUILD] Compilando e assinando os pacotes (APK & AAB)..." -ForegroundColor Yellow
