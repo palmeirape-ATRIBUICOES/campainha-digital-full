@@ -3556,12 +3556,59 @@ app.get('/api/properties/:propertyId/online-status', async (req, res) => {
   }
 });
 
-// Buscar mensagens de comunicados de uma propriedade
+// Buscar mensagens de comunicados de uma propriedade (com suporte a filtros de morador)
 app.get('/api/properties/:propertyId/messages', async (req, res) => {
   const { propertyId } = req.params;
+  const { unitId, residentId } = req.query;
   try {
+    const where = { propertyId };
+    
+    // Se for solicitado por um morador específico (filtra mensagens)
+    if (unitId || residentId) {
+      let residentBlocks = [];
+      if (unitId) {
+        const unitObj = await prisma.unit.findUnique({
+          where: { id: unitId }
+        });
+        if (unitObj && unitObj.block) {
+          residentBlocks.push(unitObj.block.trim().toLowerCase());
+        }
+      }
+      
+      where.AND = [
+        {
+          OR: [
+            { targetType: 'all' },
+            { targetType: null },
+            {
+              AND: [
+                { targetType: 'blocks' },
+                {
+                  OR: residentBlocks.map(block => ({
+                    targetBlocks: { contains: block, mode: 'insensitive' }
+                  }))
+                }
+              ]
+            },
+            {
+              AND: [
+                { targetType: 'unit' },
+                { targetUnitId: unitId }
+              ]
+            },
+            {
+              AND: [
+                { targetType: 'resident' },
+                { targetResidentId: residentId }
+              ]
+            }
+          ]
+        }
+      ];
+    }
+
     const messages = await prisma.message.findMany({
-      where: { propertyId },
+      where,
       orderBy: { createdAt: 'desc' }
     });
     res.json(messages);
@@ -3574,7 +3621,7 @@ app.get('/api/properties/:propertyId/messages', async (req, res) => {
 // Criar comunicado geral do condomínio e enviar push/socket
 app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
   const { propertyId } = req.params;
-  const { adminEmail, title, body, priority } = req.body;
+  const { adminEmail, title, body, priority, targetType, targetBlocks, targetUnitId, targetResidentId, mediaUrl } = req.body;
   
   if (!body || !body.trim()) {
     return res.status(400).json({ error: 'O corpo da mensagem é obrigatório.' });
@@ -3595,26 +3642,63 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
         title: title || 'Aviso do Condomínio',
         body: body.trim(),
         priority: priority || 'normal',
-        senderId: adminEmail || 'Admin'
+        senderId: adminEmail || 'Admin',
+        targetType: targetType || 'all',
+        targetBlocks: targetBlocks || null,
+        targetUnitId: targetUnitId || null,
+        targetResidentId: targetResidentId || null,
+        mediaUrl: mediaUrl || null
       }
     });
     
     // Emitir via socket para a sala da propriedade
     io.to(`vila_${propertyId}`).emit('broadcast_message', msg);
     
-    // Buscar todos os moradores ativos do condomínio para mandar notificação push
-    const units = await prisma.unit.findMany({
-      where: { propertyId },
-      include: { residents: true }
-    });
+    // Buscar moradores alvo para mandar notificação push
+    let residentIds = new Set();
     
-    const residentIds = new Set();
-    for (const unit of units) {
-      for (const resident of unit.residents) {
-        if (!resident.trialEndsAt || new Date(resident.trialEndsAt) >= new Date()) {
-          residentIds.add(resident.id);
+    if (!targetType || targetType === 'all') {
+      const units = await prisma.unit.findMany({
+        where: { propertyId },
+        include: { residents: true }
+      });
+      for (const unit of units) {
+        for (const resident of unit.residents) {
+          if (!resident.trialEndsAt || new Date(resident.trialEndsAt) >= new Date()) {
+            residentIds.add(resident.id);
+          }
         }
       }
+    } else if (targetType === 'blocks') {
+      const selectedBlocks = targetBlocks ? targetBlocks.split(',').map(b => b.trim().toLowerCase()) : [];
+      const units = await prisma.unit.findMany({
+        where: { propertyId },
+        include: { residents: true }
+      });
+      for (const unit of units) {
+        const uBlock = unit.block ? unit.block.trim().toLowerCase() : '';
+        if (selectedBlocks.some(b => uBlock.includes(b) || b.includes(uBlock))) {
+          for (const resident of unit.residents) {
+            if (!resident.trialEndsAt || new Date(resident.trialEndsAt) >= new Date()) {
+              residentIds.add(resident.id);
+            }
+          }
+        }
+      }
+    } else if (targetType === 'unit' && targetUnitId) {
+      const unit = await prisma.unit.findUnique({
+        where: { id: targetUnitId },
+        include: { residents: true }
+      });
+      if (unit) {
+        for (const resident of unit.residents) {
+          if (!resident.trialEndsAt || new Date(resident.trialEndsAt) >= new Date()) {
+            residentIds.add(resident.id);
+          }
+        }
+      }
+    } else if (targetType === 'resident' && targetResidentId) {
+      residentIds.add(targetResidentId);
     }
     
     const payload = {

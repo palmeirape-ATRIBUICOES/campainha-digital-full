@@ -84,7 +84,19 @@ export default function MessagesPanel({ messages, unreadCount, onClear }) {
               <h3 style={{ fontWeight: 800, fontSize: '16px', margin: 0 }}>{messages[selected].title}</h3>
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20}/></button>
             </div>
-            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, margin: '0 0 8px' }}>{messages[selected].body}</p>
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, margin: '0 0 12px' }}>{messages[selected].body}</p>
+            
+            {/* Renderizar anexo de mídia (foto ou vídeo) */}
+            {messages[selected].mediaUrl && (
+              <div style={{ marginBottom: '16px', width: '100%' }}>
+                {messages[selected].mediaUrl.startsWith('data:video/') || messages[selected].mediaUrl.includes('.mp4') ? (
+                  <video src={messages[selected].mediaUrl} controls style={{ width: '100%', maxHeight: '280px', borderRadius: '12px', objectFit: 'contain', background: '#000', border: '1px solid #E2E8F0' }} />
+                ) : (
+                  <img src={messages[selected].mediaUrl} alt="Anexo de Comunicado" style={{ width: '100%', maxHeight: '280px', borderRadius: '12px', objectFit: 'contain', background: '#F8FAFC', border: '1px solid #E2E8F0' }} />
+                )}
+              </div>
+            )}
+
             <p style={{ fontSize: '11px', color: '#94A3B8', margin: 0 }}>{fmt(messages[selected].createdAt)}</p>
           </div>
         </div>

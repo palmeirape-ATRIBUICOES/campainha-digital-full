@@ -184,6 +184,11 @@ model Message {
   body            String   
   priority        String   @default("normal")
   senderId        String
+  targetType      String?  @default("all") // "all" | "blocks" | "unit" | "resident"
+  targetBlocks    String?  // comma-separated blocks
+  targetUnitId    String?
+  targetResidentId String?
+  mediaUrl        String?  // photo or video attachment
   createdAt       DateTime @default(now())
 }
 

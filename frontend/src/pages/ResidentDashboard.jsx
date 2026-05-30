@@ -645,7 +645,7 @@ export default function ResidentDashboard() {
         const isVila = localStorage.getItem('residentIsVila') === 'true';
         const url = isVila
           ? `${API}/api/vila/${currentPropId}/messages?unitId=${savedUnitId || localStorage.getItem('residentUnitId') || ''}`
-          : `${API}/api/properties/${currentPropId}/messages`;
+          : `${API}/api/properties/${currentPropId}/messages?unitId=${savedUnitId || localStorage.getItem('residentUnitId') || ''}&residentId=${localStorage.getItem('cd_user_id') || ''}`;
 
         const res = await fetch(url);
         if (res.ok) {
