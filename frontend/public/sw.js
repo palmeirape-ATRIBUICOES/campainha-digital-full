@@ -1,6 +1,6 @@
 // ─── Campainha Digital — Service Worker ───────────────────────────────────────
 // Versão do cache — altere para forçar atualização
-const CACHE_NAME = 'campainha-v25';
+const CACHE_NAME = 'campainha-v26';
 
 const STATIC_ASSETS = [
   './',

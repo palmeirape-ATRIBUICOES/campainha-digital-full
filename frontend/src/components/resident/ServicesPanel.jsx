@@ -54,6 +54,8 @@ export default function ServicesPanel() {
                   localStorage.getItem('cd_admin_email') === 'admin@campainha.com' ||
                   localStorage.getItem('cd_is_super_admin') === 'true';
 
+  const [dynamicPartners, setDynamicPartners] = useState(PARTNERS);
+
   useEffect(() => {
     async function fetchSettings() {
       try {
@@ -77,6 +79,23 @@ export default function ServicesPanel() {
               }
             } catch (e) {
               console.error('Error parsing partner banner:', e);
+            }
+          }
+          if (data.local_partners) {
+            try {
+              const parsedList = JSON.parse(data.local_partners);
+              if (Array.isArray(parsedList) && parsedList.length > 0) {
+                const grouped = { farmacia: [], gas: [], agua: [], mercado: [] };
+                parsedList.forEach(p => {
+                  const cat = p.category;
+                  if (grouped[cat]) {
+                    grouped[cat].push(p);
+                  }
+                });
+                setDynamicPartners(grouped);
+              }
+            } catch (e) {
+              console.error('Error parsing local partners:', e);
             }
           }
         }
@@ -376,7 +395,7 @@ export default function ServicesPanel() {
 
       {/* Partner Cards */}
       <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {(active ? PARTNERS[active] : Object.values(PARTNERS).flat().slice(0, 3)).map((p, i) => (
+        {(active ? dynamicPartners[active] : Object.values(dynamicPartners).flat().slice(0, 3)).map((p, i) => (
           <div key={i} className="fade-in" style={{ 
             background: '#FFF', borderRadius: '16px', padding: '12px', 
             border: '1px solid #E2E8F0', display: 'flex', gap: '12px',

@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Building2, Gift, History, Settings2, LogOut, ChevronRight, RefreshCw, Search, ToggleRight, ToggleLeft, QrCode, Copy, Check, Download, X, Hash, Layers, Sparkles, Bell, Eye, EyeOff, Home, Zap } from 'lucide-react';
+import { Users, Building2, Gift, History, Settings2, LogOut, ChevronRight, RefreshCw, Search, ToggleRight, ToggleLeft, QrCode, Copy, Check, Download, X, Hash, Layers, Sparkles, Bell, Eye, EyeOff, Home, Zap, Sun, Moon, Plus, Trash2, Phone, Star } from 'lucide-react';
 import Logo from '../components/Logo';
 import PlateProductionPanel from '../components/PlateProductionPanel';
+
+const PRESETS = {
+  internet: 'https://images.unsplash.com/photo-1600132806370-bf17e65e942f?w=600&h=300&fit=crop',
+  iptv: 'https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=600&h=300&fit=crop',
+  general: 'https://images.unsplash.com/photo-1546054454-aa26e2b734c7?w=600&h=300&fit=crop'
+};
 import { useNavigate } from 'react-router-dom';
 import { API } from '../config';
 
@@ -56,9 +62,45 @@ export default function MasterAdminDashboard() {
     }
   }, [activeTab]);
 
+  // Suporte a Modo Noturno (Dark Mode)
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('cd_dark_mode') === 'true';
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-theme');
+      localStorage.setItem('cd_dark_mode', 'true');
+    } else {
+      document.body.classList.remove('dark-theme');
+      localStorage.setItem('cd_dark_mode', 'false');
+    }
+  }, [darkMode]);
+
   // Configurações globais de sistema
   const [planPrice, setPlanPrice] = useState('39.90');
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // Estados para o Banner de Parcerias
+  const [bannerEnabled, setBannerEnabled] = useState(false);
+  const [bannerTitle, setBannerTitle] = useState('');
+  const [bannerDesc, setBannerDesc] = useState('');
+  const [bannerLink, setBannerLink] = useState('');
+  const [bannerBtnText, setBannerBtnText] = useState('');
+  const [bannerPreset, setBannerPreset] = useState('internet');
+  const [bannerCustomUrl, setBannerCustomUrl] = useState('');
+  const [savingBanner, setSavingBanner] = useState(false);
+
+  // Estados para Parceiros Locais
+  const [localPartners, setLocalPartners] = useState([]);
+  const [showAddPartner, setShowAddPartner] = useState(false);
+  const [newPartnerName, setNewPartnerName] = useState('');
+  const [newPartnerCategory, setNewPartnerCategory] = useState('farmacia');
+  const [newPartnerRating, setNewPartnerRating] = useState('4.8');
+  const [newPartnerDist, setNewPartnerDist] = useState('1.0km');
+  const [newPartnerTel, setNewPartnerTel] = useState('');
+  const [newPartnerImg, setNewPartnerImg] = useState('');
+  const [savingPartners, setSavingPartners] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('cd_token');
@@ -75,8 +117,132 @@ export default function MasterAdminDashboard() {
       const res = await fetch(`${API}/api/settings`);
       const data = await res.json();
       if (data.plan_price) setPlanPrice(data.plan_price);
+      if (data.partner_banner) {
+        try {
+          const parsed = JSON.parse(data.partner_banner);
+          setBannerEnabled(parsed.enabled ?? false);
+          setBannerTitle(parsed.title || '');
+          setBannerDesc(parsed.description || '');
+          setBannerLink(parsed.link || '');
+          setBannerBtnText(parsed.btnText || '');
+          setBannerPreset(parsed.imagePreset || 'internet');
+          setBannerCustomUrl(parsed.imageUrl || '');
+        } catch (e) {
+          console.error('[Settings] Erro ao parsear banner:', e);
+        }
+      }
+      if (data.local_partners) {
+        try {
+          setLocalPartners(JSON.parse(data.local_partners));
+        } catch (e) {
+          console.error('[Settings] Erro ao parsear parceiros locais:', e);
+        }
+      }
     } catch (err) {
       console.error('[Settings] Erro ao buscar:', err);
+    }
+  };
+
+  const handleSaveBannerSettings = async (e) => {
+    e.preventDefault();
+    setSavingBanner(true);
+    try {
+      const token = localStorage.getItem('cd_token');
+      const bannerData = {
+        enabled: bannerEnabled,
+        title: bannerTitle,
+        description: bannerDesc,
+        link: bannerLink,
+        btnText: bannerBtnText,
+        imagePreset: bannerPreset,
+        imageUrl: bannerPreset === 'custom' ? bannerCustomUrl : PRESETS[bannerPreset]
+      };
+
+      const res = await fetch(`${API}/api/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
+        body: JSON.stringify({
+          key: 'partner_banner',
+          value: JSON.stringify(bannerData)
+        })
+      });
+
+      if (res.ok) {
+        alert('Configuração de banner salva com sucesso!');
+      } else {
+        alert('Erro ao salvar configuração de banner.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao salvar.');
+    } finally {
+      setSavingBanner(false);
+    }
+  };
+
+  const handleAddLocalPartner = async (e) => {
+    e.preventDefault();
+    const defaultImages = {
+      farmacia: 'https://images.unsplash.com/photo-1586015555751-63bb77f4322a?w=100&h=100&fit=crop',
+      gas: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=100&h=100&fit=crop',
+      agua: 'https://images.unsplash.com/photo-1548839140-29a749e1cf3d?w=100&h=100&fit=crop',
+      mercado: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=100&h=100&fit=crop'
+    };
+
+    const newPartner = {
+      id: Date.now().toString(),
+      name: newPartnerName,
+      category: newPartnerCategory,
+      rating: parseFloat(newPartnerRating) || 5.0,
+      dist: newPartnerDist,
+      tel: newPartnerTel,
+      img: newPartnerImg.trim() || defaultImages[newPartnerCategory] || 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=100&h=100&fit=crop'
+    };
+
+    const updatedPartners = [...localPartners, newPartner];
+    await saveLocalPartners(updatedPartners);
+    
+    // Reset form
+    setNewPartnerName('');
+    setNewPartnerTel('');
+    setNewPartnerImg('');
+    setShowAddPartner(false);
+  };
+
+  const handleDeleteLocalPartner = async (id) => {
+    if (!window.confirm('Excluir este parceiro local?')) return;
+    const updatedPartners = localPartners.filter(p => p.id !== id);
+    await saveLocalPartners(updatedPartners);
+  };
+
+  const saveLocalPartners = async (updatedList) => {
+    setSavingPartners(true);
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
+        body: JSON.stringify({
+          key: 'local_partners',
+          value: JSON.stringify(updatedList)
+        })
+      });
+      if (res.ok) {
+        setLocalPartners(updatedList);
+      } else {
+        alert('Erro ao salvar parceiros locais no banco.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao salvar parceiros.');
+    } finally {
+      setSavingPartners(false);
     }
   };
 
@@ -325,11 +491,11 @@ export default function MasterAdminDashboard() {
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F8FAFC', display: 'flex', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', display: 'flex', fontFamily: 'Inter, sans-serif', transition: 'background-color 0.3s, color 0.3s' }}>
 
       {/* SIDEBAR */}
-      <aside style={{ width: '260px', background: '#FFF', borderRight: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
-        <div style={{ padding: '28px 24px' }}><Logo size={80} /></div>
+      <aside style={{ width: '260px', background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh', transition: 'background-color 0.3s, border-color 0.3s' }}>
+        <div style={{ padding: '20px 24px' }}><Logo size={38} /></div>
         <nav style={{ padding: '0 12px', flex: 1 }}>
           <SidebarLink icon={Users} label="Usuários & Módulos" active={activeTab === 'users'} onClick={() => setActiveTab('users')} />
           <SidebarLink icon={Building2} label="Propriedades" active={activeTab === 'properties'} onClick={() => setActiveTab('properties')} />
@@ -339,20 +505,42 @@ export default function MasterAdminDashboard() {
           <SidebarLink icon={History} label="Logs" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
           <SidebarLink icon={Settings2} label="Configurações" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         </nav>
-        <div style={{ padding: '20px', borderTop: '1px solid #F1F5F9', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, paddingLeft: '4px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-            👤 Logado como: <strong style={{ color: '#0F172A' }}>{localStorage.getItem('cd_admin_email') || localStorage.getItem('cd_user_contact') || 'Master Admin'}</strong>
+        <div style={{ padding: '20px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700, paddingLeft: '4px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            👤 Logado como: <strong style={{ color: 'var(--text-main)' }}>{localStorage.getItem('cd_admin_email') || localStorage.getItem('cd_user_contact') || 'Master Admin'}</strong>
           </div>
+
+          {/* Dark Mode Toggle */}
+          <button type="button" onClick={() => setDarkMode(!darkMode)} style={{ 
+            width: '100%', 
+            padding: '12px', 
+            borderRadius: '12px', 
+            border: 'none', 
+            color: 'var(--text-muted)', 
+            background: 'var(--bg-deep)', 
+            fontWeight: 700, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '8px', 
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            marginBottom: '4px'
+          }}>
+            {darkMode ? <><Sun size={14} color="#F59E0B" /> Modo Claro</> : <><Moon size={14} color="#3B82F6" /> Modo Noturno</>}
+          </button>
+
           <button onClick={() => {
             [
               'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
               'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
               'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
               'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
-              'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+              'cd_admin_name', 'cd_admin_password', 'cd_property_type', 'cd_is_super_admin'
             ].forEach(k => localStorage.removeItem(k));
+            document.body.classList.remove('dark-theme');
             navigate('/auth');
-          }} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', color: '#DC2626', background: '#FEF2F2', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
+          }} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: 'none', color: '#DC2626', background: 'rgba(239, 68, 68, 0.08)', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
             <LogOut size={16} /> Sair do Painel
           </button>
         </div>
@@ -362,33 +550,33 @@ export default function MasterAdminDashboard() {
       <main style={{ flex: 1, padding: '40px 48px', overflowY: 'auto' }}>
         <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A', letterSpacing: '-1px', margin: 0 }}>
+            <h2 style={{ fontSize: '28px', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-1px', margin: 0 }}>
               {activeTab === 'users' ? 'Usuários & QR Codes' : 
                activeTab === 'production' ? 'Produção de Placas' : 'Controle Master'}
             </h2>
-            <p style={{ color: '#64748B', fontSize: '15px', marginTop: '4px' }}>Gerencie permissões, QR Codes e placas dos clientes.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: '4px' }}>Gerencie permissões, QR Codes e placas dos clientes.</p>
           </div>
-          <button onClick={fetchUsers} style={{ padding: '12px', borderRadius: '12px', background: '#FFF', border: '1px solid #E2E8F0', color: '#64748B', cursor: 'pointer' }}>
+          <button onClick={fetchUsers} style={{ padding: '12px', borderRadius: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', cursor: 'pointer' }}>
             <RefreshCw size={20} />
           </button>
         </header>
 
         {/* SEARCH */}
-        <div style={{ marginBottom: '24px', background: '#FFF', padding: '14px 16px', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', gap: '12px' }}>
+        <div style={{ marginBottom: '24px', background: 'var(--bg-surface)', padding: '14px 16px', borderRadius: '16px', border: '1px solid var(--border-subtle)', display: 'flex', gap: '12px' }}>
           <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={16} color="#94A3B8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+            <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
             <input type="text" placeholder="Buscar por nome, email ou celular..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px 10px 42px', borderRadius: '10px', border: '1px solid #F1F5F9', background: '#F8FAFC', outline: 'none', fontSize: '14px' }} />
+              style={{ width: '100%', padding: '10px 14px 10px 42px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '14px' }} />
           </div>
         </div>
 
         {/* USERS TABLE */}
         {activeTab === 'users' && (
-          <div style={{ background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '20px', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: '#F8FAFC' }}>
-                <tr style={{ textAlign: 'left', borderBottom: '1px solid #E2E8F0' }}>
-                  <th style={{ padding: '18px 24px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Usuário</th>
+              <thead style={{ background: 'var(--bg-deep)' }}>
+                <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <th style={{ padding: '18px 24px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Usuário</th>
                   <th style={{ padding: '18px 24px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Módulos</th>
                   <th style={{ padding: '18px 24px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>QR Code</th>
                   <th style={{ padding: '18px 24px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Trial</th>
@@ -399,16 +587,16 @@ export default function MasterAdminDashboard() {
                 {loading ? (
                   <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: '#94A3B8' }}>Carregando...</td></tr>
                 ) : filteredUsers.map(user => (
-                  <tr key={user.id} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#FAFBFC'}
+                  <tr key={user.id} style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-surface-elevated)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <td style={{ padding: '18px 24px' }}>
-                      <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '15px' }}>{user.name}</div>
-                      <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '15px' }}>{user.name}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span>{user.email || user.phone}</span>
-                        <span style={{ color: '#E2E8F0' }}>|</span>
-                        <span style={{ fontSize: '11px', color: '#94A3B8' }}>Senha:</span>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#475569' }}>
+                        <span style={{ color: 'var(--border-subtle)' }}>|</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Senha:</span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-main)' }}>
                           {visiblePassMap[user.id] ? user.password : '••••••'}
                         </span>
                         <button onClick={() => setVisiblePassMap(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
@@ -472,54 +660,339 @@ export default function MasterAdminDashboard() {
         )}
 
         {activeTab === 'settings' && (
-          <div style={{ background: '#FFF', borderRadius: '24px', border: '1px solid #E2E8F0', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
-            <div style={{ marginBottom: '32px', borderBottom: '1px solid #F1F5F9', paddingBottom: '20px' }}>
-              <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: 0 }}>⚙️ Configurações do Sistema</h2>
-              <p style={{ color: '#64748B', fontSize: '14px', marginTop: '6px', margin: 0 }}>Gerencie as preferências globais e precificação da plataforma Campainha Digital.</p>
-            </div>
-
-            <form onSubmit={handleSaveSettings} style={{ maxWidth: '480px' }}>
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#475569', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Preço do Plano Anual (moradores)
-                </label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <span style={{ position: 'absolute', left: '16px', fontWeight: 700, color: '#94A3B8', fontSize: '15px' }}>R$</span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="39.90"
-                    value={planPrice}
-                    onChange={e => setPlanPrice(e.target.value)}
-                    required
-                    style={{
-                      width: '100%', padding: '14px 16px 14px 44px', borderRadius: '12px', border: '2px solid #E2E8F0',
-                      fontSize: '16px', fontWeight: 800, color: '#1E293B', outline: 'none', transition: 'border-color 0.2s',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.01)'
-                    }}
-                    onFocus={e => e.target.style.borderColor = '#3B82F6'}
-                    onBlur={e => e.target.style.borderColor = '#E2E8F0'}
-                  />
-                </div>
-                <p style={{ color: '#64748B', fontSize: '12px', marginTop: '8px', lineHeight: 1.4 }}>
-                  Este valor será exibido no fluxo de cadastro dos moradores e será cobrado dinamicamente via Mercado Pago (PIX e Cartão de Crédito).
-                </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', width: '100%' }}>
+            {/* 1. CONFIGURAÇÕES DE PREÇO */}
+            <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
+              <div style={{ marginBottom: '32px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px' }}>
+                <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>⚙️ Configurações do Sistema</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px', margin: 0 }}>Gerencie as preferências globais e precificação da plataforma Campainha Digital.</p>
               </div>
 
-              <button
-                type="submit"
-                disabled={savingSettings}
-                style={{
-                  background: '#3B82F6', color: '#FFF', border: 'none', padding: '14px 28px', borderRadius: '12px',
-                  fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
-                  gap: '8px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)', transition: 'all 0.2s',
-                  opacity: savingSettings ? 0.7 : 1
-                }}
-              >
-                {savingSettings ? 'Salvando...' : 'Salvar Alterações'}
-              </button>
-            </form>
+              <form onSubmit={handleSaveSettings} style={{ maxWidth: '480px' }}>
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Preço do Plano Anual (moradores)
+                  </label>
+                  <div style={{ relative: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <span style={{ position: 'absolute', left: '16px', fontWeight: 700, color: 'var(--text-muted)', fontSize: '15px' }}>R$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="39.90"
+                      value={planPrice}
+                      onChange={e => setPlanPrice(e.target.value)}
+                      required
+                      style={{
+                        width: '100%', padding: '14px 16px 14px 44px', borderRadius: '12px', border: '2px solid var(--border-subtle)',
+                        fontSize: '16px', fontWeight: 800, color: 'var(--text-main)', background: 'var(--bg-deep)', outline: 'none', transition: 'border-color 0.2s',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.01)'
+                      }}
+                    />
+                  </div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px', lineHeight: 1.4 }}>
+                    Este valor será exibido no fluxo de cadastro dos moradores e será cobrado dinamicamente via Mercado Pago (PIX e Cartão de Crédito).
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={savingSettings}
+                  style={{
+                    background: '#3B82F6', color: '#FFF', border: 'none', padding: '14px 28px', borderRadius: '12px',
+                    fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                    gap: '8px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)', transition: 'all 0.2s',
+                    opacity: savingSettings ? 0.7 : 1
+                  }}
+                >
+                  {savingSettings ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </form>
+            </div>
+
+            {/* 2. CONFIGURAÇÕES DO BANNER DE PARCERIAS */}
+            <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
+              <div style={{ marginBottom: '24px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={20} color="#10B981" /> 📢 Banner de Parcerias (Internet / IPTV)
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px', margin: 0 }}>Configure o banner publicitário em destaque na aba Parceiros da Região.</p>
+              </div>
+
+              <form onSubmit={handleSaveBannerSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '580px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={bannerEnabled} 
+                    onChange={e => setBannerEnabled(e.target.checked)} 
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  Ativar e exibir o banner para os moradores
+                </label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Título do Banner</label>
+                    <input 
+                      type="text" 
+                      value={bannerTitle} 
+                      onChange={e => setBannerTitle(e.target.value)} 
+                      placeholder="Ex: Internet Fibra + IPTV" 
+                      required
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Texto do Botão</label>
+                    <input 
+                      type="text" 
+                      value={bannerBtnText} 
+                      onChange={e => setBannerBtnText(e.target.value)} 
+                      placeholder="Ex: Falar com Consultor" 
+                      required
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Descrição do Banner</label>
+                  <textarea 
+                    value={bannerDesc} 
+                    onChange={e => setBannerDesc(e.target.value)} 
+                    placeholder="Ex: Assine a melhor internet de fibra óptica da região com canais de TV inclusos e suporte 24h." 
+                    required
+                    rows={2}
+                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none', fontFamily: 'inherit', resize: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Link de Ação (WhatsApp ou Site)</label>
+                  <input 
+                    type="url" 
+                    value={bannerLink} 
+                    onChange={e => setBannerLink(e.target.value)} 
+                    placeholder="Ex: https://wa.me/5511999999999" 
+                    required
+                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Preset de Imagem</label>
+                    <select 
+                      value={bannerPreset} 
+                      onChange={e => setBannerPreset(e.target.value)} 
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                    >
+                      <option value="internet">Internet Fibra (Padrão)</option>
+                      <option value="iptv">IPTV / Canais (Padrão)</option>
+                      <option value="general">Geral / Conectividade</option>
+                      <option value="custom">URL Customizada</option>
+                    </select>
+                  </div>
+                  {bannerPreset === 'custom' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>URL da Imagem de Fundo</label>
+                      <input 
+                        type="url" 
+                        value={bannerCustomUrl} 
+                        onChange={e => setBannerCustomUrl(e.target.value)} 
+                        placeholder="https://exemplo.com/foto.jpg" 
+                        required
+                        style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={savingBanner}
+                  style={{
+                    alignSelf: 'flex-start',
+                    background: '#10B981', color: '#FFF', border: 'none', padding: '12px 24px', borderRadius: '12px',
+                    fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                    gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', transition: 'all 0.2s',
+                    opacity: savingBanner ? 0.7 : 1
+                  }}
+                >
+                  <Save size={16} />
+                  {savingBanner ? 'Salvando...' : 'Salvar Alterações do Banner'}
+                </button>
+              </form>
+            </div>
+
+            {/* 3. CONFIGURAÇÕES DE PARCEIROS LOCAIS */}
+            <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
+              <div style={{ marginBottom: '24px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Users size={20} color="#3B82F6" /> 🏪 Parceiros Locais
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px', margin: 0 }}>Gerencie a lista de comércios parceiros exibidos na aba de moradores.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddPartner(!showAddPartner)}
+                  style={{
+                    background: 'linear-gradient(135deg, #3B82F6, #2563EB)', color: '#FFF', border: 'none', padding: '10px 18px', borderRadius: '10px',
+                    fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'
+                  }}
+                >
+                  <Plus size={16} />
+                  {showAddPartner ? 'Fechar Formulário' : 'Novo Parceiro'}
+                </button>
+              </div>
+
+              {/* Form to Add Partner */}
+              {showAddPartner && (
+                <form onSubmit={handleAddLocalPartner} style={{ background: 'var(--bg-deep)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border-subtle)', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Cadastrar Novo Parceiro Regional</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Nome do Estabelecimento</label>
+                      <input 
+                        type="text" 
+                        value={newPartnerName} 
+                        onChange={e => setNewPartnerName(e.target.value)} 
+                        placeholder="Ex: Farmácia do Bairro" 
+                        required
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Categoria</label>
+                      <select 
+                        value={newPartnerCategory} 
+                        onChange={e => setNewPartnerCategory(e.target.value)} 
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                      >
+                        <option value="farmacia">Farmácia</option>
+                        <option value="gas">Gás / Fogo</option>
+                        <option value="agua">Água</option>
+                        <option value="mercado">Mercado</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Telefone / WhatsApp</label>
+                      <input 
+                        type="text" 
+                        value={newPartnerTel} 
+                        onChange={e => setNewPartnerTel(e.target.value)} 
+                        placeholder="Ex: (11) 99999-8888" 
+                        required
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Avaliação (Nota)</label>
+                      <input 
+                        type="number" 
+                        step="0.1" 
+                        min="1" 
+                        max="5"
+                        value={newPartnerRating} 
+                        onChange={e => setNewPartnerRating(e.target.value)} 
+                        placeholder="Ex: 4.8" 
+                        required
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Distância (Texto)</label>
+                      <input 
+                        type="text" 
+                        value={newPartnerDist} 
+                        onChange={e => setNewPartnerDist(e.target.value)} 
+                        placeholder="Ex: 1.2km" 
+                        required
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>URL da Foto (Opcional - deixe em branco para usar padrão)</label>
+                    <input 
+                      type="url" 
+                      value={newPartnerImg} 
+                      onChange={e => setNewPartnerImg(e.target.value)} 
+                      placeholder="https://exemplo.com/foto.jpg" 
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                    />
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    style={{
+                      alignSelf: 'flex-start',
+                      background: '#3B82F6', color: '#FFF', border: 'none', padding: '10px 20px', borderRadius: '8px',
+                      fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                    }}
+                  >
+                    <Plus size={14} /> Cadastrar Parceiro
+                  </button>
+                </form>
+              )}
+
+              {/* Table / List of existing partners */}
+              {localPartners.length === 0 ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)', border: '2px dashed var(--border-subtle)', borderRadius: '16px' }}>
+                  Nenhum parceiro customizado cadastrado ainda. A aplicação exibirá os parceiros padrão (fallback).
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: '16px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={{ background: 'var(--bg-deep)' }}>
+                      <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
+                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Logo</th>
+                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Nome</th>
+                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Categoria</th>
+                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Avaliação</th>
+                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Contato</th>
+                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Distância</th>
+                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right' }}>Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {localPartners.map((partner, index) => (
+                        <tr key={partner.id || index} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '12px 16px' }}>
+                            <img src={partner.img} alt={partner.name} style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>{partner.name}</td>
+                          <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                            <span style={{ padding: '4px 8px', borderRadius: '12px', background: 'var(--bg-deep)', fontSize: '11px', fontWeight: 700 }}>
+                              {partner.category === 'farmacia' ? '💊 Farmácia' : partner.category === 'gas' ? '🔥 Gás / Fogo' : partner.category === 'agua' ? '💧 Água' : '🛒 Mercado'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 800, color: '#F59E0B' }}>⭐ {partner.rating}</td>
+                          <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>{partner.tel}</td>
+                          <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>📍 {partner.dist}</td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteLocalPartner(partner.id)}
+                              disabled={savingPartners}
+                              style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
+                              title="Excluir parceiro"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1129,7 +1602,7 @@ export default function MasterAdminDashboard() {
 
 function SidebarLink({ icon: Icon, label, active, onClick }) {
   return (
-    <button onClick={onClick} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: active ? 'rgba(59,130,246,0.08)' : 'transparent', color: active ? '#3B82F6' : '#64748B', border: 'none', cursor: 'pointer', transition: 'all 0.2s', marginBottom: '4px' }}>
+    <button onClick={onClick} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px', background: active ? 'rgba(59,130,246,0.08)' : 'transparent', color: active ? '#3B82F6' : 'var(--text-muted)', border: 'none', cursor: 'pointer', transition: 'all 0.2s', marginBottom: '4px' }}>
       <Icon size={18} strokeWidth={active ? 2.5 : 2} />
       <span style={{ fontWeight: active ? 700 : 500, fontSize: '14px' }}>{label}</span>
       {active && <ChevronRight size={14} style={{ marginLeft: 'auto' }} />}
@@ -1139,7 +1612,7 @@ function SidebarLink({ icon: Icon, label, active, onClick }) {
 
 function ModuleBadge({ label, active, onClick }) {
   return (
-    <button onClick={onClick} style={{ padding: '5px 10px', borderRadius: '7px', fontSize: '11px', fontWeight: 700, border: '1px solid', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', background: active ? '#10B98115' : '#F1F5F9', borderColor: active ? '#10B981' : '#E2E8F0', color: active ? '#047857' : '#94A3B8' }}>
+    <button onClick={onClick} style={{ padding: '5px 10px', borderRadius: '7px', fontSize: '11px', fontWeight: 700, border: '1px solid', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', background: active ? '#10B98115' : 'var(--bg-deep)', borderColor: active ? '#10B981' : 'var(--border-subtle)', color: active ? '#047857' : 'var(--text-muted)' }}>
       {active ? <ToggleRight size={13} /> : <ToggleLeft size={13} />}
       {label}
     </button>
