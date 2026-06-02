@@ -3226,12 +3226,15 @@ app.post('/api/master/users/:id/set-plate-code', authenticate, async (req, res) 
   });
 });
 
-// ─── System Settings Routes ──────────────────────────────────────────────────
 // Retorna configurações do sistema (público para o frontend de cadastro poder ler)
 app.get('/api/settings', async (req, res) => {
   try {
-    const setting = await prisma.systemSetting.findUnique({ where: { key: 'plan_price' } });
-    res.json({ plan_price: setting?.value || '39.90' });
+    const settings = await prisma.systemSetting.findMany();
+    const result = { plan_price: '39.90' };
+    settings.forEach(s => {
+      result[s.key] = s.value;
+    });
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao obter configurações.' });
   }
