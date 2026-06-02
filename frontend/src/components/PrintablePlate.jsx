@@ -1,4 +1,5 @@
 import React, { forwardRef } from 'react';
+import Logo from './Logo';
 
 const PrintablePlate = forwardRef(({ qrImage }, ref) => {
   return (
@@ -27,17 +28,8 @@ const PrintablePlate = forwardRef(({ qrImage }, ref) => {
       <div style={{ position: 'absolute', bottom: '20px', right: '20px', width: '12px', height: '12px', borderRadius: '50%', background: '#CBD5E1', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }} />
 
       {/* Header com Logo e Texto */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-          {/* Logo Simplificado da Campainha Digital */}
-          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-            <div style={{ width: '24px', height: '24px', borderRadius: '50%', border: '4px solid #3B82F6' }}></div>
-            <div style={{ position: 'absolute', right: '-8px', width: '16px', height: '16px', borderRadius: '50%', background: '#F59E0B' }}></div>
-          </div>
-        </div>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-          Campainha-<span style={{ color: '#0891B2' }}>Digital</span>
-        </h1>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '10px 0 0 0' }}>
+        <Logo size={48} showText={true} vertical={true} />
       </div>
 
       {/* Área Central: Ícone do Celular e QR Code */}

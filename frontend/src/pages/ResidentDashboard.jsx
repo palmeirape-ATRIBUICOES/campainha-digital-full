@@ -1376,8 +1376,8 @@ export default function ResidentDashboard() {
             <ShoppingBag size={20} color={tab === 'services' ? '#0369A1' : '#64748B'} /> Parceiros da Região
           </button>
 
-          {/* Códigos de Visitante: todos exceto dependentes */}
-          {!isDependent && (
+          {/* Códigos de Visitante: todos exceto dependentes e apenas para moradores autenticados por e-mail */}
+          {!isDependent && isEmailResident && (
             <button onClick={() => { setTab('visitor-codes'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'visitor-codes' ? '#F0F9FF' : 'transparent', color: tab === 'visitor-codes' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
               <KeyRound size={20} color={tab === 'visitor-codes' ? '#0369A1' : '#64748B'} /> Códigos de Visitante
             </button>
@@ -2555,7 +2555,7 @@ export default function ResidentDashboard() {
         </div>
       )}
 
-      {tab === 'visitor-codes' && (
+      {tab === 'visitor-codes' && isEmailResident && (
         <div style={{ padding: '20px' }}>
           <VisitorCodesPanel unitId={id} propertyName={propertyName} />
         </div>
