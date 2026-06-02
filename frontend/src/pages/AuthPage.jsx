@@ -816,9 +816,6 @@ export default function AuthPage() {
       </div>
 
       {/* Footer Info */}
-      <div style={{ position: 'absolute', bottom: '32px', textAlign: 'center', width: '100%', color: '#94A3B8', fontSize: '12px', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>
-        Conexão Segura End-to-End
-      </div>
       
       {showPaymentModal && (
         <PaymentModal 
