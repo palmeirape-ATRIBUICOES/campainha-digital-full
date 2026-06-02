@@ -9,7 +9,7 @@ import { Bell } from 'lucide-react';
  *   vertical  {boolean} If true, renders icon and text in a column layout
  *   showText  {boolean} If true, renders the brand name alongside the icon
  */
-export default function Logo({ size = 40, light = false, vertical = false, showText = true }) {
+export default function Logo({ size = 40, light = false, vertical = false, showText = true, animate = true }) {
   // Map size to icon and text dimensions
   const iconSize = Math.max(14, Math.floor(size * 0.5));
   const boxSize = Math.max(26, Math.floor(size * 0.95));
@@ -41,15 +41,17 @@ export default function Logo({ size = 40, light = false, vertical = false, showT
       }}>
         <Bell size={iconSize} color="#FFF" style={{ transform: 'rotate(15deg)' }} />
         {/* Shine effect */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: '-100%',
-          width: '100%',
-          height: '100%',
-          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-          animation: 'logo-shine 2.5s infinite'
-        }} />
+        {animate && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: '-100%',
+            width: '100%',
+            height: '100%',
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+            animation: 'logo-shine 2.5s infinite'
+          }} />
+        )}
       </div>
       
       {showText && (
@@ -86,13 +88,15 @@ export default function Logo({ size = 40, light = false, vertical = false, showT
       )}
       
       {/* Inject keyframes locally */}
-      <style>{`
-        @keyframes logo-shine {
-          0% { left: -100%; }
-          50% { left: 100%; }
-          100% { left: 100%; }
-        }
-      `}</style>
+      {animate && (
+        <style>{`
+          @keyframes logo-shine {
+            0% { left: -100%; }
+            50% { left: 100%; }
+            100% { left: 100%; }
+          }
+        `}</style>
+      )}
     </div>
   );
 }

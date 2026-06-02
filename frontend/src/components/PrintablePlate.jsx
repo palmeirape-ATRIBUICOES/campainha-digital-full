@@ -24,15 +24,9 @@ const PrintablePlate = forwardRef(({ qrImage, isPreview = false }, ref) => {
         border: isPreview ? '1px solid #E2E8F0' : 'none'
       }}
     >
-      {/* Detalhes dos "parafusos" do acrílico */}
-      <div style={{ position: 'absolute', top: '20px', left: '20px', width: '12px', height: '12px', borderRadius: '50%', background: '#CBD5E1', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }} />
-      <div style={{ position: 'absolute', top: '20px', right: '20px', width: '12px', height: '12px', borderRadius: '50%', background: '#CBD5E1', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }} />
-      <div style={{ position: 'absolute', bottom: '20px', left: '20px', width: '12px', height: '12px', borderRadius: '50%', background: '#CBD5E1', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }} />
-      <div style={{ position: 'absolute', bottom: '20px', right: '20px', width: '12px', height: '12px', borderRadius: '50%', background: '#CBD5E1', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }} />
-
       {/* Header com Logo e Texto */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '10px 0 0 0' }}>
-        <Logo size={48} showText={true} vertical={true} />
+        <Logo size={48} showText={true} vertical={true} animate={false} />
       </div>
 
       {/* Área Central: Ícone do Celular e QR Code */}
