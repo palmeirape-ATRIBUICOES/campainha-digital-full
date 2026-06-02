@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Building2, Gift, History, Settings2, LogOut, ChevronRight, RefreshCw, Search, ToggleRight, ToggleLeft, QrCode, Copy, Check, Download, X, Hash, Layers, Sparkles, Bell, Eye, EyeOff, Home, Zap, Sun, Moon, Plus, Trash2, Phone, Star } from 'lucide-react';
+import { Users, Building2, Gift, History, Settings2, LogOut, ChevronRight, RefreshCw, Search, ToggleRight, ToggleLeft, QrCode, Copy, Check, Download, X, Hash, Layers, Sparkles, Bell, Eye, EyeOff, Home, Zap, Sun, Moon, Plus, Trash2, Phone, Star, Save } from 'lucide-react';
 import Logo from '../components/Logo';
 import PlateProductionPanel from '../components/PlateProductionPanel';
 
@@ -133,10 +133,14 @@ export default function MasterAdminDashboard() {
       }
       if (data.local_partners) {
         try {
-          setLocalPartners(JSON.parse(data.local_partners));
+          const parsed = JSON.parse(data.local_partners);
+          setLocalPartners(Array.isArray(parsed) ? parsed : []);
         } catch (e) {
           console.error('[Settings] Erro ao parsear parceiros locais:', e);
+          setLocalPartners([]);
         }
+      } else {
+        setLocalPartners([]);
       }
     } catch (err) {
       console.error('[Settings] Erro ao buscar:', err);
@@ -659,342 +663,345 @@ export default function MasterAdminDashboard() {
           </div>
         )}
 
-        {activeTab === 'settings' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', width: '100%' }}>
-            {/* 1. CONFIGURAÇÕES DE PREÇO */}
-            <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
-              <div style={{ marginBottom: '32px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px' }}>
-                <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>⚙️ Configurações do Sistema</h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px', margin: 0 }}>Gerencie as preferências globais e precificação da plataforma Campainha Digital.</p>
+        {activeTab === 'settings' && (() => {
+          const partnersList = Array.isArray(localPartners) ? localPartners : [];
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', width: '100%' }}>
+              {/* 1. CONFIGURAÇÕES DE PREÇO */}
+              <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
+                <div style={{ marginBottom: '32px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px' }}>
+                  <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>⚙️ Configurações do Sistema</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px', margin: 0 }}>Gerencie as preferências globais e precificação da plataforma Campainha Digital.</p>
+                </div>
+
+                <form onSubmit={handleSaveSettings} style={{ maxWidth: '480px' }}>
+                  <div style={{ marginBottom: '24px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Preço do Plano Anual (moradores)
+                    </label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <span style={{ position: 'absolute', left: '16px', fontWeight: 700, color: 'var(--text-muted)', fontSize: '15px' }}>R$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="39.90"
+                        value={planPrice}
+                        onChange={e => setPlanPrice(e.target.value)}
+                        required
+                        style={{
+                          width: '100%', padding: '14px 16px 14px 44px', borderRadius: '12px', border: '2px solid var(--border-subtle)',
+                          fontSize: '16px', fontWeight: 800, color: 'var(--text-main)', background: 'var(--bg-deep)', outline: 'none', transition: 'border-color 0.2s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.01)'
+                        }}
+                      />
+                    </div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px', lineHeight: 1.4 }}>
+                      Este valor será exibido no fluxo de cadastro dos moradores e será cobrado dinamicamente via Mercado Pago (PIX e Cartão de Crédito).
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={savingSettings}
+                    style={{
+                      background: '#3B82F6', color: '#FFF', border: 'none', padding: '14px 28px', borderRadius: '12px',
+                      fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                      gap: '8px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)', transition: 'all 0.2s',
+                      opacity: savingSettings ? 0.7 : 1
+                    }}
+                  >
+                    {savingSettings ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+                </form>
               </div>
 
-              <form onSubmit={handleSaveSettings} style={{ maxWidth: '480px' }}>
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Preço do Plano Anual (moradores)
+              {/* 2. CONFIGURAÇÕES DO BANNER DE PARCERIAS */}
+              <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
+                <div style={{ marginBottom: '24px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Sparkles size={20} color="#10B981" /> 📢 Banner de Parcerias (Internet / IPTV)
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px', margin: 0 }}>Configure o banner publicitário em destaque na aba Parceiros da Região.</p>
+                </div>
+
+                <form onSubmit={handleSaveBannerSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '580px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={bannerEnabled} 
+                      onChange={e => setBannerEnabled(e.target.checked)} 
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    Ativar e exibir o banner para os moradores
                   </label>
-                  <div style={{ relative: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <span style={{ position: 'absolute', left: '16px', fontWeight: 700, color: 'var(--text-muted)', fontSize: '15px' }}>R$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="39.90"
-                      value={planPrice}
-                      onChange={e => setPlanPrice(e.target.value)}
-                      required
-                      style={{
-                        width: '100%', padding: '14px 16px 14px 44px', borderRadius: '12px', border: '2px solid var(--border-subtle)',
-                        fontSize: '16px', fontWeight: 800, color: 'var(--text-main)', background: 'var(--bg-deep)', outline: 'none', transition: 'border-color 0.2s',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.01)'
-                      }}
-                    />
-                  </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '8px', lineHeight: 1.4 }}>
-                    Este valor será exibido no fluxo de cadastro dos moradores e será cobrado dinamicamente via Mercado Pago (PIX e Cartão de Crédito).
-                  </p>
-                </div>
 
-                <button
-                  type="submit"
-                  disabled={savingSettings}
-                  style={{
-                    background: '#3B82F6', color: '#FFF', border: 'none', padding: '14px 28px', borderRadius: '12px',
-                    fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
-                    gap: '8px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)', transition: 'all 0.2s',
-                    opacity: savingSettings ? 0.7 : 1
-                  }}
-                >
-                  {savingSettings ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
-              </form>
-            </div>
-
-            {/* 2. CONFIGURAÇÕES DO BANNER DE PARCERIAS */}
-            <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
-              <div style={{ marginBottom: '24px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Sparkles size={20} color="#10B981" /> 📢 Banner de Parcerias (Internet / IPTV)
-                </h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px', margin: 0 }}>Configure o banner publicitário em destaque na aba Parceiros da Região.</p>
-              </div>
-
-              <form onSubmit={handleSaveBannerSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '580px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={bannerEnabled} 
-                    onChange={e => setBannerEnabled(e.target.checked)} 
-                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                  />
-                  Ativar e exibir o banner para os moradores
-                </label>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Título do Banner</label>
-                    <input 
-                      type="text" 
-                      value={bannerTitle} 
-                      onChange={e => setBannerTitle(e.target.value)} 
-                      placeholder="Ex: Internet Fibra + IPTV" 
-                      required
-                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Texto do Botão</label>
-                    <input 
-                      type="text" 
-                      value={bannerBtnText} 
-                      onChange={e => setBannerBtnText(e.target.value)} 
-                      placeholder="Ex: Falar com Consultor" 
-                      required
-                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Descrição do Banner</label>
-                  <textarea 
-                    value={bannerDesc} 
-                    onChange={e => setBannerDesc(e.target.value)} 
-                    placeholder="Ex: Assine a melhor internet de fibra óptica da região com canais de TV inclusos e suporte 24h." 
-                    required
-                    rows={2}
-                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none', fontFamily: 'inherit', resize: 'none' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Link de Ação (WhatsApp ou Site)</label>
-                  <input 
-                    type="url" 
-                    value={bannerLink} 
-                    onChange={e => setBannerLink(e.target.value)} 
-                    placeholder="Ex: https://wa.me/5511999999999" 
-                    required
-                    style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
-                  />
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Preset de Imagem</label>
-                    <select 
-                      value={bannerPreset} 
-                      onChange={e => setBannerPreset(e.target.value)} 
-                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
-                    >
-                      <option value="internet">Internet Fibra (Padrão)</option>
-                      <option value="iptv">IPTV / Canais (Padrão)</option>
-                      <option value="general">Geral / Conectividade</option>
-                      <option value="custom">URL Customizada</option>
-                    </select>
-                  </div>
-                  {bannerPreset === 'custom' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>URL da Imagem de Fundo</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Título do Banner</label>
                       <input 
-                        type="url" 
-                        value={bannerCustomUrl} 
-                        onChange={e => setBannerCustomUrl(e.target.value)} 
-                        placeholder="https://exemplo.com/foto.jpg" 
+                        type="text" 
+                        value={bannerTitle} 
+                        onChange={e => setBannerTitle(e.target.value)} 
+                        placeholder="Ex: Internet Fibra + IPTV" 
                         required
                         style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
                       />
                     </div>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={savingBanner}
-                  style={{
-                    alignSelf: 'flex-start',
-                    background: '#10B981', color: '#FFF', border: 'none', padding: '12px 24px', borderRadius: '12px',
-                    fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
-                    gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', transition: 'all 0.2s',
-                    opacity: savingBanner ? 0.7 : 1
-                  }}
-                >
-                  <Save size={16} />
-                  {savingBanner ? 'Salvando...' : 'Salvar Alterações do Banner'}
-                </button>
-              </form>
-            </div>
-
-            {/* 3. CONFIGURAÇÕES DE PARCEIROS LOCAIS */}
-            <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
-              <div style={{ marginBottom: '24px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Users size={20} color="#3B82F6" /> 🏪 Parceiros Locais
-                  </h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px', margin: 0 }}>Gerencie a lista de comércios parceiros exibidos na aba de moradores.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAddPartner(!showAddPartner)}
-                  style={{
-                    background: 'linear-gradient(135deg, #3B82F6, #2563EB)', color: '#FFF', border: 'none', padding: '10px 18px', borderRadius: '10px',
-                    fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'
-                  }}
-                >
-                  <Plus size={16} />
-                  {showAddPartner ? 'Fechar Formulário' : 'Novo Parceiro'}
-                </button>
-              </div>
-
-              {/* Form to Add Partner */}
-              {showAddPartner && (
-                <form onSubmit={handleAddLocalPartner} style={{ background: 'var(--bg-deep)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border-subtle)', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Cadastrar Novo Parceiro Regional</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Nome do Estabelecimento</label>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Texto do Botão</label>
                       <input 
                         type="text" 
-                        value={newPartnerName} 
-                        onChange={e => setNewPartnerName(e.target.value)} 
-                        placeholder="Ex: Farmácia do Bairro" 
+                        value={bannerBtnText} 
+                        onChange={e => setBannerBtnText(e.target.value)} 
+                        placeholder="Ex: Falar com Consultor" 
                         required
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Categoria</label>
-                      <select 
-                        value={newPartnerCategory} 
-                        onChange={e => setNewPartnerCategory(e.target.value)} 
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
-                      >
-                        <option value="farmacia">Farmácia</option>
-                        <option value="gas">Gás / Fogo</option>
-                        <option value="agua">Água</option>
-                        <option value="mercado">Mercado</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '14px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Telefone / WhatsApp</label>
-                      <input 
-                        type="text" 
-                        value={newPartnerTel} 
-                        onChange={e => setNewPartnerTel(e.target.value)} 
-                        placeholder="Ex: (11) 99999-8888" 
-                        required
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Avaliação (Nota)</label>
-                      <input 
-                        type="number" 
-                        step="0.1" 
-                        min="1" 
-                        max="5"
-                        value={newPartnerRating} 
-                        onChange={e => setNewPartnerRating(e.target.value)} 
-                        placeholder="Ex: 4.8" 
-                        required
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Distância (Texto)</label>
-                      <input 
-                        type="text" 
-                        value={newPartnerDist} 
-                        onChange={e => setNewPartnerDist(e.target.value)} 
-                        placeholder="Ex: 1.2km" 
-                        required
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                        style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>URL da Foto (Opcional - deixe em branco para usar padrão)</label>
-                    <input 
-                      type="url" 
-                      value={newPartnerImg} 
-                      onChange={e => setNewPartnerImg(e.target.value)} 
-                      placeholder="https://exemplo.com/foto.jpg" 
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Descrição do Banner</label>
+                    <textarea 
+                      value={bannerDesc} 
+                      onChange={e => setBannerDesc(e.target.value)} 
+                      placeholder="Ex: Assine a melhor internet de fibra óptica da região com canais de TV inclusos e suporte 24h." 
+                      required
+                      rows={2}
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none', fontFamily: 'inherit', resize: 'none' }}
                     />
                   </div>
 
-                  <button 
-                    type="submit" 
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Link de Ação (WhatsApp ou Site)</label>
+                    <input 
+                      type="url" 
+                      value={bannerLink} 
+                      onChange={e => setBannerLink(e.target.value)} 
+                      placeholder="Ex: https://wa.me/5511999999999" 
+                      required
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Preset de Imagem</label>
+                      <select 
+                        value={bannerPreset} 
+                        onChange={e => setBannerPreset(e.target.value)} 
+                        style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                      >
+                        <option value="internet">Internet Fibra (Padrão)</option>
+                        <option value="iptv">IPTV / Canais (Padrão)</option>
+                        <option value="general">Geral / Conectividade</option>
+                        <option value="custom">URL Customizada</option>
+                      </select>
+                    </div>
+                    {bannerPreset === 'custom' && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>URL da Imagem de Fundo</label>
+                        <input 
+                          type="url" 
+                          value={bannerCustomUrl} 
+                          onChange={e => setBannerCustomUrl(e.target.value)} 
+                          placeholder="https://exemplo.com/foto.jpg" 
+                          required
+                          style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={savingBanner}
                     style={{
                       alignSelf: 'flex-start',
-                      background: '#3B82F6', color: '#FFF', border: 'none', padding: '10px 20px', borderRadius: '8px',
-                      fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                      background: '#10B981', color: '#FFF', border: 'none', padding: '12px 24px', borderRadius: '12px',
+                      fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                      gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', transition: 'all 0.2s',
+                      opacity: savingBanner ? 0.7 : 1
                     }}
                   >
-                    <Plus size={14} /> Cadastrar Parceiro
+                    <Save size={16} />
+                    {savingBanner ? 'Salvando...' : 'Salvar Alterações do Banner'}
                   </button>
                 </form>
-              )}
+              </div>
 
-              {/* Table / List of existing partners */}
-              {localPartners.length === 0 ? (
-                <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)', border: '2px dashed var(--border-subtle)', borderRadius: '16px' }}>
-                  Nenhum parceiro customizado cadastrado ainda. A aplicação exibirá os parceiros padrão (fallback).
+              {/* 3. CONFIGURAÇÕES DE PARCEIROS LOCAIS */}
+              <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
+                <div style={{ marginBottom: '24px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Users size={20} color="#3B82F6" /> 🏪 Parceiros Locais
+                    </h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px', margin: 0 }}>Gerencie a lista de comércios parceiros exibidos na aba de moradores.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddPartner(!showAddPartner)}
+                    style={{
+                      background: 'linear-gradient(135deg, #3B82F6, #2563EB)', color: '#FFF', border: 'none', padding: '10px 18px', borderRadius: '10px',
+                      fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'
+                    }}
+                  >
+                    <Plus size={16} />
+                    {showAddPartner ? 'Fechar Formulário' : 'Novo Parceiro'}
+                  </button>
                 </div>
-              ) : (
-                <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: '16px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead style={{ background: 'var(--bg-deep)' }}>
-                      <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
-                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Logo</th>
-                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Nome</th>
-                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Categoria</th>
-                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Avaliação</th>
-                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Contato</th>
-                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Distância</th>
-                        <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right' }}>Ação</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {localPartners.map((partner, index) => (
-                        <tr key={partner.id || index} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                          <td style={{ padding: '12px 16px' }}>
-                            <img src={partner.img} alt={partner.name} style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
-                          </td>
-                          <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>{partner.name}</td>
-                          <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                            <span style={{ padding: '4px 8px', borderRadius: '12px', background: 'var(--bg-deep)', fontSize: '11px', fontWeight: 700 }}>
-                              {partner.category === 'farmacia' ? '💊 Farmácia' : partner.category === 'gas' ? '🔥 Gás / Fogo' : partner.category === 'agua' ? '💧 Água' : '🛒 Mercado'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 800, color: '#F59E0B' }}>⭐ {partner.rating}</td>
-                          <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>{partner.tel}</td>
-                          <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>📍 {partner.dist}</td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteLocalPartner(partner.id)}
-                              disabled={savingPartners}
-                              style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
-                              title="Excluir parceiro"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
+
+                {/* Form to Add Partner */}
+                {showAddPartner && (
+                  <form onSubmit={handleAddLocalPartner} style={{ background: 'var(--bg-deep)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border-subtle)', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Cadastrar Novo Parceiro Regional</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Nome do Estabelecimento</label>
+                        <input 
+                          type="text" 
+                          value={newPartnerName} 
+                          onChange={e => setNewPartnerName(e.target.value)} 
+                          placeholder="Ex: Farmácia do Bairro" 
+                          required
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Categoria</label>
+                        <select 
+                          value={newPartnerCategory} 
+                          onChange={e => setNewPartnerCategory(e.target.value)} 
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                        >
+                          <option value="farmacia">Farmácia</option>
+                          <option value="gas">Gás / Fogo</option>
+                          <option value="agua">Água</option>
+                          <option value="mercado">Mercado</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '14px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Telefone / WhatsApp</label>
+                        <input 
+                          type="text" 
+                          value={newPartnerTel} 
+                          onChange={e => setNewPartnerTel(e.target.value)} 
+                          placeholder="Ex: (11) 99999-8888" 
+                          required
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Avaliação (Nota)</label>
+                        <input 
+                          type="number" 
+                          step="0.1" 
+                          min="1" 
+                          max="5"
+                          value={newPartnerRating} 
+                          onChange={e => setNewPartnerRating(e.target.value)} 
+                          placeholder="Ex: 4.8" 
+                          required
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Distância (Texto)</label>
+                        <input 
+                          type="text" 
+                          value={newPartnerDist} 
+                          onChange={e => setNewPartnerDist(e.target.value)} 
+                          placeholder="Ex: 1.2km" 
+                          required
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>URL da Foto (Opcional - deixe em branco para usar padrão)</label>
+                      <input 
+                        type="url" 
+                        value={newPartnerImg} 
+                        onChange={e => setNewPartnerImg(e.target.value)} 
+                        placeholder="https://exemplo.com/foto.jpg" 
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                      />
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      style={{
+                        alignSelf: 'flex-start',
+                        background: '#3B82F6', color: '#FFF', border: 'none', padding: '10px 20px', borderRadius: '8px',
+                        fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                      }}
+                    >
+                      <Plus size={14} /> Cadastrar Parceiro
+                    </button>
+                  </form>
+                )}
+
+                {/* Table / List of existing partners */}
+                {partnersList.length === 0 ? (
+                  <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)', border: '2px dashed var(--border-subtle)', borderRadius: '16px' }}>
+                    Nenhum parceiro customizado cadastrado ainda. A aplicação exibirá os parceiros padrão (fallback).
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: '16px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead style={{ background: 'var(--bg-deep)' }}>
+                        <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Logo</th>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Nome</th>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Categoria</th>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Avaliação</th>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Contato</th>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Distância</th>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right' }}>Ação</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      </thead>
+                      <tbody>
+                        {partnersList.map((partner, index) => (
+                          <tr key={partner.id || index} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '12px 16px' }}>
+                              <img src={partner.img} alt={partner.name} style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
+                            </td>
+                            <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>{partner.name}</td>
+                            <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                              <span style={{ padding: '4px 8px', borderRadius: '12px', background: 'var(--bg-deep)', fontSize: '11px', fontWeight: 700 }}>
+                                {partner.category === 'farmacia' ? '💊 Farmácia' : partner.category === 'gas' ? '🔥 Gás / Fogo' : partner.category === 'agua' ? '💧 Água' : '🛒 Mercado'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 800, color: '#F59E0B' }}>⭐ {partner.rating}</td>
+                            <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>{partner.tel}</td>
+                            <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>📍 {partner.dist}</td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteLocalPartner(partner.id)}
+                                disabled={savingPartners}
+                                style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
+                                title="Excluir parceiro"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {activeTab === 'properties' && (
           <div>
