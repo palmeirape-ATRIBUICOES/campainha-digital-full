@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 import Logo from './Logo';
 
-const PrintablePlate = forwardRef(({ qrImage }, ref) => {
+const PrintablePlate = forwardRef(({ qrImage, isPreview = false }, ref) => {
   return (
     <div 
       ref={ref}
@@ -9,16 +9,19 @@ const PrintablePlate = forwardRef(({ qrImage }, ref) => {
         width: '400px', 
         height: '500px', 
         background: '#FFFFFF', 
-        position: 'absolute', 
-        top: '-9999px', // Escondido da tela principal
-        left: '-9999px',
+        position: isPreview ? 'relative' : 'absolute', 
+        top: isPreview ? '0' : '-9999px',
+        left: isPreview ? '0' : '-9999px',
         display: 'flex', 
         flexDirection: 'column', 
         alignItems: 'center', 
         justifyContent: 'space-between',
         padding: '40px',
         boxSizing: 'border-box',
-        fontFamily: "'Inter', sans-serif"
+        fontFamily: "'Inter', sans-serif",
+        borderRadius: isPreview ? '20px' : '0',
+        boxShadow: isPreview ? '0 20px 40px rgba(0,0,0,0.12)' : 'none',
+        border: isPreview ? '1px solid #E2E8F0' : 'none'
       }}
     >
       {/* Detalhes dos "parafusos" do acrílico */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, User, RefreshCw, Calendar, MapPin, Phone, X, ChevronDown, ChevronUp, Bell, BellOff, Share2, Copy, Check, QrCode, Download, Hash, ShieldCheck, Camera } from 'lucide-react';
+import { Clock, User, RefreshCw, Calendar, MapPin, Phone, X, ChevronDown, ChevronUp, Bell, BellOff, Share2, Copy, Check, QrCode, Download, Hash, ShieldCheck, Camera, Eye } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 import { API } from '../config';
@@ -174,6 +174,7 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
   const [qrLoading, setQrLoading] = useState(false);
   const [newPlateInput, setNewPlateInput] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const printRef = useRef(null);
 
   useEffect(() => {
@@ -417,13 +418,24 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
               {/* COMPONENTE INVISÍVEL PARA DOWNLOAD */}
               <PrintablePlate ref={printRef} qrImage={qrImage} />
 
-              <button 
-                onClick={handleDownloadPlate}
-                disabled={loading}
-                style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#0F172A', color: '#FFF', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
-              >
-                <Download size={18} /> {loading ? 'Gerando Placa...' : 'Baixar Placa Completa'}
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                <button 
+                  type="button"
+                  onClick={() => setShowPreviewModal(true)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#F1F5F9', color: '#0F172A', border: '1px solid #E2E8F0', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
+                >
+                  <Eye size={18} /> Visualizar Placa
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={handleDownloadPlate}
+                  disabled={loading}
+                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#0F172A', color: '#FFF', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
+                >
+                  <Download size={18} /> {loading ? 'Gerando Placa...' : 'Baixar Placa Completa'}
+                </button>
+              </div>
 
               <div style={{ marginTop: '16px', width: '100%', borderTop: '1px solid #E2E8F0', paddingTop: '16px', textAlign: 'left' }}>
                 <p style={{ fontSize: '13px', fontWeight: 700, color: '#64748B', marginBottom: '8px' }}>Comprou uma placa nova?</p>
@@ -492,6 +504,105 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
 
       {showScanner && (
         <QRScanner onScan={handleScanPlate} onClose={() => setShowScanner(false)} />
+      )}
+
+      {showPreviewModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#F8FAFC',
+            borderRadius: '24px',
+            padding: '24px',
+            position: 'relative',
+            maxWidth: '440px',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            <button 
+              type="button"
+              onClick={() => setShowPreviewModal(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: '#FFF',
+                border: '1px solid #E2E8F0',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#64748B'
+              }}
+            >
+              <X size={16} />
+            </button>
+
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', margin: '8px 0 0 0' }}>
+              Pré-visualização da Placa
+            </h3>
+            
+            {/* Wrapper to scale down the 400x500 plate on small screens */}
+            <div style={{
+              width: '100%',
+              overflow: 'hidden',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: '10px 0'
+            }}>
+              <div style={{
+                transform: 'scale(0.65)',
+                transformOrigin: 'center center',
+                margin: '-85px 0' // offsets the scaled-down blank margins
+              }}>
+                <PrintablePlate qrImage={qrImage} isPreview={true} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '8px' }}>
+              <button 
+                type="button"
+                onClick={() => {
+                  setShowPreviewModal(false);
+                  handleDownloadPlate();
+                }}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  borderRadius: '12px',
+                  background: '#0F172A',
+                  color: '#FFF',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <Download size={18} /> Baixar PNG
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
