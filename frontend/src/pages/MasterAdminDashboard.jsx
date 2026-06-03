@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Building2, Gift, History, Settings2, LogOut, ChevronRight, RefreshCw, Search, ToggleRight, ToggleLeft, QrCode, Copy, Check, Download, X, Hash, Layers, Sparkles, Bell, Eye, EyeOff, Home, Zap, Sun, Moon, Plus, Trash2, Phone, Star, Save } from 'lucide-react';
+import { Users, Building2, Gift, History, Settings2, LogOut, ChevronRight, RefreshCw, Search, ToggleRight, ToggleLeft, QrCode, Copy, Check, Download, X, Hash, Layers, Sparkles, Bell, Eye, EyeOff, Home, Zap, Sun, Moon, Plus, Trash2, Phone, Star, Save, Settings, Printer } from 'lucide-react';
 import Logo from '../components/Logo';
 import PlateProductionPanel from '../components/PlateProductionPanel';
+import PrintablePlate from '../components/PrintablePlate';
 
 const PRESETS = {
   internet: 'https://images.unsplash.com/photo-1600132806370-bf17e65e942f?w=600&h=300&fit=crop',
@@ -37,6 +38,78 @@ export default function MasterAdminDashboard() {
   const [demoFeedback, setDemoFeedback] = useState(null);
   const [showDemoPassMap, setShowDemoPassMap] = useState({});
 
+  // Plate Customizer States
+  const [platesSubTab, setPlatesSubTab] = useState('lab');
+  const [savingStyle, setSavingStyle] = useState(false);
+  const [selectedPlates, setSelectedPlates] = useState([]);
+  const [plateStyle, setPlateStyle] = useState({
+    titleText: "CAMPAINHA DIGITAL",
+    subTitleText: "Para tocar o interfone:",
+    instructionText: "Aproxime a câmera do seu celular do QR Code abaixo para chamar o morador",
+    primaryColor: "#0F172A",
+    secondaryColor: "#00E5FF",
+    accentColor: "#F59E0B",
+    backgroundColor: "#FFFFFF",
+    textColor: "#1E293B",
+    showBorder: true,
+    borderColor: "#E2E8F0",
+    borderWidth: "4px",
+    logoColor: "#0F172A"
+  });
+
+  const handleSaveStyle = async () => {
+    setSavingStyle(true);
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/settings`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token || ''
+        },
+        body: JSON.stringify({ 
+          key: 'plate_style', 
+          value: JSON.stringify(plateStyle) 
+        })
+      });
+      if (res.ok) {
+        alert('Visual das placas atualizado com sucesso para todos os usuários!');
+      } else {
+        alert('Erro ao salvar visual das placas.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao salvar.');
+    } finally {
+      setSavingStyle(false);
+    }
+  };
+
+  const handleToggleSelectAll = () => {
+    const list = properties || [];
+    if (selectedPlates.length === list.length) {
+      setSelectedPlates([]);
+    } else {
+      setSelectedPlates(list.map(p => p.id));
+    }
+  };
+
+  const handleToggleSelectClient = (id) => {
+    if (selectedPlates.includes(id)) {
+      setSelectedPlates(selectedPlates.filter(pid => pid !== id));
+    } else {
+      setSelectedPlates([...selectedPlates, id]);
+    }
+  };
+
+  const handlePrintSelected = () => {
+    if (selectedPlates.length === 0) {
+      alert('Selecione pelo menos uma placa para imprimir.');
+      return;
+    }
+    window.print();
+  };
+
   const fetchProperties = async () => {
     setLoadingProperties(true);
     try {
@@ -54,13 +127,30 @@ export default function MasterAdminDashboard() {
   };
 
   useEffect(() => {
-    if (activeTab === 'properties') {
+    if (activeTab === 'properties' || activeTab === 'production') {
       fetchProperties();
     }
     if (activeTab === 'demo') {
       fetchDemoUsers();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    const fetchGlobalSettings = async () => {
+      try {
+        const res = await fetch(`${API}/api/settings`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.plate_style) {
+            setPlateStyle(data.plate_style);
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao carregar configurações de estilo:', err);
+      }
+    };
+    fetchGlobalSettings();
+  }, []);
 
   // Suporte a Modo Noturno (Dark Mode)
   const [darkMode, setDarkMode] = useState(() => {
@@ -1003,6 +1093,293 @@ export default function MasterAdminDashboard() {
           );
         })()}
 
+        {activeTab === 'production' && (
+          <div style={{ padding: '10px' }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', marginBottom: '24px', gap: '24px' }}>
+              <button 
+                onClick={() => setPlatesSubTab('lab')} 
+                style={{ 
+                  padding: '12px 16px', 
+                  background: 'none', 
+                  border: 'none', 
+                  borderBottom: platesSubTab === 'lab' ? '2px solid #3B82F6' : '2px solid transparent', 
+                  color: platesSubTab === 'lab' ? '#3B82F6' : 'var(--text-muted)', 
+                  fontWeight: 700, 
+                  cursor: 'pointer' 
+                }}
+              >
+                Laboratório de Estilização
+              </button>
+              <button 
+                onClick={() => setPlatesSubTab('production')} 
+                style={{ 
+                  padding: '12px 16px', 
+                  background: 'none', 
+                  border: 'none', 
+                  borderBottom: platesSubTab === 'production' ? '2px solid #3B82F6' : '2px solid transparent', 
+                  color: platesSubTab === 'production' ? '#3B82F6' : 'var(--text-muted)', 
+                  fontWeight: 700, 
+                  cursor: 'pointer' 
+                }}
+              >
+                Produção e Impressão em Lote
+              </button>
+            </div>
+
+            {platesSubTab === 'lab' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '40px' }}>
+                {/* Controls */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <Settings size={18} color="#3B82F6" />
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Configuração Visual das Placas</h3>
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Título Principal</label>
+                    <input 
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                      value={plateStyle.titleText} 
+                      onChange={e => setPlateStyle({ ...plateStyle, titleText: e.target.value })} 
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Subtítulo / Chamada</label>
+                    <input 
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                      value={plateStyle.subTitleText} 
+                      onChange={e => setPlateStyle({ ...plateStyle, subTitleText: e.target.value })} 
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Texto de Instruções</label>
+                    <textarea 
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none', minHeight: '80px', fontFamily: 'inherit', resize: 'vertical' }}
+                      value={plateStyle.instructionText} 
+                      onChange={e => setPlateStyle({ ...plateStyle, instructionText: e.target.value })} 
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Cor do Texto</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input 
+                          type="color" 
+                          value={plateStyle.textColor.startsWith('linear-gradient') ? '#1E293B' : plateStyle.textColor} 
+                          onChange={e => setPlateStyle({ ...plateStyle, textColor: e.target.value })} 
+                          style={{ width: '40px', height: '40px', border: '1px solid var(--border-subtle)', borderRadius: '8px', cursor: 'pointer', flexShrink: 0 }}
+                        />
+                        <input 
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                          value={plateStyle.textColor} 
+                          onChange={e => setPlateStyle({ ...plateStyle, textColor: e.target.value })} 
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Cor do Logo</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input 
+                          type="color" 
+                          value={plateStyle.logoColor || '#4F46E5'} 
+                          onChange={e => setPlateStyle({ ...plateStyle, logoColor: e.target.value })} 
+                          style={{ width: '40px', height: '40px', border: '1px solid var(--border-subtle)', borderRadius: '8px', cursor: 'pointer', flexShrink: 0 }}
+                        />
+                        <input 
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                          value={plateStyle.logoColor || ''} 
+                          onChange={e => setPlateStyle({ ...plateStyle, logoColor: e.target.value })} 
+                          placeholder="Igual à cor do texto..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Cor de Destaque (Accent)</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input 
+                          type="color" 
+                          value={plateStyle.accentColor} 
+                          onChange={e => setPlateStyle({ ...plateStyle, accentColor: e.target.value })} 
+                          style={{ width: '40px', height: '40px', border: '1px solid var(--border-subtle)', borderRadius: '8px', cursor: 'pointer', flexShrink: 0 }}
+                        />
+                        <input 
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                          value={plateStyle.accentColor} 
+                          onChange={e => setPlateStyle({ ...plateStyle, accentColor: e.target.value })} 
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Fundo (Hex ou Gradient)</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input 
+                          type="color" 
+                          value={plateStyle.backgroundColor.startsWith('linear-gradient') ? '#FFFFFF' : plateStyle.backgroundColor} 
+                          onChange={e => setPlateStyle({ ...plateStyle, backgroundColor: e.target.value })} 
+                          style={{ width: '40px', height: '40px', border: '1px solid var(--border-subtle)', borderRadius: '8px', cursor: 'pointer', flexShrink: 0 }}
+                        />
+                        <input 
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
+                          value={plateStyle.backgroundColor} 
+                          onChange={e => setPlateStyle({ ...plateStyle, backgroundColor: e.target.value })} 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                      <input 
+                        type="checkbox" 
+                        id="showBorder" 
+                        checked={plateStyle.showBorder} 
+                        onChange={e => setPlateStyle({ ...plateStyle, showBorder: e.target.checked })}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                      <label htmlFor="showBorder" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', cursor: 'pointer' }}>EXIBIR BORDA NA PLACA</label>
+                    </div>
+
+                    {plateStyle.showBorder && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Cor da Borda</label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input 
+                              type="color" 
+                              value={plateStyle.borderColor} 
+                              onChange={e => setPlateStyle({ ...plateStyle, borderColor: e.target.value })} 
+                              style={{ width: '32px', height: '32px', border: '1px solid var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', flexShrink: 0 }}
+                            />
+                            <input 
+                              style={{ width: '100%', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                              value={plateStyle.borderColor} 
+                              onChange={e => setPlateStyle({ ...plateStyle, borderColor: e.target.value })} 
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Largura da Borda</label>
+                          <input 
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                            value={plateStyle.borderWidth} 
+                            onChange={e => setPlateStyle({ ...plateStyle, borderWidth: e.target.value })} 
+                            placeholder="Ex: 4px"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <button 
+                    onClick={handleSaveStyle} 
+                    disabled={savingStyle}
+                    style={{ 
+                      padding: '16px', 
+                      borderRadius: '12px', 
+                      background: '#3B82F6', 
+                      color: '#FFF', 
+                      border: 'none', 
+                      fontWeight: 700, 
+                      fontSize: '16px', 
+                      cursor: 'pointer',
+                      opacity: savingStyle ? 0.7 : 1,
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                    }}
+                  >
+                    {savingStyle ? 'Salvando Alterações...' : 'SALVAR E PROPAGAR DESIGN'}
+                  </button>
+                </div>
+
+                {/* Preview Container */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1px' }}>PRÉ-VISUALIZAÇÃO AO VIVO</div>
+                  <div style={{ width: '320px', pointerEvents: 'none' }}>
+                    <PrintablePlate 
+                      propertyId="SCAN-MASTER-LAB"
+                      propertyName="Condomínio Residencial Solar"
+                      unitName="Bloco B - Apto 204"
+                      customStyle={plateStyle}
+                      animateLogo={true}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontWeight: 800, fontSize: '18px', color: 'var(--text-main)' }}>Fila de Impressão ({selectedPlates.length} selecionadas)</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '4px 0 0' }}>Selecione as placas das propriedades para gerar o layout de impressão A4.</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button 
+                      onClick={handleToggleSelectAll}
+                      style={{ padding: '10px 16px', borderRadius: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+                    >
+                      {selectedPlates.length === (properties || []).length ? 'Desmarcar Todas' : 'Selecionar Todas'}
+                    </button>
+                    <button 
+                      onClick={handlePrintSelected}
+                      disabled={selectedPlates.length === 0}
+                      style={{ padding: '10px 20px', borderRadius: '10px', background: '#10B981', color: '#FFF', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer', opacity: selectedPlates.length === 0 ? 0.6 : 1 }}
+                    >
+                      <Download size={14} style={{ display: 'inline-block', marginRight: '6px', transform: 'rotate(180deg)' }} /> Imprimir Selecionadas
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ border: '1px solid var(--border-subtle)', borderRadius: '16px', overflow: 'hidden', background: 'var(--bg-surface)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--bg-deep)', textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
+                        <th style={{ padding: '14px 16px', width: '48px' }}></th>
+                        <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 700 }}>Propriedade</th>
+                        <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 700 }}>Tipo / Unidades</th>
+                        <th style={{ padding: '14px 16px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 700 }}>Código QR</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(properties || []).map(prop => (
+                        <tr key={prop.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <input 
+                              type="checkbox"
+                              checked={selectedPlates.includes(prop.id)}
+                              onChange={() => handleToggleSelectClient(prop.id)}
+                              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                            />
+                          </td>
+                          <td style={{ padding: '14px 16px' }}>
+                            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '14px' }}>{prop.name}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{prop.clientAddress || 'Sem endereço'}</div>
+                          </td>
+                          <td style={{ padding: '14px 16px' }}>
+                            <span style={{ fontSize: '11px', background: 'var(--bg-deep)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: '100px', fontWeight: 700 }}>
+                              {(prop.type || 'house').toUpperCase()}
+                            </span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                              {prop.units?.length || 0} unid.
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 16px' }}>
+                            <code style={{ fontSize: '12px', background: 'var(--bg-deep)', color: 'var(--text-main)', padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace' }}>{prop.id}</code>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'properties' && (
           <div>
             {/* SUB-TABS NAVIGATION */}
@@ -1603,6 +1980,31 @@ export default function MasterAdminDashboard() {
           </div>
         </div>
       )}
+      {/* PRINT LAYER (HIDDEN IN UI, ONLY FOR window.print()) */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @media screen {
+          #print-area { display: none !important; }
+        }
+        @media print {
+          body > *:not(#print-area) { display: none !important; }
+          #print-area { display: block !important; width: 100% !important; background: #fff !important; }
+          .print-page-break { page-break-inside: avoid; page-break-after: auto; }
+        }
+      `}} />
+      <div id="print-area">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', padding: '20px' }}>
+          {(properties || []).filter(p => selectedPlates.includes(p.id)).map(prop => (
+            <div key={prop.id} className="print-page-break" style={{ width: '100%' }}>
+              <PrintablePlate 
+                propertyId={prop.id} 
+                propertyName={prop.name} 
+                customStyle={plateStyle} 
+                animateLogo={false} 
+              />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

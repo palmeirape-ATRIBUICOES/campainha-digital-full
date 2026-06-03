@@ -1,0 +1,16 @@
+{
+  "plate_style": {
+    "borderWidth": "4px",
+    "titleText": "CAMPAINHA EDITADA",
+    "showBorder": true,
+    "textColor": "#1E293B",
+    "primaryColor": "#0F172A",
+    "subTitleText": "Para tocar:",
+    "logoColor": "#0F172A",
+    "backgroundColor": "#FFFFFF",
+    "instructionText": "Escaneie o QR Code abaixo",
+    "secondaryColor": "#00E5FF",
+    "borderColor": "#E2E8F0",
+    "accentColor": "#F59E0B"
+  }
+}

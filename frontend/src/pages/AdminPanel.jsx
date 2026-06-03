@@ -7,6 +7,8 @@ import UnitManager from '../components/UnitManager';
 import BroadcastPanel from '../components/BroadcastPanel';
 import ResidentManager from '../components/ResidentManager';
 import PlateProductionPanel from '../components/PlateProductionPanel';
+import html2canvas from 'html2canvas';
+import PrintablePlate from '../components/PrintablePlate';
 
 import { API } from '../config';
 
@@ -81,6 +83,9 @@ export default function AdminPanel() {
   const [visitors, setVisitors]     = useState([]);
   const [loadingVisitors, setLoadingVisitors] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [previewPlateProperty, setPreviewPlateProperty] = useState(null);
+  const [downloadingPlate, setDownloadingPlate] = useState(false);
+  const plateRef = useRef(null);
   
   // Novos estados para Caixa Postal, Alertas de Portão e Grade Visual Interativa
   const [mailboxMessages, setMailboxMessages] = useState([]);
@@ -973,6 +978,65 @@ export default function AdminPanel() {
 
   const downloadQR = (url, name) => { const a = document.createElement('a'); a.href = url; a.download = `QR_${name}.png`; a.click(); };
 
+  const handleDownloadPlate = async (property) => {
+    if (!plateRef.current) return;
+    setDownloadingPlate(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const canvas = await html2canvas(plateRef.current, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: null,
+        logging: false
+      });
+
+      const fileName = `placa_${(property.name || 'campainha').replace(/\s+/g, '_')}.png`;
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          alert('Erro ao gerar imagem.');
+          return;
+        }
+
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: `Placa ${property.name}`,
+              text: `Placa da Campainha Digital para ${property.name}`
+            });
+          } catch (shareErr) {
+            const downloadUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+          }
+        } else {
+          const downloadUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(downloadUrl);
+        }
+      }, 'image/png');
+    } catch (err) {
+      console.error('Erro ao fazer download da placa:', err);
+      alert('Houve um erro ao gerar o arquivo de imagem.');
+    } finally {
+      setDownloadingPlate(false);
+    }
+  };
+
   if (loading) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
       <div className="spinner" style={{ width: '40px', height: '40px', border: '3px solid var(--border-subtle)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
@@ -1549,6 +1613,20 @@ export default function AdminPanel() {
                         <Download size={16} /> Baixar QR Code
                       </button>
                     </HoverHelp>
+
+                    <button 
+                      className="btn-primary" 
+                      style={{ 
+                        width: '100%', 
+                        padding: '12px', 
+                        fontSize: '13px', 
+                        marginBottom: '16px', 
+                        background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)' 
+                      }} 
+                      onClick={() => setPreviewPlateProperty(p)}
+                    >
+                      <Download size={16} /> Baixar Placa Completa
+                    </button>
 
                     <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
                       <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
@@ -3066,6 +3144,43 @@ export default function AdminPanel() {
       )}
 
       <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+
+      {/* PLATE PREVIEW & DOWNLOAD MODAL */}
+      {previewPlateProperty && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-surface)', padding: '24px', borderRadius: '24px', width: '100%', maxWidth: '420px', border: '1px solid var(--border-subtle)', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>Placa Completa</h3>
+              <button onClick={() => setPreviewPlateProperty(null)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex', color: 'var(--text-muted)' }}><X size={20}/></button>
+            </div>
+
+            {/* Capturable Area wrapper */}
+            <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }}>
+              <div 
+                ref={plateRef} 
+                style={{ 
+                  width: '320px',
+                }}
+              >
+                <PrintablePlate 
+                  propertyId={previewPlateProperty.id} 
+                  propertyName={previewPlateProperty.name} 
+                  animateLogo={false} 
+                />
+              </div>
+            </div>
+
+            <button 
+              onClick={() => handleDownloadPlate(previewPlateProperty)} 
+              disabled={downloadingPlate}
+              className="btn-primary" 
+              style={{ width: '100%', padding: '14px', background: '#10B981', boxShadow: '0 8px 24px rgba(16,185,129,0.2)', opacity: downloadingPlate ? 0.7 : 1 }}
+            >
+              <Download size={18} /> {downloadingPlate ? 'Gerando PNG...' : 'Baixar Imagem da Placa'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

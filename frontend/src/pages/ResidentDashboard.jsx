@@ -12,6 +12,8 @@ import VisitorCodesPanel from '../components/resident/VisitorCodesPanel';
 import ResidentsPanel from '../components/resident/ResidentsPanel';
 import FamilyChat from '../components/resident/FamilyChat';
 import { startDoorbell, stopDoorbell, warmUpAudio, isPending, tryResumePending } from '../hooks/useDoorbellAlert';
+import html2canvas from 'html2canvas';
+import PrintablePlate from '../components/PrintablePlate';
 
 import { API } from '../config';
 const DEFAULT_ICE = {
@@ -76,6 +78,8 @@ export default function ResidentDashboard() {
   const [isEmailResident, setIsEmailResident] = useState(
     () => localStorage.getItem('cd_login_type') === 'email'
   );
+  const [downloadingPlate, setDownloadingPlate] = useState(false);
+  const plateRef = useRef(null);
   const HOUSE_QUICK_MSGS = [
     { id: 'general', label: 'Geral', messages: ['Já estou indo', 'Já está Aberto', 'Pode entrar'] },
     { id: 'services', label: 'Serviços', messages: ['Pode entrar pra marcar a luz', 'Pode entrar para marcar a água'] },
@@ -1212,6 +1216,66 @@ export default function ResidentDashboard() {
 
   const saveSettings = () => { localStorage.setItem('cd_unit_name', unitName); };
 
+  const handleDownloadPlate = async () => {
+    if (!plateRef.current) return;
+    setDownloadingPlate(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const canvas = await html2canvas(plateRef.current, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: null,
+        logging: false
+      });
+
+      const propName = localStorage.getItem('residentPropertyName') || 'campainha';
+      const fileName = `placa_${propName.replace(/\s+/g, '_')}.png`;
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          alert('Erro ao gerar imagem.');
+          return;
+        }
+
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: `Placa ${propName}`,
+              text: `Placa da Campainha Digital para ${propName}`
+            });
+          } catch (shareErr) {
+            const downloadUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+          }
+        } else {
+          const downloadUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(downloadUrl);
+        }
+      }, 'image/png');
+    } catch (err) {
+      console.error('Erro ao fazer download da placa:', err);
+      alert('Houve um erro ao gerar o arquivo de imagem.');
+    } finally {
+      setDownloadingPlate(false);
+    }
+  };
+
   const sendSupportMessage = async (e) => {
     e.preventDefault();
     if (!supportSubject || !supportBody) {
@@ -1376,8 +1440,8 @@ export default function ResidentDashboard() {
             <ShoppingBag size={20} color={tab === 'services' ? '#0369A1' : '#64748B'} /> Parceiros da Região
           </button>
 
-          {/* Códigos de Visitante: todos exceto dependentes e apenas para moradores autenticados por e-mail */}
-          {!isDependent && isEmailResident && (
+          {/* Códigos de Visitante: todos exceto dependentes */}
+          {!isDependent && (
             <button onClick={() => { setTab('visitor-codes'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'visitor-codes' ? '#F0F9FF' : 'transparent', color: tab === 'visitor-codes' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
               <KeyRound size={20} color={tab === 'visitor-codes' ? '#0369A1' : '#64748B'} /> Códigos de Visitante
             </button>
@@ -1389,6 +1453,10 @@ export default function ResidentDashboard() {
               <Users size={20} color={tab === 'residents' ? '#0369A1' : '#64748B'} /> Moradores & Acessos
             </button>
           )}
+
+          <button onClick={() => { setTab('plate'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'plate' ? '#F0F9FF' : 'transparent', color: tab === 'plate' ? '#0369A1' : '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
+            <Download size={20} color={tab === 'plate' ? '#0369A1' : '#64748B'} /> Baixar Placa Completa
+          </button>
 
           <div style={{ height: '1px', background: '#F1F5F9', margin: '8px 0' }} />
           
@@ -2555,9 +2623,38 @@ export default function ResidentDashboard() {
         </div>
       )}
 
-      {tab === 'visitor-codes' && isEmailResident && (
+      {tab === 'visitor-codes' && (
         <div style={{ padding: '20px' }}>
           <VisitorCodesPanel unitId={id} propertyName={propertyName} />
+        </div>
+      )}
+
+      {tab === 'plate' && (
+        <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>Sua Placa da Campainha</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '4px 0 0' }}>Salve e imprima a placa de identificação oficial da sua unidade.</p>
+          </div>
+
+          <div style={{ width: '100%', maxWidth: '320px', display: 'flex', justifyContent: 'center' }}>
+            <div ref={plateRef} style={{ width: '100%' }}>
+              <PrintablePlate 
+                propertyId={propertyId || localStorage.getItem('residentPropertyId')} 
+                propertyName={localStorage.getItem('residentPropertyName') || 'Minha Casa'} 
+                unitName={unitName !== 'Principal' && unitName !== 'Minha Casa' ? unitName : ''}
+                animateLogo={false} 
+              />
+            </div>
+          </div>
+
+          <button 
+            onClick={handleDownloadPlate} 
+            disabled={downloadingPlate}
+            className="btn-primary" 
+            style={{ width: '100%', maxWidth: '320px', padding: '14px', background: '#10B981', boxShadow: '0 8px 24px rgba(16,185,129,0.2)', opacity: downloadingPlate ? 0.7 : 1 }}
+          >
+            <Download size={18} /> {downloadingPlate ? 'Gerando PNG...' : 'Baixar Imagem da Placa'}
+          </button>
         </div>
       )}
 

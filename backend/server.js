@@ -3226,13 +3226,36 @@ app.post('/api/master/users/:id/set-plate-code', authenticate, async (req, res) 
   });
 });
 
+const defaultPlateStyle = {
+  titleText: "CAMPAINHA DIGITAL",
+  subTitleText: "Para tocar o interfone:",
+  instructionText: "Aproxime a câmera do seu celular do QR Code abaixo para chamar o morador",
+  primaryColor: "#0F172A",
+  secondaryColor: "#00E5FF",
+  accentColor: "#F59E0B",
+  backgroundColor: "#FFFFFF",
+  textColor: "#1E293B",
+  showBorder: true,
+  borderColor: "#E2E8F0",
+  borderWidth: "4px",
+  logoColor: "#0F172A"
+};
+
 // Retorna configurações do sistema (público para o frontend de cadastro poder ler)
 app.get('/api/settings', async (req, res) => {
   try {
     const settings = await prisma.systemSetting.findMany();
-    const result = { plan_price: '39.90' };
+    const result = { plan_price: '39.90', plate_style: defaultPlateStyle };
     settings.forEach(s => {
-      result[s.key] = s.value;
+      if (s.key === 'plate_style') {
+        try {
+          result[s.key] = JSON.parse(s.value);
+        } catch (e) {
+          result[s.key] = s.value;
+        }
+      } else {
+        result[s.key] = s.value;
+      }
     });
     res.json(result);
   } catch (err) {

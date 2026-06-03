@@ -9,7 +9,7 @@ import { Bell } from 'lucide-react';
  *   vertical  {boolean} If true, renders icon and text in a column layout
  *   showText  {boolean} If true, renders the brand name alongside the icon
  */
-export default function Logo({ size = 40, light = false, vertical = false, showText = true, animate = true }) {
+export default function Logo({ size = 40, light = false, vertical = false, showText = true, animate = true, textColor = null }) {
   // Map size to icon and text dimensions
   const iconSize = Math.max(14, Math.floor(size * 0.5));
   const boxSize = Math.max(26, Math.floor(size * 0.95));
@@ -31,11 +31,11 @@ export default function Logo({ size = 40, light = false, vertical = false, showT
         width: `${boxSize}px`,
         height: `${boxSize}px`,
         borderRadius: Math.max(6, Math.floor(boxSize * 0.3)) + 'px',
-        background: 'linear-gradient(135deg, #4F46E5, #8B5CF6, #EC4899)',
+        background: textColor ? textColor : 'linear-gradient(135deg, #4F46E5, #8B5CF6, #EC4899)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: light ? '0 4px 16px rgba(255, 255, 255, 0.15)' : '0 4px 14px rgba(79, 70, 229, 0.35)',
+        boxShadow: textColor ? 'none' : (light ? '0 4px 16px rgba(255, 255, 255, 0.15)' : '0 4px 14px rgba(79, 70, 229, 0.35)'),
         position: 'relative',
         overflow: 'hidden'
       }}>
@@ -66,10 +66,10 @@ export default function Logo({ size = 40, light = false, vertical = false, showT
             fontSize: `${mainFontSize}px`, 
             fontWeight: 900, 
             letterSpacing: '-0.3px',
-            background: light ? '#FFF' : 'linear-gradient(135deg, #4F46E5, #8B5CF6)',
-            WebkitBackgroundClip: light ? 'none' : 'text',
-            WebkitTextFillColor: light ? 'none' : 'transparent',
-            color: light ? '#FFF' : 'transparent',
+            background: textColor ? 'none' : (light ? '#FFF' : 'linear-gradient(135deg, #4F46E5, #8B5CF6)'),
+            WebkitBackgroundClip: textColor ? 'none' : (light ? 'none' : 'text'),
+            WebkitTextFillColor: textColor ? 'none' : (light ? 'none' : 'transparent'),
+            color: textColor || (light ? '#FFF' : 'transparent'),
             textTransform: 'uppercase'
           }}>
             Campainha
@@ -78,7 +78,7 @@ export default function Logo({ size = 40, light = false, vertical = false, showT
             fontSize: `${subFontSize}px`, 
             fontWeight: 800, 
             letterSpacing: '1.2px',
-            color: light ? 'rgba(255,255,255,0.7)' : '#64748B',
+            color: textColor || (light ? 'rgba(255,255,255,0.7)' : '#64748B'),
             textTransform: 'uppercase',
             marginTop: '1px'
           }}>
