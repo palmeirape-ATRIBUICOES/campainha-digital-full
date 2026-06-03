@@ -1122,11 +1122,25 @@ export default function MasterAdminDashboard() {
                   cursor: 'pointer' 
                 }}
               >
-                Produção e Impressão em Lote
+                Impressão em Lote (Clientes)
+              </button>
+              <button 
+                onClick={() => setPlatesSubTab('sequential')} 
+                style={{ 
+                  padding: '12px 16px', 
+                  background: 'none', 
+                  border: 'none', 
+                  borderBottom: platesSubTab === 'sequential' ? '2px solid #3B82F6' : '2px solid transparent', 
+                  color: platesSubTab === 'sequential' ? '#3B82F6' : 'var(--text-muted)', 
+                  fontWeight: 700, 
+                  cursor: 'pointer' 
+                }}
+              >
+                Produzir Placas (Sequencial)
               </button>
             </div>
 
-            {platesSubTab === 'lab' ? (
+            {platesSubTab === 'lab' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '40px' }}>
                 {/* Controls */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -1310,7 +1324,9 @@ export default function MasterAdminDashboard() {
                   </div>
                 </div>
               </div>
-            ) : (
+            )}
+
+            {platesSubTab === 'production' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                   <div>
@@ -1376,6 +1392,10 @@ export default function MasterAdminDashboard() {
                   </table>
                 </div>
               </div>
+            )}
+
+            {platesSubTab === 'sequential' && (
+              <PlateProductionPanel />
             )}
           </div>
         )}
