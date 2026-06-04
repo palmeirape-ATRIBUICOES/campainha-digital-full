@@ -52,7 +52,13 @@ export default function MasterAdminDashboard() {
     headerBadgeText: '',
     headerBadgeBg: '#3B82F6',
     headerBadgeColor: '#FFFFFF',
-    logoPosition: 'top',
+    logoPosition: 'top-center',
+    logoSize: 36,
+    showPhoneIllustration: false,
+    plateSizeFormat: 'a4',
+    plateWidthCustom: 21.0,
+    plateHeightCustom: 29.7,
+    plateSizeUnit: 'cm',
     qrBgColor: '#FFFFFF',
     qrFgColor: '#000000',
     titleText: "CAMPAINHA DIGITAL",
@@ -68,6 +74,163 @@ export default function MasterAdminDashboard() {
     borderWidth: "4px",
     logoColor: "#0F172A"
   });
+
+  const [savedPresets, setSavedPresets] = useState([]);
+  const [newPresetName, setNewPresetName] = useState('');
+
+  const palettes = [
+    { bg: '#0F172A', text: '#F8FAFC', accent: '#3B82F6', logo: '#60A5FA', primary: '#1E293B', name: 'Midnight Blue' },
+    { bg: '#FAF8F5', text: '#1A1A1A', accent: '#D4AF37', logo: '#D4AF37', primary: '#D4AF37', name: 'Luxury Gold' },
+    { bg: '#F4EAD4', text: '#4E3629', accent: '#8D5B4C', logo: '#4E3629', primary: '#6E473B', name: 'Retro Warm' },
+    { bg: '#0B3C5D', text: '#FFFFFF', accent: '#F5D76E', logo: '#FFFFFF', primary: '#328CC1', name: 'Classic Royal' },
+    { bg: '#1E232A', text: '#ECF0F1', accent: '#E74C3C', logo: '#E74C3C', primary: '#34495E', name: 'Crimson Slate' },
+    { bg: '#E8F5E9', text: '#1B5E20', accent: '#4CAF50', logo: '#1B5E20', primary: '#2E7D32', name: 'Mint Breeze' },
+    { bg: '#FFF3E0', text: '#E65100', accent: '#FF9800', logo: '#E65100', primary: '#F57C00', name: 'Peach Velvet' },
+    { bg: '#F3E5F5', text: '#4A148C', accent: '#AB47BC', logo: '#4A148C', primary: '#7B1FA2', name: 'Lavender Dreams' },
+    { bg: '#E0F7FA', text: '#006064', accent: '#00ACC1', logo: '#006064', primary: '#00838F', name: 'Teal Lagoon' },
+    { bg: '#FFF5F5', text: '#C53030', accent: '#E53E3E', logo: '#C53030', primary: '#9B2C2C', name: 'Coral Pop' },
+    { bg: '#080710', text: '#F8FAFC', accent: '#00E5FF', logo: '#00E5FF', primary: '#111', name: 'Neon Cyberpunk' },
+    { bg: '#FAF9F6', text: '#2C3E50', accent: '#7F8C8D', logo: '#2C3E50', primary: '#95A5A6', name: 'Minimalist Ivory' }
+  ];
+
+  const handleSavePreset = async () => {
+    if (!newPresetName.trim()) {
+      alert('Por favor, insira um nome para o estilo.');
+      return;
+    }
+    const newPreset = {
+      id: 'preset_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      name: newPresetName.trim(),
+      style: { ...plateStyle }
+    };
+    const updatedPresets = [...savedPresets, newPreset];
+    setSavedPresets(updatedPresets);
+    setNewPresetName('');
+
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/settings`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token || ''
+        },
+        body: JSON.stringify({ 
+          key: 'plate_presets', 
+          value: JSON.stringify(updatedPresets) 
+        })
+      });
+      if (res.ok) {
+        alert(`Estilo "${newPreset.name}" salvo com sucesso como preset!`);
+      } else {
+        alert('Erro ao persistir preset no servidor.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão ao salvar preset.');
+    }
+  };
+
+  const handleApplyPreset = (preset) => {
+    setPlateStyle({ ...plateStyle, ...preset.style });
+  };
+
+  const handleDeletePreset = async (presetId) => {
+    if (!confirm('Excluir este estilo salvo?')) return;
+    const updatedPresets = savedPresets.filter(p => p.id !== presetId);
+    setSavedPresets(updatedPresets);
+
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/settings`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token || ''
+        },
+        body: JSON.stringify({ 
+          key: 'plate_presets', 
+          value: JSON.stringify(updatedPresets) 
+        })
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRandomizeStyle = () => {
+    const templates = [
+      'standard', 'minimalist', 'premiumDark', 'aurora', 'bento', 
+      'splitDiagonal', 'neonCyberpunk', 'classicStreet', 'luxuryMarble', 
+      'carbonFiber', 'vintage', 'cleanCorporate', 'abstractGeometric', 
+      'giantCenteredQR', 'glassmorphism'
+    ];
+    const fonts = ['Inter', 'Outfit', 'Montserrat', 'Playfair Display', 'Fira Code', 'Space Grotesk', 'Cinzel'];
+    const textures = ['none', 'dots', 'grid', 'stripes'];
+    const shadows = ['none', 'soft', 'medium', 'hard'];
+    const borders = ['solid', 'dashed', 'double', 'dotted'];
+    
+    const templateId = templates[Math.floor(Math.random() * templates.length)];
+    const fontFamily = fonts[Math.floor(Math.random() * fonts.length)];
+    const backgroundPattern = textures[Math.floor(Math.random() * textures.length)];
+    const shadowDepth = shadows[Math.floor(Math.random() * shadows.length)];
+    const borderStyle = borders[Math.floor(Math.random() * borders.length)];
+    
+    const logoPosition = [
+      'top-left', 'top-center', 'top-right', 
+      'mid-left', 'mid-center', 'mid-right', 
+      'bottom-left', 'bottom-center', 'bottom-right'
+    ][Math.floor(Math.random() * 9)];
+    
+    const palette = palettes[Math.floor(Math.random() * palettes.length)];
+    const showBorder = Math.random() > 0.4;
+    const qrRadius = ['0px', '8px', '16px', '24px', '32px', '50%'][Math.floor(Math.random() * 6)];
+    const showPhoneIllustration = Math.random() > 0.4;
+    const logoSize = Math.floor(Math.random() * 30) + 24; // 24 to 54
+    
+    const newStyle = {
+      ...plateStyle,
+      templateId,
+      fontFamily,
+      backgroundPattern,
+      shadowDepth,
+      borderStyle,
+      logoPosition,
+      logoSize,
+      showPhoneIllustration,
+      qrRadius,
+      backgroundColor: palette.bg,
+      textColor: palette.text,
+      accentColor: palette.accent,
+      logoColor: palette.logo,
+      primaryColor: palette.primary,
+      showBorder,
+      borderColor: palette.accent,
+      borderWidth: '4px',
+      qrBgColor: '#FFFFFF',
+      qrFgColor: '#000000'
+    };
+
+    if (templateId === 'neonCyberpunk') {
+      newStyle.backgroundColor = '#05050A';
+      newStyle.textColor = '#F8FAFC';
+      newStyle.accentColor = palette.accent;
+      newStyle.qrBgColor = '#0B0B14';
+      newStyle.qrFgColor = palette.accent;
+    } else if (templateId === 'premiumDark') {
+      newStyle.backgroundColor = '#0F172A';
+      newStyle.textColor = '#F8FAFC';
+      newStyle.qrBgColor = '#1E293B';
+      newStyle.qrFgColor = '#FFFFFF';
+    } else if (templateId === 'glassmorphism' || templateId === 'aurora') {
+      newStyle.textColor = '#FFFFFF';
+      newStyle.accentColor = '#FFFFFF';
+      newStyle.qrBgColor = 'rgba(255,255,255,0.9)';
+      newStyle.qrFgColor = '#0F172A';
+    }
+
+    setPlateStyle(newStyle);
+  };
 
   const handleSaveStyle = async () => {
     setSavingStyle(true);
@@ -155,6 +318,13 @@ export default function MasterAdminDashboard() {
           const data = await res.json();
           if (data.plate_style) {
             setPlateStyle(data.plate_style);
+          }
+          if (data.plate_presets) {
+            try {
+              setSavedPresets(JSON.parse(data.plate_presets));
+            } catch (e) {
+              setSavedPresets([]);
+            }
           }
         }
       } catch (err) {
@@ -1156,21 +1326,166 @@ export default function MasterAdminDashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '40px' }}>
                 {/* Controls */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
-                    <Settings size={18} color="#3B82F6" />
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Configuração Visual Avançada</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Settings size={18} color="#3B82F6" />
+                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Configuração Visual Avançada</h3>
+                    </div>
+                    {/* Estilo Aleatorio */}
+                    <button
+                      type="button"
+                      onClick={handleRandomizeStyle}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        background: 'linear-gradient(135deg, #EC4899, #8B5CF6)',
+                        color: '#FFF',
+                        border: 'none',
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 4px 10px rgba(139, 92, 246, 0.2)'
+                      }}
+                      title="Gera uma combinação harmônica aleatória de cores e templates"
+                    >
+                      ✨ Estilo Aleatório
+                    </button>
+                  </div>
+
+                  {/* PRESETS DE ESTILO SALVOS */}
+                  <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>PRESETS E ESTILOS SALVOS</span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{savedPresets.length} salvos</span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        placeholder="Nome do novo preset (ex: Royal Gold)..."
+                        value={newPresetName}
+                        onChange={e => setNewPresetName(e.target.value)}
+                        style={{ flex: 1, padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSavePreset}
+                        style={{ padding: '8px 14px', borderRadius: '8px', background: '#10B981', color: '#FFF', border: 'none', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+                      >
+                        Salvar Preset
+                      </button>
+                    </div>
+
+                    {savedPresets.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                        {savedPresets.map((preset) => (
+                          <div
+                            key={preset.id}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: 'var(--bg-surface)',
+                              border: '1px solid var(--border-subtle)',
+                              padding: '4px 10px',
+                              borderRadius: '8px',
+                              fontSize: '11px',
+                              fontWeight: 700
+                            }}
+                          >
+                            <span
+                              onClick={() => handleApplyPreset(preset)}
+                              style={{ cursor: 'pointer', color: 'var(--text-main)' }}
+                              title="Clique para aplicar"
+                            >
+                              📁 {preset.name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePreset(preset.id)}
+                              style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '0 2px', fontSize: '12px', fontWeight: 800 }}
+                              title="Excluir preset"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* TAMANHO E PROPORÇÃO DA PLACA */}
+                  <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>DIMENSIONAMENTO DA PLACA (PARA IMPRESSÃO)</div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Formato do Tamanho</label>
+                        <select
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
+                          value={plateStyle.plateSizeFormat || 'a4'}
+                          onChange={e => setPlateStyle({ ...plateStyle, plateSizeFormat: e.target.value })}
+                        >
+                          <option value="a4">Placa A4 Padrão (21 x 29.7 cm)</option>
+                          <option value="a5">Placa A5 Média (14.8 x 21 cm)</option>
+                          <option value="a6">Placa A6 De Bolso (10.5 x 14.8 cm)</option>
+                          <option value="square">Placa Quadrada (20 x 20 cm)</option>
+                          <option value="custom">Dimensões Personalizadas</option>
+                        </select>
+                      </div>
+
+                      {plateStyle.plateSizeFormat === 'custom' && (
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end' }}>
+                          <div style={{ width: '33%' }}>
+                            <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '3px' }}>Largura</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={plateStyle.plateWidthCustom || 21}
+                              onChange={e => setPlateStyle({ ...plateStyle, plateWidthCustom: parseFloat(e.target.value) || 0 })}
+                              style={{ width: '100%', padding: '7px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '11px', textAlign: 'center' }}
+                            />
+                          </div>
+                          <div style={{ width: '33%' }}>
+                            <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '3px' }}>Altura</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={plateStyle.plateHeightCustom || 29.7}
+                              onChange={e => setPlateStyle({ ...plateStyle, plateHeightCustom: parseFloat(e.target.value) || 0 })}
+                              style={{ width: '100%', padding: '7px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '11px', textAlign: 'center' }}
+                            />
+                          </div>
+                          <div style={{ width: '34%' }}>
+                            <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '3px' }}>Unidade</label>
+                            <select
+                              value={plateStyle.plateSizeUnit || 'cm'}
+                              onChange={e => setPlateStyle({ ...plateStyle, plateSizeUnit: e.target.value })}
+                              style={{ width: '100%', padding: '7px 4px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '11px', cursor: 'pointer' }}
+                            >
+                              <option value="cm">cm</option>
+                              <option value="mm">mm</option>
+                              <option value="px">px</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* 1. MODEL TEMPLATE SELECTOR */}
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px' }}>
-                      1. ESCOLHA O MODELO DA PLACA (15 TEMPLATES DISPONÍVEIS)
+                      MODELO DA PLACA (15 TEMPLATES)
                     </label>
                     <div style={{ 
                       display: 'grid', 
                       gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', 
                       gap: '10px', 
-                      maxHeight: '260px', 
+                      maxHeight: '200px', 
                       overflowY: 'auto', 
                       padding: '8px', 
                       background: 'var(--bg-deep)', 
@@ -1223,9 +1538,95 @@ export default function MasterAdminDashboard() {
                     </div>
                   </div>
 
+                  {/* CUSTOMIZAÇÃO DE LOGO (TAMANHO & POSIÇÃO GRID 3x3) */}
+                  <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>PERSONALIZAÇÃO E ALINHAMENTO DO LOGO</div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px' }}>
+                      {/* Logo Size */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>
+                          Tamanho do Logo: <strong style={{ color: 'var(--text-main)' }}>{plateStyle.logoSize || 36}px</strong>
+                        </label>
+                        <input
+                          type="range"
+                          min="16"
+                          max="72"
+                          value={plateStyle.logoSize || 36}
+                          onChange={e => setPlateStyle({ ...plateStyle, logoSize: parseInt(e.target.value) })}
+                          style={{ width: '100%', cursor: 'pointer', height: '6px', background: '#CBD5E1', borderRadius: '4px', outline: 'none' }}
+                        />
+                        <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>* Tamanhos abaixo de 24px ocultam o texto</span>
+                      </div>
+
+                      {/* 9-Quadrant Position Grid */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>
+                          Posição do Logo na Placa:
+                        </label>
+                        <div style={{ 
+                          display: 'grid', 
+                          gridTemplateColumns: '1fr 1fr 1fr', 
+                          gap: '4px', 
+                          width: '108px', 
+                          height: '80px', 
+                          margin: '0 auto',
+                          background: '#E2E8F0', 
+                          padding: '4px',
+                          borderRadius: '8px',
+                          border: '1px solid #CBD5E1'
+                        }}>
+                          {[
+                            { pos: 'top-left', label: '↖️' }, { pos: 'top-center', label: '⬆️' }, { pos: 'top-right', label: '↗️' },
+                            { pos: 'mid-left', label: '⬅️' }, { pos: 'mid-center', label: '🎯' }, { pos: 'mid-right', label: '➡️' },
+                            { pos: 'bottom-left', label: '↙️' }, { pos: 'bottom-center', label: '⬇️' }, { pos: 'bottom-right', label: '↘️' }
+                          ].map((gridItem) => {
+                            const isSelected = (plateStyle.logoPosition || 'top-center') === gridItem.pos;
+                            return (
+                              <button
+                                key={gridItem.pos}
+                                type="button"
+                                onClick={() => setPlateStyle({ ...plateStyle, logoPosition: gridItem.pos })}
+                                style={{
+                                  background: isSelected ? '#3B82F6' : '#FFFFFF',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '10px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                  transition: 'all 0.1s'
+                                }}
+                                title={`Logo posicionado em: ${gridItem.pos}`}
+                              >
+                                {gridItem.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CELULAR AO LADO DO QR CODE */}
+                  <div style={{ padding: '14px 16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyBetween: 'space-between', gap: '12px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="showPhoneIllustration" 
+                      checked={plateStyle.showPhoneIllustration || false} 
+                      onChange={e => setPlateStyle({ ...plateStyle, showPhoneIllustration: e.target.checked })}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <label htmlFor="showPhoneIllustration" style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-main)', cursor: 'pointer' }}>
+                      VISUAL DO CELULAR AO LADO DO QR CODE (APOIO VISUAL)
+                    </label>
+                  </div>
+
                   {/* 2. TEXT CONTENT CUSTOMIZATION */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>2. CONTEÚDO TEXTUAL</div>
+                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>CONTEÚDO TEXTUAL</div>
                     
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Título Principal</label>
@@ -1301,19 +1702,6 @@ export default function MasterAdminDashboard() {
                         <option value="soft">Sombra Suave</option>
                         <option value="medium">Sombra Média</option>
                         <option value="hard">Sombra Projetada 3D</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Posicionamento do Logo</label>
-                      <select
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '13px', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
-                        value={plateStyle.logoPosition || 'top'}
-                        onChange={e => setPlateStyle({ ...plateStyle, logoPosition: e.target.value })}
-                      >
-                        <option value="top">No Topo</option>
-                        <option value="bottom">No Rodapé (Sem Texto)</option>
-                        <option value="hidden">Ocultar Logo</option>
                       </select>
                     </div>
                   </div>
@@ -1392,7 +1780,7 @@ export default function MasterAdminDashboard() {
 
                   {/* 5. ADVANCED QR CODE DESIGN */}
                   <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>5. DESIGN DO BOX DO QR CODE</div>
+                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>DESIGN DO BOX DO QR CODE</div>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '12px' }}>
                       <div>
@@ -1436,7 +1824,7 @@ export default function MasterAdminDashboard() {
 
                   {/* 6. HEADER BADGE / TAG DE DESTAQUE */}
                   <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>6. TAG DE DESTAQUE SUPERIOR (OPCIONAL)</div>
+                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>TAG DE DESTAQUE SUPERIOR (OPCIONAL)</div>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
                       <div>

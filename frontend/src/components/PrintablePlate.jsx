@@ -14,7 +14,13 @@ const defaultStyle = {
   headerBadgeText: '',
   headerBadgeBg: '#3B82F6',
   headerBadgeColor: '#FFFFFF',
-  logoPosition: 'top',
+  logoPosition: 'top-center',
+  logoSize: 36,
+  showPhoneIllustration: false,
+  plateSizeFormat: 'a4',
+  plateWidthCustom: 21.0,
+  plateHeightCustom: 29.7,
+  plateSizeUnit: 'cm',
   qrBgColor: '#FFFFFF',
   qrFgColor: '#000000',
   titleText: "CAMPAINHA DIGITAL",
@@ -138,10 +144,52 @@ const PrintablePlate = React.forwardRef(({
     }
   };
 
-  // 4. Default structural mappings (can be modified by templates)
+  // 4. Sizing configuration
+  const getPlateDimensions = () => {
+    const format = style.plateSizeFormat || 'a4';
+    switch (format) {
+      case 'a5':
+        return {
+          aspectRatio: '1/1.414',
+          '--print-width': '148mm',
+          '--print-height': '210mm'
+        };
+      case 'a6':
+        return {
+          aspectRatio: '1/1.414',
+          '--print-width': '105mm',
+          '--print-height': '148mm'
+        };
+      case 'square':
+        return {
+          aspectRatio: '1/1',
+          '--print-width': '200mm',
+          '--print-height': '200mm'
+        };
+      case 'custom':
+        const w = style.plateWidthCustom || 21;
+        const h = style.plateHeightCustom || 29.7;
+        const unit = style.plateSizeUnit || 'cm';
+        return {
+          aspectRatio: `${w}/${h}`,
+          '--print-width': `${w}${unit}`,
+          '--print-height': `${h}${unit}`
+        };
+      case 'a4':
+      default:
+        return {
+          aspectRatio: '1/1.414',
+          '--print-width': '210mm',
+          '--print-height': '297mm'
+        };
+    }
+  };
+
+  const dimensions = getPlateDimensions();
+
   let containerStyle = {
     width: '100%',
-    aspectRatio: '1/1.414',
+    aspectRatio: dimensions.aspectRatio,
     padding: '36px 24px',
     boxSizing: 'border-box',
     display: 'flex',
@@ -152,6 +200,8 @@ const PrintablePlate = React.forwardRef(({
     overflow: 'hidden',
     fontFamily: currentFontFamily,
     boxShadow: getShadowStyle(style.shadowDepth),
+    '--print-width': dimensions['--print-width'],
+    '--print-height': dimensions['--print-height'],
     ...getBackgroundPatternStyle(style.backgroundPattern)
   };
 
@@ -183,15 +233,11 @@ const PrintablePlate = React.forwardRef(({
   let badgeBg = style.headerBadgeBg || '#3B82F6';
   let badgeTextColor = style.headerBadgeColor || '#FFFFFF';
 
-  let showLogoTop = style.logoPosition === 'top' || !style.logoPosition;
-  let showLogoBottom = style.logoPosition === 'bottom';
-
   let innerContainerStyle = null; // Used for glassmorphism layout
 
   // ==================== 15 VISUALLY DISTINCT TEMPLATE DEFINITIONS ====================
   switch (style.templateId) {
     case 'minimalist':
-      // 2. Minimalist Chic
       containerStyle.backgroundColor = style.backgroundColor === '#FFFFFF' || style.backgroundColor === '#1E293B' ? '#FAF9F6' : style.backgroundColor;
       containerStyle.padding = '44px 32px';
       containerStyle.border = '1px solid rgba(0,0,0,0.15)';
@@ -204,7 +250,6 @@ const PrintablePlate = React.forwardRef(({
       break;
 
     case 'premiumDark':
-      // 3. Premium Dark Theme
       containerStyle.background = 'linear-gradient(135deg, #0F172A 0%, #020617 100%)';
       containerStyle.borderRadius = '32px';
       containerStyle.border = style.showBorder ? `${style.borderWidth || '2px'} solid ${style.borderColor || 'rgba(255,255,255,0.15)'}` : 'none';
@@ -216,10 +261,9 @@ const PrintablePlate = React.forwardRef(({
       break;
 
     case 'aurora':
-      // 4. Aurora Mesh Gradient with Glassmorphism overlay
       containerStyle.background = 'linear-gradient(135deg, #FF007F 0%, #7F00FF 50%, #00F0FF 100%)';
       containerStyle.borderRadius = '36px';
-      containerStyle.padding = '12px'; // Outer shell padding
+      containerStyle.padding = '12px';
       containerStyle.border = 'none';
 
       innerContainerStyle = {
@@ -245,22 +289,18 @@ const PrintablePlate = React.forwardRef(({
       break;
 
     case 'bento':
-      // 5. Bento Grid Modular Structure
       containerStyle.backgroundColor = style.backgroundColor === '#FFFFFF' ? '#F1F5F9' : style.backgroundColor;
       containerStyle.padding = '24px 20px';
       break;
 
     case 'splitDiagonal':
-      // 6. Split Diagonal (contrasting halves)
       containerStyle.background = `linear-gradient(145deg, ${style.primaryColor || '#0F172A'} 42%, ${style.backgroundColor || '#FFFFFF'} 42.2%)`;
-      // Dynamically adjust coloring based on where texts sit
-      textPrimaryColor = '#1E293B'; // bottom half is white, so text is dark
+      textPrimaryColor = '#1E293B';
       accentColorStyle = style.accentColor || '#3B82F6';
-      logoTextColor = '#FFFFFF'; // top half is dark, so logo text is white
+      logoTextColor = '#FFFFFF';
       break;
 
     case 'neonCyberpunk':
-      // 7. Neon Glow / Cyberpunk Tech
       containerStyle.background = '#05050A';
       containerStyle.borderRadius = '24px';
       containerStyle.border = `2px solid ${style.accentColor || '#00E5FF'}`;
@@ -274,13 +314,12 @@ const PrintablePlate = React.forwardRef(({
       break;
 
     case 'classicStreet':
-      // 8. Classic Street Plaque (double borders, royal style)
-      containerStyle.backgroundColor = '#0B3C5D'; // Royal Blue
+      containerStyle.backgroundColor = '#0B3C5D';
       containerStyle.borderRadius = '16px';
       containerStyle.border = '8px double #FFFFFF';
       containerStyle.padding = '36px 28px';
       textPrimaryColor = '#FFFFFF';
-      accentColorStyle = '#F5D76E'; // Gold tone
+      accentColorStyle = '#F5D76E';
       logoTextColor = '#FFFFFF';
       qrContainerBg = '#FFFFFF';
       qrCodeFgColor = '#0B3C5D';
@@ -288,12 +327,11 @@ const PrintablePlate = React.forwardRef(({
       break;
 
     case 'luxuryMarble':
-      // 9. Luxury Marble/Gold
       containerStyle.background = 'linear-gradient(135deg, #FAF8F5 0%, #FFFDF9 100%)';
-      containerStyle.borderRadius = '0px'; // Classical sharp corners
+      containerStyle.borderRadius = '0px';
       containerStyle.border = `3px double ${style.borderColor || '#D4AF37'}`;
       textPrimaryColor = '#1A1A1A';
-      accentColorStyle = '#D4AF37'; // Luxury Gold
+      accentColorStyle = '#D4AF37';
       logoTextColor = '#D4AF37';
       qrContainerBg = '#FFFFFF';
       qrCodeFgColor = '#1A1A1A';
@@ -301,7 +339,6 @@ const PrintablePlate = React.forwardRef(({
       break;
 
     case 'carbonFiber':
-      // 10. Carbon Fiber/Industrial Safety Vibe
       containerStyle.backgroundColor = '#1C1C1E';
       containerStyle.backgroundImage = 'radial-gradient(#2C2C2E 20%, transparent 20%), radial-gradient(#2C2C2E 20%, transparent 20%)';
       containerStyle.backgroundPosition = '0 0, 8px 8px';
@@ -309,7 +346,7 @@ const PrintablePlate = React.forwardRef(({
       containerStyle.borderRadius = '12px';
       containerStyle.border = `6px solid ${style.accentColor || '#F59E0B'}`;
       textPrimaryColor = '#FFFFFF';
-      accentColorStyle = style.accentColor || '#F59E0B'; // Safety yellow/orange
+      accentColorStyle = style.accentColor || '#F59E0B';
       logoTextColor = '#FFFFFF';
       qrContainerBg = '#111';
       qrCodeFgColor = style.accentColor || '#F59E0B';
@@ -317,12 +354,11 @@ const PrintablePlate = React.forwardRef(({
       break;
 
     case 'vintage':
-      // 11. Retro/Vintage Classic Vibe
-      containerStyle.backgroundColor = '#F4EAD4'; // Retro Cream
+      containerStyle.backgroundColor = '#F4EAD4';
       containerStyle.borderRadius = '40px';
       containerStyle.border = '3px dashed #6E473B';
       containerStyle.padding = '40px 24px';
-      textPrimaryColor = '#4E3629'; // Warm brown
+      textPrimaryColor = '#4E3629';
       accentColorStyle = '#8D5B4C';
       logoTextColor = '#4E3629';
       qrContainerBg = '#FAF5E8';
@@ -331,11 +367,10 @@ const PrintablePlate = React.forwardRef(({
       break;
 
     case 'cleanCorporate':
-      // 12. Clean Corporate / Professional
       containerStyle.backgroundColor = '#FFFFFF';
       containerStyle.borderRadius = '8px';
       containerStyle.border = `1px solid #E2E8F0`;
-      containerStyle.borderTop = `16px solid ${style.primaryColor || '#1E3A8A'}`; // Thick corporate banner on top
+      containerStyle.borderTop = `16px solid ${style.primaryColor || '#1E3A8A'}`;
       textPrimaryColor = '#0F172A';
       accentColorStyle = style.primaryColor || '#1E3A8A';
       logoTextColor = style.primaryColor || '#1E3A8A';
@@ -345,25 +380,22 @@ const PrintablePlate = React.forwardRef(({
       break;
 
     case 'abstractGeometric':
-      // 13. Abstract Geometric
       containerStyle.background = 'linear-gradient(135deg, #FFEFD5 0%, #E6E6FA 100%)';
       containerStyle.borderRadius = '32px';
       containerStyle.border = 'none';
       textPrimaryColor = '#2D3748';
-      accentColorStyle = '#E53E3E'; // Coral red
+      accentColorStyle = '#E53E3E';
       logoTextColor = '#2D3748';
       qrContainerBg = '#FFFFFF';
       qrBoxRadius = '30px';
       break;
 
     case 'giantCenteredQR':
-      // 14. Giant Centered QR Code
       containerStyle.backgroundColor = style.backgroundColor || '#FFFFFF';
       containerStyle.padding = '24px 20px';
       break;
 
     case 'glassmorphism':
-      // 15. Frosted Glassmorphism
       containerStyle.background = 'linear-gradient(225deg, #FF3CAC 0%, #784BA0 50%, #2B86C5 100%)';
       containerStyle.borderRadius = '32px';
       containerStyle.border = 'none';
@@ -396,10 +428,42 @@ const PrintablePlate = React.forwardRef(({
       break;
   }
 
+  // 5. Dynamic Logo Renderer
+  const renderLogo = (targetPos) => {
+    const rawPos = style.logoPosition || 'top-center';
+    const parts = rawPos.split('-');
+    const vPos = parts[0] || 'top';
+    const hPos = parts[1] || 'center';
+
+    if (vPos !== targetPos) return null;
+
+    const alignValue = hPos === 'left' ? 'flex-start' : hPos === 'right' ? 'flex-end' : 'center';
+    const size = style.logoSize || 36;
+
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: alignValue, 
+        width: '90%', 
+        marginBottom: vPos === 'top' ? '8px' : '0px', 
+        marginTop: vPos === 'bottom' ? '10px' : '0px',
+        zIndex: 5
+      }}>
+        <Logo 
+          size={size} 
+          showText={size >= 24} 
+          textColor={logoTextColor} 
+          animate={animateLogo} 
+        />
+      </div>
+    );
+  };
+
   // Helper content element that renders the layout fields
   const renderPlateContent = () => {
     const isGiantQR = style.templateId === 'giantCenteredQR';
     const isBento = style.templateId === 'bento';
+    const showPhone = style.showPhoneIllustration;
 
     if (isBento) {
       return (
@@ -414,11 +478,7 @@ const PrintablePlate = React.forwardRef(({
             textAlign: 'center',
             boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
           }}>
-            {showLogoTop && (
-              <div style={{ marginBottom: '8px' }}>
-                <Logo size={32} showText={true} textColor={logoTextColor} animate={animateLogo} />
-              </div>
-            )}
+            {renderLogo('top')}
             <h1 style={{ fontSize: 'clamp(16px, 3.5vw, 20px)', fontWeight: 900, color: '#0F172A', margin: 0, textTransform: 'uppercase' }}>
               {style.titleText || 'CAMPAINHA DIGITAL'}
             </h1>
@@ -439,16 +499,52 @@ const PrintablePlate = React.forwardRef(({
             boxShadow: '0 4px 10px rgba(0,0,0,0.03)',
             flexGrow: 1
           }}>
-            <div style={{ width: '65%', aspectRatio: '1' }}>
-              <QRCodeSVG 
-                value={targetUrl}
-                size={256}
-                bgColor={qrContainerBg}
-                fgColor={qrCodeFgColor}
-                level="H"
-                includeMargin={false}
-                style={{ width: '100%', height: '100%' }}
-              />
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: showPhone ? 'row' : 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '16px', 
+              width: '100%' 
+            }}>
+              <div style={{ width: showPhone ? '50%' : '65%', aspectRatio: '1' }}>
+                <QRCodeSVG 
+                  value={targetUrl}
+                  size={256}
+                  bgColor={qrContainerBg}
+                  fgColor={qrCodeFgColor}
+                  level="H"
+                  includeMargin={false}
+                  style={{ width: '100%', height: '100%' }}
+                />
+              </div>
+
+              {showPhone && (
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  width: '40%',
+                  background: 'rgba(0,0,0,0.04)',
+                  borderRadius: '12px',
+                  padding: '10px 6px',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  color: '#1E293B',
+                  textAlign: 'center'
+                }}>
+                  <svg width="24" height="42" viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="2" width="36" height="66" rx="6" stroke="#1E293B" strokeWidth="4" fill="none" />
+                    <circle cx="20" cy="62" r="3" fill="#1E293B" />
+                    <rect x="5" y="8" width="30" height="48" rx="2" fill="#1E293B22" />
+                    <path d="M10 26 H30 M20 16 V36" stroke={accentColorStyle} strokeWidth="2.5" strokeDasharray="3 3" />
+                  </svg>
+                  <span style={{ fontSize: '8px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2px', color: '#475569' }}>
+                    Use o Celular
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -475,6 +571,7 @@ const PrintablePlate = React.forwardRef(({
                 </span>
               )}
             </div>
+            {renderLogo('bottom')}
           </div>
         </div>
       );
@@ -482,6 +579,19 @@ const PrintablePlate = React.forwardRef(({
 
     return (
       <>
+        <style>{`
+          @media print {
+            .printable-plate-container {
+              width: var(--print-width, 210mm) !important;
+              height: var(--print-height, 297mm) !important;
+              max-width: none !important;
+              aspect-ratio: auto !important;
+              border-radius: 0px !important;
+              box-shadow: none !important;
+            }
+          }
+        `}</style>
+
         {/* Top Badge Tag */}
         {hasTopBadge && (
           <div style={{
@@ -503,16 +613,7 @@ const PrintablePlate = React.forwardRef(({
         )}
 
         {/* HEADER: LOGO */}
-        {showLogoTop && (
-          <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: '6px', marginTop: hasTopBadge ? '16px' : '0' }}>
-            <Logo 
-              size={36} 
-              showText={true} 
-              textColor={logoTextColor} 
-              animate={animateLogo} 
-            />
-          </div>
-        )}
+        {renderLogo('top')}
 
         {/* BODY TITLE & SUBTITLE */}
         <div style={{ textAlign: 'center', width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -539,30 +640,69 @@ const PrintablePlate = React.forwardRef(({
           </p>
         </div>
 
-        {/* QR CODE CONTAINER */}
-        <div style={{ 
-          background: qrContainerBg,
-          padding: '16px',
-          borderRadius: qrBoxRadius,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
+        {/* LOGO POSITION MIDDLE */}
+        {renderLogo('mid')}
+
+        {/* QR CODE CONTAINER & PHONE LAYOUT */}
+        <div style={{
           display: 'flex',
+          flexDirection: showPhone ? 'row' : 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          border: '1px solid rgba(0,0,0,0.06)',
-          width: isGiantQR ? '72%' : '56%',
-          aspectRatio: '1',
-          margin: isGiantQR ? '8px 0' : '14px 0',
-          position: 'relative'
+          gap: '16px',
+          width: '100%',
+          margin: isGiantQR ? '8px 0' : '14px 0'
         }}>
-          <QRCodeSVG 
-            value={targetUrl}
-            size={256}
-            bgColor={qrContainerBg}
-            fgColor={qrCodeFgColor}
-            level="H"
-            includeMargin={false}
-            style={{ width: '100%', height: '100%' }}
-          />
+          <div style={{ 
+            background: qrContainerBg,
+            padding: '16px',
+            borderRadius: qrBoxRadius,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid rgba(0,0,0,0.06)',
+            width: showPhone ? '50%' : (isGiantQR ? '72%' : '56%'),
+            aspectRatio: '1',
+            position: 'relative'
+          }}>
+            <QRCodeSVG 
+              value={targetUrl}
+              size={256}
+              bgColor={qrContainerBg}
+              fgColor={qrCodeFgColor}
+              level="H"
+              includeMargin={false}
+              style={{ width: '100%', height: '100%' }}
+            />
+          </div>
+
+          {showPhone && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              width: '40%',
+              background: 'rgba(255,255,255,0.08)',
+              borderRadius: '16px',
+              padding: '14px 10px',
+              border: `1px solid ${textPrimaryColor}22`,
+              color: textPrimaryColor,
+              textAlign: 'center'
+            }}>
+              <svg width="32" height="56" viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="36" height="66" rx="6" stroke={textPrimaryColor} strokeWidth="3" fill="none" />
+                <circle cx="20" cy="62" r="3" fill={textPrimaryColor} />
+                <rect x="5" y="8" width="30" height="48" rx="2" fill={`${textPrimaryColor}15`} />
+                <path d="M12 26 H28 M20 18 V34" stroke={accentColorStyle} strokeWidth="1.8" strokeDasharray="2 2" />
+              </svg>
+              <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2px', opacity: 0.85 }}>
+                Aproxime o Celular
+              </span>
+            </div>
+          )}
         </div>
 
         {/* INSTRUCTIONS */}
@@ -621,16 +761,7 @@ const PrintablePlate = React.forwardRef(({
             </span>
           )}
           
-          {showLogoBottom && (
-            <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginTop: '6px' }}>
-              <Logo 
-                size={24} 
-                showText={false} 
-                textColor={logoTextColor} 
-                animate={animateLogo} 
-              />
-            </div>
-          )}
+          {renderLogo('bottom')}
         </div>
       </>
     );
