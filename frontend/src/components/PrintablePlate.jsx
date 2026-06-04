@@ -24,6 +24,9 @@ const defaultStyle = {
   showFooter: true,
   showUnitFooter: true,
   footerTextOverride: '',
+  footerFontSize: 14,
+  footerUnitFontSize: 12,
+  footerFontFamily: 'inherit',
   qrBgColor: '#FFFFFF',
   qrFgColor: '#000000',
   titleText: "CAMPAINHA DIGITAL",
@@ -113,6 +116,17 @@ const PrintablePlate = React.forwardRef(({
   };
 
   const currentFontFamily = getFontFamily(style.fontFamily);
+
+  const getFooterFontFamily = () => {
+    if (!style.footerFontFamily || style.footerFontFamily === 'inherit') {
+      return currentFontFamily;
+    }
+    return getFontFamily(style.footerFontFamily);
+  };
+
+  const footerFont = getFooterFontFamily();
+  const footerFontSizePx = style.footerFontSize !== undefined ? `${style.footerFontSize}px` : 'clamp(11px, 2.5vw, 16px)';
+  const footerUnitFontSizePx = style.footerUnitFontSize !== undefined ? `${style.footerUnitFontSize}px` : 'clamp(9px, 2vw, 13px)';
 
   // 2. Background pattern styling
   const getBackgroundPatternStyle = (pattern) => {
@@ -573,12 +587,12 @@ const PrintablePlate = React.forwardRef(({
             {(showFooterText || (showUnitText && unitName)) && (
               <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '8px' }}>
                 {showFooterText && (
-                  <span style={{ fontSize: 'clamp(11px, 2.2vw, 14px)', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', display: 'block' }}>
+                  <span style={{ fontSize: footerFontSizePx, fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', display: 'block', fontFamily: footerFont }}>
                     {displayPropertyName}
                   </span>
                 )}
                 {showUnitText && unitName && (
-                  <span style={{ fontSize: 'clamp(9px, 1.8vw, 12px)', fontWeight: 700, color: accentColorStyle, textTransform: 'uppercase', display: 'block', marginTop: '2px' }}>
+                  <span style={{ fontSize: footerUnitFontSizePx, fontWeight: 700, color: accentColorStyle, textTransform: 'uppercase', display: 'block', marginTop: '2px', fontFamily: footerFont }}>
                     {unitName}
                   </span>
                 )}
@@ -750,7 +764,7 @@ const PrintablePlate = React.forwardRef(({
           }}>
             {showFooterText && (
               <span style={{ 
-                fontSize: 'clamp(11px, 2.5vw, 16px)', 
+                fontSize: footerFontSizePx, 
                 fontWeight: 800, 
                 color: textPrimaryColor,
                 textTransform: 'uppercase',
@@ -759,19 +773,21 @@ const PrintablePlate = React.forwardRef(({
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                width: '100%'
+                width: '100%',
+                fontFamily: footerFont
               }}>
                 {displayPropertyName}
               </span>
             )}
             {showUnitText && unitName && (
               <span style={{ 
-                fontSize: 'clamp(9px, 2vw, 13px)', 
+                fontSize: footerUnitFontSizePx, 
                 fontWeight: 700, 
                 color: accentColorStyle,
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
-                display: 'block'
+                display: 'block',
+                fontFamily: footerFont
               }}>
                 {unitName}
               </span>

@@ -62,6 +62,9 @@ export default function MasterAdminDashboard() {
     showFooter: true,
     showUnitFooter: true,
     footerTextOverride: '',
+    footerFontSize: 14,
+    footerUnitFontSize: 12,
+    footerFontFamily: 'inherit',
     qrBgColor: '#FFFFFF',
     qrFgColor: '#000000',
     titleText: "CAMPAINHA DIGITAL",
@@ -320,7 +323,7 @@ export default function MasterAdminDashboard() {
         if (res.ok) {
           const data = await res.json();
           if (data.plate_style) {
-            setPlateStyle(data.plate_style);
+            setPlateStyle(prev => ({ ...prev, ...data.plate_style }));
           }
           if (data.plate_presets) {
             try {
@@ -1692,6 +1695,72 @@ export default function MasterAdminDashboard() {
                         />
                         <label htmlFor="showUnitFooter" style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-main)', cursor: 'pointer' }}>Exibir Unidade / Bloco no Rodapé</label>
                       </div>
+
+                      {/* Personalização da Fonte e Tamanho do Rodapé */}
+                      {((plateStyle.showFooter !== false) || (plateStyle.showUnitFooter !== false)) && (
+                        <div style={{ 
+                          marginTop: '8px', 
+                          paddingTop: '12px', 
+                          borderTop: '1px dashed var(--border-subtle)',
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '12px' 
+                        }}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)' }}>ESTILO DO TEXTO DO RODAPÉ</div>
+                          
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Fonte do Rodapé</label>
+                            <select
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
+                              value={plateStyle.footerFontFamily || 'inherit'}
+                              onChange={e => setPlateStyle({ ...plateStyle, footerFontFamily: e.target.value })}
+                            >
+                              <option value="inherit">Herdar da Placa ({plateStyle.fontFamily || 'Inter'})</option>
+                              <option value="Inter">Inter (Padrão Clean)</option>
+                              <option value="Outfit">Outfit (Moderna/Redonda)</option>
+                              <option value="Montserrat">Montserrat (Esportiva/Negrito)</option>
+                              <option value="Playfair Display">Playfair Display (Serif Elegante)</option>
+                              <option value="Fira Code">Fira Code (Tecnológica/Monospace)</option>
+                              <option value="Space Grotesk">Space Grotesk (Tech/Industrial)</option>
+                              <option value="Cinzel">Cinzel (Luxo Clássico)</option>
+                            </select>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            {plateStyle.showFooter !== false && (
+                              <div>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                  Tam. Propriedade: <strong style={{ color: 'var(--text-main)' }}>{plateStyle.footerFontSize !== undefined ? plateStyle.footerFontSize : 14}px</strong>
+                                </label>
+                                <input
+                                  type="range"
+                                  min="10"
+                                  max="24"
+                                  value={plateStyle.footerFontSize !== undefined ? plateStyle.footerFontSize : 14}
+                                  onChange={e => setPlateStyle({ ...plateStyle, footerFontSize: parseInt(e.target.value) })}
+                                  style={{ width: '100%', cursor: 'pointer', height: '6px', background: '#CBD5E1', borderRadius: '4px', outline: 'none' }}
+                                />
+                              </div>
+                            )}
+
+                            {plateStyle.showUnitFooter !== false && (
+                              <div>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>
+                                  Tam. Unidade: <strong style={{ color: 'var(--text-main)' }}>{plateStyle.footerUnitFontSize !== undefined ? plateStyle.footerUnitFontSize : 12}px</strong>
+                                </label>
+                                <input
+                                  type="range"
+                                  min="8"
+                                  max="20"
+                                  value={plateStyle.footerUnitFontSize !== undefined ? plateStyle.footerUnitFontSize : 12}
+                                  onChange={e => setPlateStyle({ ...plateStyle, footerUnitFontSize: parseInt(e.target.value) })}
+                                  style={{ width: '100%', cursor: 'pointer', height: '6px', background: '#CBD5E1', borderRadius: '4px', outline: 'none' }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
