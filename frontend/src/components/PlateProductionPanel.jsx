@@ -2,8 +2,9 @@ import React, { useState, useRef } from 'react';
 import { Printer, QrCode, Smartphone, Bell } from 'lucide-react';
 import { API } from '../config';
 import Logo from './Logo';
+import PrintablePlate from './PrintablePlate';
 
-export default function PlateProductionPanel() {
+export default function PlateProductionPanel({ customStyle }) {
   const [quantity, setQuantity] = useState(4);
   const [plates, setPlates] = useState([]);
   const [generating, setGenerating] = useState(false);
@@ -126,48 +127,14 @@ export default function PlateProductionPanel() {
                   CORTE AQUI ✂️ --- {plate.code} --- ✂️
                 </div>
 
-                {/* Área real da placa (aquela que será recortada) */}
-                <div style={{ 
-                  flex: 1, border: '1px solid #102E4A', background: '#F8F9FA', 
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  padding: '20px', fontFamily: 'Montserrat, sans-serif'
-                }}>
-                  
-                  {/* LOGO AREA */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
-                    <Logo size={80} hideText={true} />
-                    <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#31697E', marginTop: '10px', letterSpacing: '-0.5px', textTransform: 'none' }}>
-                      Campainha-Digital
-                    </h2>
-                  </div>
-
-                  {/* ICONS AND QR */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '30px', width: '100%' }}>
-                    {/* Telefone */}
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-                      <svg width="100" height="180" viewBox="0 0 24 40" fill="#102E4A" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="2" y="2" width="20" height="36" rx="4" fill="#102E4A"/>
-                        <rect x="4" y="6" width="16" height="24" fill="#FFFFFF"/>
-                        <circle cx="12" cy="34" r="2" fill="#FFFFFF"/>
-                      </svg>
-                    </div>
-                    
-                    {/* QR Code */}
-                    <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', position: 'relative' }}>
-                      <img src={plate.qr} alt={plate.code} style={{ width: '160px', height: '160px', mixBlendMode: 'multiply' }} />
-                      <div style={{ position: 'absolute', top: '50%', left: '80px', transform: 'translate(-50%, -50%)', background: '#FFF', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Bell size={30} color="#102E4A" fill="#102E4A" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* BOTTOM TEXT */}
-                  <div style={{ textAlign: 'center', width: '100%' }}>
-                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#102E4A', lineHeight: 1.4, margin: 0 }}>
-                      ESCANEIE AQUI COM<br/>O SEU TELEFONE E<br/>FALE COM O MORADOR
-                    </h3>
-                  </div>
-                </div>
+                <PrintablePlate 
+                  propertyId={plate.code}
+                  propertyName="Campainha Digital"
+                  unitName={plate.code}
+                  customStyle={customStyle}
+                  qrUrl={plate.url}
+                  isPrintGrid={true}
+                />
 
               </div>
             ))}

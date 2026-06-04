@@ -54,7 +54,9 @@ const PrintablePlate = React.forwardRef(({
   unitName = '',
   customStyle = null, 
   animateLogo = false,
-  onSectionClick = null
+  onSectionClick = null,
+  qrUrl = '',
+  isPrintGrid = false
 }, ref) => {
   const [style, setStyle] = useState(null);
 
@@ -106,7 +108,7 @@ const PrintablePlate = React.forwardRef(({
     );
   }
 
-  const targetUrl = `${window.location.origin}/chamada/${propertyId}`;
+  const targetUrl = qrUrl || `${window.location.origin}/chamada/${propertyId}`;
 
   const getInteractiveProps = (sectionId) => {
     if (!onSectionClick) return {};
@@ -665,17 +667,21 @@ const PrintablePlate = React.forwardRef(({
 
     return (
       <>
-        <style>{`
-          @media print {
-            .printable-plate-container {
-              width: var(--print-width, 210mm) !important;
-              height: var(--print-height, 297mm) !important;
-              max-width: none !important;
-              aspect-ratio: auto !important;
-              border-radius: 0px !important;
-              box-shadow: none !important;
+        {!isPrintGrid && (
+          <style>{`
+            @media print {
+              .printable-plate-container {
+                width: var(--print-width, 210mm) !important;
+                height: var(--print-height, 297mm) !important;
+                max-width: none !important;
+                aspect-ratio: auto !important;
+                border-radius: 0px !important;
+                box-shadow: none !important;
+              }
             }
-          }
+          `}</style>
+        )}
+        <style>{`
           .interactive-section {
             transition: all 0.15s ease-in-out;
           }
@@ -685,6 +691,7 @@ const PrintablePlate = React.forwardRef(({
             background-color: rgba(59, 130, 246, 0.04) !important;
           }
         `}</style>
+
 
         {/* Top Badge Tag */}
         {hasTopBadge && (

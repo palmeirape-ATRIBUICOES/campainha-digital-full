@@ -1908,17 +1908,12 @@ export default function ResidentDashboard() {
                       <MessageCircle size={16} /> Compartilhar
                     </button>
                     <button 
-                      onClick={() => {
-                        const url = `${API}/api/qrcode?text=${encodeURIComponent(qrCodeUrl)}`;
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `Campainha_Digital_${unitName}.png`;
-                        a.click();
-                      }}
-                      style={{ padding: '12px 16px', borderRadius: '14px', background: '#F1F5F9', border: 'none', color: '#475569', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                      title="Baixar QR Code"
+                      onClick={handleDownloadPlate}
+                      disabled={downloadingPlate}
+                      style={{ padding: '12px 16px', borderRadius: '14px', background: '#F1F5F9', border: 'none', color: '#475569', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: downloadingPlate ? 0.7 : 1 }}
+                      title="Baixar Placa Completa"
                     >
-                      <Download size={16} /> Baixar
+                      <Download size={16} /> {downloadingPlate ? 'Gerando...' : 'Baixar'}
                     </button>
                   </div>
                 </div>
@@ -2637,7 +2632,7 @@ export default function ResidentDashboard() {
           </div>
 
           <div style={{ width: '100%', maxWidth: '320px', display: 'flex', justifyContent: 'center' }}>
-            <div ref={plateRef} style={{ width: '100%' }}>
+            <div style={{ width: '100%' }}>
               <PrintablePlate 
                 propertyId={propertyId || localStorage.getItem('residentPropertyId')} 
                 propertyName={localStorage.getItem('residentPropertyName') || 'Minha Casa'} 
@@ -2806,6 +2801,18 @@ export default function ResidentDashboard() {
           </div>
         </div>
       )}
+      
+      {/* Container invisivel para garantir download da placa completa em qualquer aba */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '320px' }}>
+        <div ref={plateRef}>
+          <PrintablePlate 
+            propertyId={propertyId || localStorage.getItem('residentPropertyId')} 
+            propertyName={localStorage.getItem('residentPropertyName') || 'Minha Casa'} 
+            unitName={unitName !== 'Principal' && unitName !== 'Minha Casa' ? unitName : ''}
+            animateLogo={false} 
+          />
+        </div>
+      </div>
     </div>
   );
 }

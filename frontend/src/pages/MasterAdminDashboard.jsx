@@ -175,8 +175,32 @@ export default function MasterAdminDashboard() {
     }
   };
 
-  const handleApplyPreset = (preset) => {
-    setPlateStyle({ ...plateStyle, ...preset.style });
+  const handleApplyPreset = async (preset) => {
+    const updatedStyle = { ...plateStyle, ...preset.style };
+    setPlateStyle(updatedStyle);
+
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/settings`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token || ''
+        },
+        body: JSON.stringify({ 
+          key: 'plate_style', 
+          value: JSON.stringify(updatedStyle) 
+        })
+      });
+      if (res.ok) {
+        alert(`Estilo do preset "${preset.name}" aplicado e salvo com sucesso para todos os usuários!`);
+      } else {
+        alert('Preset aplicado localmente, mas erro ao salvar no servidor.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Preset aplicado localmente, mas erro de conexão ao salvar.');
+    }
   };
 
   const handleDeletePreset = async (presetId) => {
@@ -2313,7 +2337,7 @@ export default function MasterAdminDashboard() {
             )}
 
             {platesSubTab === 'sequential' && (
-              <PlateProductionPanel />
+              <PlateProductionPanel customStyle={plateStyle} />
             )}
           </div>
         )}
@@ -2938,6 +2962,7 @@ export default function MasterAdminDashboard() {
                 propertyName={prop.name} 
                 customStyle={plateStyle} 
                 animateLogo={false} 
+                isPrintGrid={true}
               />
             </div>
           ))}
