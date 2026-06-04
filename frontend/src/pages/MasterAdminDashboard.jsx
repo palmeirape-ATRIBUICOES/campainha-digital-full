@@ -59,6 +59,9 @@ export default function MasterAdminDashboard() {
     plateWidthCustom: 21.0,
     plateHeightCustom: 29.7,
     plateSizeUnit: 'cm',
+    showFooter: true,
+    showUnitFooter: true,
+    footerTextOverride: '',
     qrBgColor: '#FFFFFF',
     qrFgColor: '#000000',
     titleText: "CAMPAINHA DIGITAL",
@@ -1653,6 +1656,42 @@ export default function MasterAdminDashboard() {
                         value={plateStyle.instructionText} 
                         onChange={e => setPlateStyle({ ...plateStyle, instructionText: e.target.value })} 
                       />
+                    </div>
+
+                    <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '12px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                          type="checkbox" 
+                          id="showFooter" 
+                          checked={plateStyle.showFooter !== false} 
+                          onChange={e => setPlateStyle({ ...plateStyle, showFooter: e.target.checked })}
+                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor="showFooter" style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-main)', cursor: 'pointer' }}>Exibir Nome da Propriedade no Rodapé</label>
+                      </div>
+
+                      {plateStyle.showFooter !== false && (
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>Texto de Sobrescrever Nome da Propriedade (Opcional)</label>
+                          <input 
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                            value={plateStyle.footerTextOverride || ''} 
+                            onChange={e => setPlateStyle({ ...plateStyle, footerTextOverride: e.target.value })} 
+                            placeholder="Ex: Bloco Principal, Portaria Central..."
+                          />
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input 
+                          type="checkbox" 
+                          id="showUnitFooter" 
+                          checked={plateStyle.showUnitFooter !== false} 
+                          onChange={e => setPlateStyle({ ...plateStyle, showUnitFooter: e.target.checked })}
+                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor="showUnitFooter" style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-main)', cursor: 'pointer' }}>Exibir Unidade / Bloco no Rodapé</label>
+                      </div>
                     </div>
                   </div>
 

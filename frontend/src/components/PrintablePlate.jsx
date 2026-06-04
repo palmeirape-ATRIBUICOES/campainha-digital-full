@@ -21,6 +21,9 @@ const defaultStyle = {
   plateWidthCustom: 21.0,
   plateHeightCustom: 29.7,
   plateSizeUnit: 'cm',
+  showFooter: true,
+  showUnitFooter: true,
+  footerTextOverride: '',
   qrBgColor: '#FFFFFF',
   qrFgColor: '#000000',
   titleText: "CAMPAINHA DIGITAL",
@@ -465,6 +468,12 @@ const PrintablePlate = React.forwardRef(({
     const isBento = style.templateId === 'bento';
     const showPhone = style.showPhoneIllustration;
 
+    const showFooterText = style.showFooter !== false;
+    const showUnitText = style.showUnitFooter !== false;
+    const displayPropertyName = style.footerTextOverride && style.footerTextOverride.trim() !== ''
+      ? style.footerTextOverride
+      : propertyName;
+
     if (isBento) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', height: '100%', justifyContent: 'space-between' }}>
@@ -561,16 +570,20 @@ const PrintablePlate = React.forwardRef(({
             <p style={{ fontSize: 'clamp(9px, 1.8vw, 11px)', lineHeight: 1.3, fontWeight: 500, color: '#475569', margin: '0 0 10px' }}>
               {style.instructionText || 'Aproxime a câmera do seu celular do QR Code'}
             </p>
-            <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '8px' }}>
-              <span style={{ fontSize: 'clamp(11px, 2.2vw, 14px)', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', display: 'block' }}>
-                {propertyName}
-              </span>
-              {unitName && (
-                <span style={{ fontSize: 'clamp(9px, 1.8vw, 12px)', fontWeight: 700, color: accentColorStyle, textTransform: 'uppercase', display: 'block', marginTop: '2px' }}>
-                  {unitName}
-                </span>
-              )}
-            </div>
+            {(showFooterText || (showUnitText && unitName)) && (
+              <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '8px' }}>
+                {showFooterText && (
+                  <span style={{ fontSize: 'clamp(11px, 2.2vw, 14px)', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', display: 'block' }}>
+                    {displayPropertyName}
+                  </span>
+                )}
+                {showUnitText && unitName && (
+                  <span style={{ fontSize: 'clamp(9px, 1.8vw, 12px)', fontWeight: 700, color: accentColorStyle, textTransform: 'uppercase', display: 'block', marginTop: '2px' }}>
+                    {unitName}
+                  </span>
+                )}
+              </div>
+            )}
             {renderLogo('bottom')}
           </div>
         </div>
@@ -724,45 +737,49 @@ const PrintablePlate = React.forwardRef(({
         </div>
 
         {/* FOOTER: PROPERTY NAME / UNIT NAME */}
-        <div style={{ 
-          width: '90%', 
-          borderTop: `1px solid ${textPrimaryColor}22`, 
-          paddingTop: '10px',
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px'
-        }}>
-          <span style={{ 
-            fontSize: 'clamp(11px, 2.5vw, 16px)', 
-            fontWeight: 800, 
-            color: textPrimaryColor,
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            display: 'block',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            width: '100%'
+        {(showFooterText || (showUnitText && unitName) || style.logoPosition.startsWith('bottom')) && (
+          <div style={{ 
+            width: '90%', 
+            borderTop: showFooterText ? `1px solid ${textPrimaryColor}22` : 'none', 
+            paddingTop: showFooterText ? '10px' : '0px',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '2px'
           }}>
-            {propertyName}
-          </span>
-          {unitName && (
-            <span style={{ 
-              fontSize: 'clamp(9px, 2vw, 13px)', 
-              fontWeight: 700, 
-              color: accentColorStyle,
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              display: 'block'
-            }}>
-              {unitName}
-            </span>
-          )}
-          
-          {renderLogo('bottom')}
-        </div>
+            {showFooterText && (
+              <span style={{ 
+                fontSize: 'clamp(11px, 2.5vw, 16px)', 
+                fontWeight: 800, 
+                color: textPrimaryColor,
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                display: 'block',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                width: '100%'
+              }}>
+                {displayPropertyName}
+              </span>
+            )}
+            {showUnitText && unitName && (
+              <span style={{ 
+                fontSize: 'clamp(9px, 2vw, 13px)', 
+                fontWeight: 700, 
+                color: accentColorStyle,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                display: 'block'
+              }}>
+                {unitName}
+              </span>
+            )}
+            
+            {renderLogo('bottom')}
+          </div>
+        )}
       </>
     );
   };
