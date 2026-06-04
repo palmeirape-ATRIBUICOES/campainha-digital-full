@@ -4,9 +4,8 @@ import { API } from '../config';
 import Logo from './Logo';
 import PrintablePlate from './PrintablePlate';
 
-export default function PlateProductionPanel({ customStyle }) {
+export default function PlateProductionPanel({ customStyle, plates = [], setPlates }) {
   const [quantity, setQuantity] = useState(4);
-  const [plates, setPlates] = useState([]);
   const [generating, setGenerating] = useState(false);
   
   const generatePlates = async () => {
@@ -61,30 +60,6 @@ export default function PlateProductionPanel({ customStyle }) {
 
   return (
     <div>
-      <style>
-        {`
-          @media print {
-            body * {
-              visibility: hidden;
-            }
-            #print-area, #print-area * {
-              visibility: visible;
-            }
-            #print-area {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-            }
-            .a4-page {
-              margin: 0 !important;
-              border: none !important;
-              box-shadow: none !important;
-              page-break-after: always;
-            }
-          }
-        `}
-      </style>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
@@ -110,7 +85,7 @@ export default function PlateProductionPanel({ customStyle }) {
         </div>
       </div>
 
-      <div id="print-area">
+      <div className="preview-print-area">
         {pages.map((pagePlates, pageIndex) => (
           <div key={pageIndex} className="a4-page" style={{ 
             width: '210mm', minHeight: '297mm', background: '#FFF', 

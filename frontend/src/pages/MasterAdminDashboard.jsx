@@ -88,6 +88,7 @@ export default function MasterAdminDashboard() {
 
   const [savedPresets, setSavedPresets] = useState([]);
   const [newPresetName, setNewPresetName] = useState('');
+  const [sequentialPlates, setSequentialPlates] = useState([]);
   const [activeSection, setActiveSection] = useState('logo');
   const [previewOffset, setPreviewOffset] = useState(0);
 
@@ -2337,7 +2338,7 @@ export default function MasterAdminDashboard() {
             )}
 
             {platesSubTab === 'sequential' && (
-              <PlateProductionPanel customStyle={plateStyle} />
+              <PlateProductionPanel customStyle={plateStyle} plates={sequentialPlates} setPlates={setSequentialPlates} />
             )}
           </div>
         )}
@@ -2951,22 +2952,67 @@ export default function MasterAdminDashboard() {
           body > *:not(#print-area) { display: none !important; }
           #print-area { display: block !important; width: 100% !important; background: #fff !important; }
           .print-page-break { page-break-inside: avoid; page-break-after: auto; }
+          .a4-page {
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            page-break-after: always;
+            page-break-inside: avoid;
+          }
         }
       `}} />
       <div id="print-area">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', padding: '20px' }}>
-          {(properties || []).filter(p => selectedPlates.includes(p.id)).map(prop => (
-            <div key={prop.id} className="print-page-break" style={{ width: '100%' }}>
-              <PrintablePlate 
-                propertyId={prop.id} 
-                propertyName={prop.name} 
-                customStyle={plateStyle} 
-                animateLogo={false} 
-                isPrintGrid={true}
-              />
-            </div>
-          ))}
-        </div>
+        {platesSubTab === 'sequential' ? (
+          <div>
+            {(() => {
+              const pages = [];
+              for (let i = 0; i < sequentialPlates.length; i += 4) {
+                pages.push(sequentialPlates.slice(i, i + 4));
+              }
+              return pages.map((pagePlates, pageIndex) => (
+                <div key={pageIndex} className="a4-page print-page-break" style={{ 
+                  width: '210mm', minHeight: '297mm', background: '#FFF', 
+                  margin: '0 auto 32px', padding: '10mm', 
+                  display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '10mm',
+                  boxSizing: 'border-box'
+                }}>
+                  {pagePlates.map(plate => (
+                    <div key={plate.code} style={{ 
+                      position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column'
+                    }}>
+                      <div style={{ position: 'absolute', top: '-15px', left: 0, width: '100%', textAlign: 'center', fontSize: '10px', color: '#94A3B8', fontWeight: 700, letterSpacing: '1px' }}>
+                        CORTE AQUI ✂️ --- {plate.code} --- ✂️
+                      </div>
+
+                      <PrintablePlate 
+                        propertyId={plate.code}
+                        propertyName="Campainha Digital"
+                        unitName={plate.code}
+                        customStyle={plateStyle}
+                        qrUrl={plate.url}
+                        isPrintGrid={true}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ));
+            })()}
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', padding: '20px' }}>
+            {(properties || []).filter(p => selectedPlates.includes(p.id)).map(prop => (
+              <div key={prop.id} className="print-page-break" style={{ width: '100%' }}>
+                <PrintablePlate 
+                  propertyId={prop.id} 
+                  propertyName={prop.name} 
+                  customStyle={plateStyle} 
+                  animateLogo={false} 
+                  isPrintGrid={true}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
