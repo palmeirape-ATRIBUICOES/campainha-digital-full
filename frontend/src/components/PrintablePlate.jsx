@@ -17,6 +17,11 @@ const defaultStyle = {
   logoPosition: 'top-center',
   logoSize: 36,
   showPhoneIllustration: false,
+  phoneIllustrationPosition: 'right',
+  phoneIllustrationText: 'Aproxime o Celular',
+  logoTextMain: 'CAMPAINHA',
+  logoTextSub: 'DIGITAL',
+  logoIcon: 'bell',
   plateSizeFormat: 'a4',
   plateWidthCustom: 21.0,
   plateHeightCustom: 29.7,
@@ -48,7 +53,8 @@ const PrintablePlate = React.forwardRef(({
   propertyName = 'Residência Teste', 
   unitName = '',
   customStyle = null, 
-  animateLogo = false 
+  animateLogo = false,
+  onSectionClick = null
 }, ref) => {
   const [style, setStyle] = useState(null);
 
@@ -101,6 +107,18 @@ const PrintablePlate = React.forwardRef(({
   }
 
   const targetUrl = `${window.location.origin}/chamada/${propertyId}`;
+
+  const getInteractiveProps = (sectionId) => {
+    if (!onSectionClick) return {};
+    return {
+      className: 'interactive-section',
+      onClick: (e) => {
+        e.stopPropagation();
+        onSectionClick(sectionId);
+      },
+      title: `Clique para editar`
+    };
+  };
 
   // 1. Font Family styling mapping
   const getFontFamily = (font) => {
@@ -457,20 +475,30 @@ const PrintablePlate = React.forwardRef(({
     const alignValue = hPos === 'left' ? 'flex-start' : hPos === 'right' ? 'flex-end' : 'center';
     const size = style.logoSize || 36;
 
+    const logoInteractive = getInteractiveProps('logo');
+
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: alignValue, 
-        width: '90%', 
-        marginBottom: vPos === 'top' ? '8px' : '0px', 
-        marginTop: vPos === 'bottom' ? '10px' : '0px',
-        zIndex: 5
-      }}>
+      <div 
+        {...logoInteractive}
+        style={{ 
+          display: 'flex', 
+          justifyContent: alignValue, 
+          width: '90%', 
+          marginBottom: vPos === 'top' ? '8px' : '0px', 
+          marginTop: vPos === 'bottom' ? '10px' : '0px',
+          zIndex: 5,
+          padding: onSectionClick ? '4px' : '0',
+          ...logoInteractive.style
+        }}
+      >
         <Logo 
           size={size} 
           showText={size >= 24} 
           textColor={logoTextColor} 
           animate={animateLogo} 
+          textMain={style.logoTextMain}
+          textSub={style.logoTextSub}
+          iconName={style.logoIcon}
         />
       </div>
     );
@@ -492,15 +520,19 @@ const PrintablePlate = React.forwardRef(({
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', height: '100%', justifyContent: 'space-between' }}>
           {/* Header Box */}
-          <div style={{ 
-            background: 'rgba(255,255,255,0.85)', 
-            backdropFilter: 'blur(8px)',
-            borderRadius: '16px', 
-            padding: '16px', 
-            border: '1px solid rgba(0,0,0,0.06)',
-            textAlign: 'center',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
-          }}>
+          <div 
+            {...getInteractiveProps('header')}
+            style={{ 
+              background: 'rgba(255,255,255,0.85)', 
+              backdropFilter: 'blur(8px)',
+              borderRadius: '16px', 
+              padding: '16px', 
+              border: '1px solid rgba(0,0,0,0.06)',
+              textAlign: 'center',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.02)',
+              ...getInteractiveStyle('header')
+            }}
+          >
             {renderLogo('top')}
             <h1 style={{ fontSize: 'clamp(16px, 3.5vw, 20px)', fontWeight: 900, color: '#0F172A', margin: 0, textTransform: 'uppercase' }}>
               {style.titleText || 'CAMPAINHA DIGITAL'}
@@ -524,13 +556,21 @@ const PrintablePlate = React.forwardRef(({
           }}>
             <div style={{ 
               display: 'flex', 
-              flexDirection: showPhone ? 'row' : 'column', 
+              flexDirection: showPhone ? (style.phoneIllustrationPosition === 'left' ? 'row-reverse' : 'row') : 'column', 
               alignItems: 'center', 
               justifyContent: 'center', 
               gap: '16px', 
               width: '100%' 
             }}>
-              <div style={{ width: showPhone ? '50%' : '65%', aspectRatio: '1' }}>
+              <div 
+                {...getInteractiveProps('qr')}
+                style={{ 
+                  width: showPhone ? '50%' : '65%', 
+                  aspectRatio: '1',
+                  padding: onSectionClick ? '4px' : '0',
+                  ...getInteractiveStyle('qr')
+                }}
+              >
                 <QRCodeSVG 
                   value={targetUrl}
                   size={256}
@@ -543,28 +583,32 @@ const PrintablePlate = React.forwardRef(({
               </div>
 
               {showPhone && (
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  width: '40%',
-                  background: 'rgba(0,0,0,0.04)',
-                  borderRadius: '12px',
-                  padding: '10px 6px',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                  color: '#1E293B',
-                  textAlign: 'center'
-                }}>
+                <div 
+                  {...getInteractiveProps('phone')}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    width: '40%',
+                    background: 'rgba(0,0,0,0.04)',
+                    borderRadius: '12px',
+                    padding: '10px 6px',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                    color: '#1E293B',
+                    textAlign: 'center',
+                    ...getInteractiveStyle('phone')
+                  }}
+                >
                   <svg width="24" height="42" viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="2" y="2" width="36" height="66" rx="6" stroke="#1E293B" strokeWidth="4" fill="none" />
                     <circle cx="20" cy="62" r="3" fill="#1E293B" />
-                    <rect x="5" y="8" width="30" height="48" rx="2" fill="#1E293B22" />
+                    <rect x="5" y="8" width="30" height="48" rx="2" fill="#FFFFFF" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5" />
                     <path d="M10 26 H30 M20 16 V36" stroke={accentColorStyle} strokeWidth="2.5" strokeDasharray="3 3" />
                   </svg>
                   <span style={{ fontSize: '8px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2px', color: '#475569' }}>
-                    Use o Celular
+                    {style.phoneIllustrationText || 'Use o Celular'}
                   </span>
                 </div>
               )}
@@ -585,7 +629,15 @@ const PrintablePlate = React.forwardRef(({
               {style.instructionText || 'Aproxime a câmera do seu celular do QR Code'}
             </p>
             {(showFooterText || (showUnitText && unitName)) && (
-              <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '8px' }}>
+              <div 
+                {...getInteractiveProps('footer')}
+                style={{ 
+                  borderTop: '1px solid rgba(0,0,0,0.08)', 
+                  paddingTop: '8px',
+                  padding: onSectionClick ? '4px' : '0',
+                  ...getInteractiveStyle('footer')
+                }}
+              >
                 {showFooterText && (
                   <span style={{ fontSize: footerFontSizePx, fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', display: 'block', fontFamily: footerFont }}>
                     {displayPropertyName}
@@ -617,6 +669,14 @@ const PrintablePlate = React.forwardRef(({
               box-shadow: none !important;
             }
           }
+          .interactive-section {
+            transition: all 0.15s ease-in-out;
+          }
+          .interactive-section:hover {
+            outline: 2px dashed #3B82F6 !important;
+            outline-offset: 4px;
+            background-color: rgba(59, 130, 246, 0.04) !important;
+          }
         `}</style>
 
         {/* Top Badge Tag */}
@@ -643,7 +703,18 @@ const PrintablePlate = React.forwardRef(({
         {renderLogo('top')}
 
         {/* BODY TITLE & SUBTITLE */}
-        <div style={{ textAlign: 'center', width: '100%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div 
+          {...getInteractiveProps('header')}
+          style={{ 
+            textAlign: 'center', 
+            width: '100%', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '6px',
+            padding: onSectionClick ? '4px' : '0',
+            ...getInteractiveStyle('header')
+          }}
+        >
           <h1 style={{ 
             fontSize: isGiantQR ? 'clamp(14px, 3vw, 18px)' : 'clamp(18px, 4vw, 24px)', 
             fontWeight: 900, 
@@ -673,26 +744,30 @@ const PrintablePlate = React.forwardRef(({
         {/* QR CODE CONTAINER & PHONE LAYOUT */}
         <div style={{
           display: 'flex',
-          flexDirection: showPhone ? 'row' : 'column',
+          flexDirection: showPhone ? (style.phoneIllustrationPosition === 'left' ? 'row-reverse' : 'row') : 'column',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '16px',
           width: '100%',
           margin: isGiantQR ? '8px 0' : '14px 0'
         }}>
-          <div style={{ 
-            background: qrContainerBg,
-            padding: '16px',
-            borderRadius: qrBoxRadius,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid rgba(0,0,0,0.06)',
-            width: showPhone ? '50%' : (isGiantQR ? '72%' : '56%'),
-            aspectRatio: '1',
-            position: 'relative'
-          }}>
+          <div 
+            {...getInteractiveProps('qr')}
+            style={{ 
+              background: qrContainerBg,
+              padding: '16px',
+              borderRadius: qrBoxRadius,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid rgba(0,0,0,0.06)',
+              width: showPhone ? '50%' : (isGiantQR ? '72%' : '56%'),
+              aspectRatio: '1',
+              position: 'relative',
+              ...getInteractiveStyle('qr')
+            }}
+          >
             <QRCodeSVG 
               value={targetUrl}
               size={256}
@@ -705,28 +780,32 @@ const PrintablePlate = React.forwardRef(({
           </div>
 
           {showPhone && (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              width: '40%',
-              background: 'rgba(255,255,255,0.08)',
-              borderRadius: '16px',
-              padding: '14px 10px',
-              border: `1px solid ${textPrimaryColor}22`,
-              color: textPrimaryColor,
-              textAlign: 'center'
-            }}>
+            <div 
+              {...getInteractiveProps('phone')}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                width: '40%',
+                background: 'rgba(255,255,255,0.08)',
+                borderRadius: '16px',
+                padding: '14px 10px',
+                border: `1px solid ${textPrimaryColor}22`,
+                color: textPrimaryColor,
+                textAlign: 'center',
+                ...getInteractiveStyle('phone')
+              }}
+            >
               <svg width="32" height="56" viewBox="0 0 40 70" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect x="2" y="2" width="36" height="66" rx="6" stroke={textPrimaryColor} strokeWidth="3" fill="none" />
                 <circle cx="20" cy="62" r="3" fill={textPrimaryColor} />
-                <rect x="5" y="8" width="30" height="48" rx="2" fill={`${textPrimaryColor}15`} />
+                <rect x="5" y="8" width="30" height="48" rx="2" fill="#FFFFFF" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5" />
                 <path d="M12 26 H28 M20 18 V34" stroke={accentColorStyle} strokeWidth="1.8" strokeDasharray="2 2" />
               </svg>
               <span style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2px', opacity: 0.85 }}>
-                Aproxime o Celular
+                {style.phoneIllustrationText || 'Aproxime o Celular'}
               </span>
             </div>
           )}
@@ -752,16 +831,21 @@ const PrintablePlate = React.forwardRef(({
 
         {/* FOOTER: PROPERTY NAME / UNIT NAME */}
         {(showFooterText || (showUnitText && unitName) || style.logoPosition.startsWith('bottom')) && (
-          <div style={{ 
-            width: '90%', 
-            borderTop: showFooterText ? `1px solid ${textPrimaryColor}22` : 'none', 
-            paddingTop: showFooterText ? '10px' : '0px',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '2px'
-          }}>
+          <div 
+            {...getInteractiveProps('footer')}
+            style={{ 
+              width: '90%', 
+              borderTop: showFooterText ? `1px solid ${textPrimaryColor}22` : 'none', 
+              paddingTop: showFooterText ? '10px' : '0px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '2px',
+              padding: onSectionClick ? '4px' : '0',
+              ...getInteractiveStyle('footer')
+            }}
+          >
             {showFooterText && (
               <span style={{ 
                 fontSize: footerFontSizePx, 

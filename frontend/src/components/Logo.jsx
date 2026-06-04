@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Home, Building, Key, QrCode } from 'lucide-react';
 
 /**
  * Logo component — global stylized brand.
@@ -9,12 +9,35 @@ import { Bell } from 'lucide-react';
  *   vertical  {boolean} If true, renders icon and text in a column layout
  *   showText  {boolean} If true, renders the brand name alongside the icon
  */
-export default function Logo({ size = 40, light = false, vertical = false, showText = true, animate = true, textColor = null }) {
+export default function Logo({ 
+  size = 40, 
+  light = false, 
+  vertical = false, 
+  showText = true, 
+  animate = true, 
+  textColor = null,
+  textMain = "CAMPAINHA",
+  textSub = "DIGITAL",
+  iconName = "bell"
+}) {
   // Map size to icon and text dimensions
   const iconSize = Math.max(14, Math.floor(size * 0.5));
   const boxSize = Math.max(26, Math.floor(size * 0.95));
   const mainFontSize = Math.max(12, Math.floor(size * 0.42));
   const subFontSize = Math.max(8, Math.floor(size * 0.28));
+
+  const renderIcon = () => {
+    const iconProps = { size: iconSize, color: "#FFF" };
+    switch (iconName) {
+      case 'home': return <Home {...iconProps} />;
+      case 'building': return <Building {...iconProps} />;
+      case 'key': return <Key {...iconProps} />;
+      case 'qrcode': return <QrCode {...iconProps} />;
+      case 'bell':
+      default:
+        return <Bell {...iconProps} style={{ transform: 'rotate(15deg)' }} />;
+    }
+  };
   
   return (
     <div style={{ 
@@ -27,32 +50,34 @@ export default function Logo({ size = 40, light = false, vertical = false, showT
       fontFamily: "'Outfit', 'Inter', sans-serif"
     }}>
       {/* Glowing Bell Icon with animated shine */}
-      <div style={{
-        width: `${boxSize}px`,
-        height: `${boxSize}px`,
-        borderRadius: Math.max(6, Math.floor(boxSize * 0.3)) + 'px',
-        background: textColor ? textColor : 'linear-gradient(135deg, #4F46E5, #8B5CF6, #EC4899)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: textColor ? 'none' : (light ? '0 4px 16px rgba(255, 255, 255, 0.15)' : '0 4px 14px rgba(79, 70, 229, 0.35)'),
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        <Bell size={iconSize} color="#FFF" style={{ transform: 'rotate(15deg)' }} />
-        {/* Shine effect */}
-        {animate && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: '-100%',
-            width: '100%',
-            height: '100%',
-            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-            animation: 'logo-shine 2.5s infinite'
-          }} />
-        )}
-      </div>
+      {iconName !== 'none' && (
+        <div style={{
+          width: `${boxSize}px`,
+          height: `${boxSize}px`,
+          borderRadius: Math.max(6, Math.floor(boxSize * 0.3)) + 'px',
+          background: textColor ? textColor : 'linear-gradient(135deg, #4F46E5, #8B5CF6, #EC4899)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: textColor ? 'none' : (light ? '0 4px 16px rgba(255, 255, 255, 0.15)' : '0 4px 14px rgba(79, 70, 229, 0.35)'),
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {renderIcon()}
+          {/* Shine effect */}
+          {animate && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '100%',
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+              animation: 'logo-shine 2.5s infinite'
+            }} />
+          )}
+        </div>
+      )}
       
       {showText && (
         <div style={{ 
@@ -72,7 +97,7 @@ export default function Logo({ size = 40, light = false, vertical = false, showT
             color: textColor || (light ? '#FFF' : 'transparent'),
             textTransform: 'uppercase'
           }}>
-            Campainha
+            {textMain}
           </span>
           <span style={{ 
             fontSize: `${subFontSize}px`, 
@@ -82,7 +107,7 @@ export default function Logo({ size = 40, light = false, vertical = false, showT
             textTransform: 'uppercase',
             marginTop: '1px'
           }}>
-            Digital
+            {textSub}
           </span>
         </div>
       )}

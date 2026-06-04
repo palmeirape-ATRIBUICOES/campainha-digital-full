@@ -55,6 +55,11 @@ export default function MasterAdminDashboard() {
     logoPosition: 'top-center',
     logoSize: 36,
     showPhoneIllustration: false,
+    phoneIllustrationPosition: 'right',
+    phoneIllustrationText: 'Aproxime o Celular',
+    logoTextMain: 'CAMPAINHA',
+    logoTextSub: 'DIGITAL',
+    logoIcon: 'bell',
     plateSizeFormat: 'a4',
     plateWidthCustom: 21.0,
     plateHeightCustom: 29.7,
@@ -236,6 +241,37 @@ export default function MasterAdminDashboard() {
     }
 
     setPlateStyle(newStyle);
+  };
+
+  const scrollToField = (sectionId) => {
+    const idMap = {
+      logo: 'editor-logo-section',
+      header: 'editor-header-section',
+      qr: 'editor-qr-section',
+      phone: 'editor-phone-section',
+      footer: 'editor-footer-section'
+    };
+    const elementId = idMap[sectionId];
+    if (!elementId) return;
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      element.style.transition = 'all 0.3s ease-in-out';
+      element.style.outline = '3px solid #3B82F6';
+      element.style.outlineOffset = '4px';
+      element.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.4)';
+      
+      setTimeout(() => {
+        element.style.outline = 'none';
+        element.style.boxShadow = 'none';
+      }, 1500);
+
+      const input = element.querySelector('input, select, textarea');
+      if (input) {
+        input.focus();
+      }
+    }
   };
 
   const handleSaveStyle = async () => {
@@ -1544,8 +1580,8 @@ export default function MasterAdminDashboard() {
                     </div>
                   </div>
 
-                  {/* CUSTOMIZAÇÃO DE LOGO (TAMANHO & POSIÇÃO GRID 3x3) */}
-                  <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* CUSTOMIZAÇÃO DE LOGO (TAMANHO, POSIÇÃO, ÍCONE & TEXTO) */}
+                  <div id="editor-logo-section" style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>PERSONALIZAÇÃO E ALINHAMENTO DO LOGO</div>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px' }}>
@@ -1614,24 +1650,115 @@ export default function MasterAdminDashboard() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Logo Custom Text & Icons */}
+                    <div style={{ borderTop: '1px dashed var(--border-subtle)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Texto Principal do Logo</label>
+                          <input 
+                            type="text"
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                            value={plateStyle.logoTextMain !== undefined ? plateStyle.logoTextMain : 'CAMPAINHA'} 
+                            onChange={e => setPlateStyle({ ...plateStyle, logoTextMain: e.target.value })} 
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Subtexto do Logo</label>
+                          <input 
+                            type="text"
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                            value={plateStyle.logoTextSub !== undefined ? plateStyle.logoTextSub : 'DIGITAL'} 
+                            onChange={e => setPlateStyle({ ...plateStyle, logoTextSub: e.target.value })} 
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Ícone do Logo</label>
+                          <select
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
+                            value={plateStyle.logoIcon || 'bell'}
+                            onChange={e => setPlateStyle({ ...plateStyle, logoIcon: e.target.value })}
+                          >
+                            <option value="bell">🔔 Sino</option>
+                            <option value="home">🏠 Casa</option>
+                            <option value="building">🏢 Prédio</option>
+                            <option value="key">🔑 Chave</option>
+                            <option value="qrcode">📱 Código QR</option>
+                            <option value="none">❌ Nenhum Ícone</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Cor do Logo (Texto/Ícone)</label>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <input 
+                              type="color" 
+                              value={plateStyle.logoColor || '#0F172A'} 
+                              onChange={e => setPlateStyle({ ...plateStyle, logoColor: e.target.value })}
+                              style={{ width: '36px', height: '30px', padding: 0, border: '1px solid var(--border-subtle)', borderRadius: '4px', cursor: 'pointer' }}
+                            />
+                            <input 
+                              type="text" 
+                              value={plateStyle.logoColor || '#0F172A'} 
+                              onChange={e => setPlateStyle({ ...plateStyle, logoColor: e.target.value })}
+                              style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '11px', outline: 'none', fontFamily: 'monospace' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* CELULAR AO LADO DO QR CODE */}
-                  <div style={{ padding: '14px 16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyBetween: 'space-between', gap: '12px' }}>
-                    <input 
-                      type="checkbox" 
-                      id="showPhoneIllustration" 
-                      checked={plateStyle.showPhoneIllustration || false} 
-                      onChange={e => setPlateStyle({ ...plateStyle, showPhoneIllustration: e.target.checked })}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="showPhoneIllustration" style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-main)', cursor: 'pointer' }}>
-                      VISUAL DO CELULAR AO LADO DO QR CODE (APOIO VISUAL)
-                    </label>
+                  <div id="editor-phone-section" style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <input 
+                        type="checkbox" 
+                        id="showPhoneIllustration" 
+                        checked={plateStyle.showPhoneIllustration || false} 
+                        onChange={e => setPlateStyle({ ...plateStyle, showPhoneIllustration: e.target.checked })}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                      <label htmlFor="showPhoneIllustration" style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-main)', cursor: 'pointer' }}>
+                        VISUAL DO CELULAR AO LADO DO QR CODE (APOIO VISUAL)
+                      </label>
+                    </div>
+
+                    {plateStyle.showPhoneIllustration && (
+                      <div style={{ borderTop: '1px dashed var(--border-subtle)', paddingTop: '12px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '16px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Texto de Apoio do Celular</label>
+                            <input 
+                              type="text"
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                              value={plateStyle.phoneIllustrationText !== undefined ? plateStyle.phoneIllustrationText : 'Aproxime o Celular'} 
+                              onChange={e => setPlateStyle({ ...plateStyle, phoneIllustrationText: e.target.value })} 
+                              placeholder="Ex: Aproxime o Celular, Use o Celular..."
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Posição Lateral do Celular</label>
+                            <select
+                              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
+                              value={plateStyle.phoneIllustrationPosition || 'right'}
+                              onChange={e => setPlateStyle({ ...plateStyle, phoneIllustrationPosition: e.target.value })}
+                            >
+                              <option value="right">👉 À Direita do QR Code</option>
+                              <option value="left">👈 À Esquerda do QR Code</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* 2. TEXT CONTENT CUSTOMIZATION */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+                  <div id="editor-header-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
                     <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>CONTEÚDO TEXTUAL</div>
                     
                     <div>
@@ -1661,7 +1788,7 @@ export default function MasterAdminDashboard() {
                       />
                     </div>
 
-                    <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '12px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div id="editor-footer-section" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '12px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input 
                           type="checkbox" 
@@ -1887,7 +2014,7 @@ export default function MasterAdminDashboard() {
                   </div>
 
                   {/* 5. ADVANCED QR CODE DESIGN */}
-                  <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div id="editor-qr-section" style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>DESIGN DO BOX DO QR CODE</div>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '12px' }}>
@@ -2048,8 +2175,8 @@ export default function MasterAdminDashboard() {
                 </div>
 
                 {/* Preview Container */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ position: 'sticky', top: '20px', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'sticky', top: '24px', alignSelf: 'start' }}>
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1px' }}>PRÉ-VISUALIZAÇÃO AO VIVO</div>
                     <div style={{ width: '325px', boxShadow: '0 15px 35px rgba(0,0,0,0.15)', borderRadius: '32px', overflow: 'hidden' }}>
                       <PrintablePlate 
@@ -2058,6 +2185,7 @@ export default function MasterAdminDashboard() {
                         unitName="Bloco B - Apto 204"
                         customStyle={plateStyle}
                         animateLogo={true}
+                        onSectionClick={scrollToField}
                       />
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '16px', maxWidth: '280px', textAlign: 'center', lineHeight: 1.4 }}>
