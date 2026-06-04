@@ -120,6 +120,13 @@ const PrintablePlate = React.forwardRef(({
     };
   };
 
+  const getInteractiveStyle = (sectionId) => {
+    if (!onSectionClick) return {};
+    return {
+      cursor: 'pointer'
+    };
+  };
+
   // 1. Font Family styling mapping
   const getFontFamily = (font) => {
     switch (font) {
