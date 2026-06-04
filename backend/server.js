@@ -3227,6 +3227,18 @@ app.post('/api/master/users/:id/set-plate-code', authenticate, async (req, res) 
 });
 
 const defaultPlateStyle = {
+  templateId: 'standard',
+  fontFamily: 'Inter',
+  shadowDepth: 'none',
+  qrRadius: '24px',
+  backgroundPattern: 'none',
+  borderStyle: 'solid',
+  headerBadgeText: '',
+  headerBadgeBg: '#3B82F6',
+  headerBadgeColor: '#FFFFFF',
+  logoPosition: 'top',
+  qrBgColor: '#FFFFFF',
+  qrFgColor: '#000000',
   titleText: "CAMPAINHA DIGITAL",
   subTitleText: "Para tocar o interfone:",
   instructionText: "Aproxime a câmera do seu celular do QR Code abaixo para chamar o morador",

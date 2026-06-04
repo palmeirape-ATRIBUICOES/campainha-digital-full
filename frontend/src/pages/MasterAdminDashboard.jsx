@@ -43,6 +43,18 @@ export default function MasterAdminDashboard() {
   const [savingStyle, setSavingStyle] = useState(false);
   const [selectedPlates, setSelectedPlates] = useState([]);
   const [plateStyle, setPlateStyle] = useState({
+    templateId: 'standard',
+    fontFamily: 'Inter',
+    shadowDepth: 'none',
+    qrRadius: '24px',
+    backgroundPattern: 'none',
+    borderStyle: 'solid',
+    headerBadgeText: '',
+    headerBadgeBg: '#3B82F6',
+    headerBadgeColor: '#FFFFFF',
+    logoPosition: 'top',
+    qrBgColor: '#FFFFFF',
+    qrFgColor: '#000000',
     titleText: "CAMPAINHA DIGITAL",
     subTitleText: "Para tocar o interfone:",
     instructionText: "Aproxime a câmera do seu celular do QR Code abaixo para chamar o morador",
@@ -1141,41 +1153,172 @@ export default function MasterAdminDashboard() {
             </div>
 
             {platesSubTab === 'lab' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '40px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '40px' }}>
                 {/* Controls */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <Settings size={18} color="#3B82F6" />
-                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Configuração Visual das Placas</h3>
-                  </div>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Título Principal</label>
-                    <input 
-                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
-                      value={plateStyle.titleText} 
-                      onChange={e => setPlateStyle({ ...plateStyle, titleText: e.target.value })} 
-                    />
-                  </div>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Subtítulo / Chamada</label>
-                    <input 
-                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
-                      value={plateStyle.subTitleText} 
-                      onChange={e => setPlateStyle({ ...plateStyle, subTitleText: e.target.value })} 
-                    />
-                  </div>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Texto de Instruções</label>
-                    <textarea 
-                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none', minHeight: '80px', fontFamily: 'inherit', resize: 'vertical' }}
-                      value={plateStyle.instructionText} 
-                      onChange={e => setPlateStyle({ ...plateStyle, instructionText: e.target.value })} 
-                    />
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'var(--text-main)' }}>Configuração Visual Avançada</h3>
                   </div>
 
+                  {/* 1. MODEL TEMPLATE SELECTOR */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '8px' }}>
+                      1. ESCOLHA O MODELO DA PLACA (15 TEMPLATES DISPONÍVEIS)
+                    </label>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', 
+                      gap: '10px', 
+                      maxHeight: '260px', 
+                      overflowY: 'auto', 
+                      padding: '8px', 
+                      background: 'var(--bg-deep)', 
+                      borderRadius: '12px',
+                      border: '1px solid var(--border-subtle)'
+                    }}>
+                      {[
+                        { id: 'standard', name: 'Padrão Moderno', desc: 'Limpo e clássico' },
+                        { id: 'minimalist', name: 'Minimalista Chic', desc: 'Espaçoso e elegante' },
+                        { id: 'premiumDark', name: 'Dark Premium', desc: 'Estética futurista escura' },
+                        { id: 'aurora', name: 'Aurora Mesh', desc: 'Gradiente neon fluido' },
+                        { id: 'bento', name: 'Bento Grid', desc: 'Blocos modulares' },
+                        { id: 'splitDiagonal', name: 'Divisão Diagonal', desc: 'Bipartido moderno' },
+                        { id: 'neonCyberpunk', name: 'Cyberpunk Glow', desc: 'Brilho neon de alta tech' },
+                        { id: 'classicStreet', name: 'Placa de Rua', desc: 'Clássico tradicional' },
+                        { id: 'luxuryMarble', name: 'Mármore Imperial', desc: 'Luxuoso com dourados' },
+                        { id: 'carbonFiber', name: 'Fibra de Carbono', desc: 'Industrial e robusto' },
+                        { id: 'vintage', name: 'Retrô Vintage', desc: 'Acolhedor em tons creme' },
+                        { id: 'cleanCorporate', name: 'Corporativo Clean', desc: 'Design executivo limpo' },
+                        { id: 'abstractGeometric', name: 'Geométrico', desc: 'Formas contemporâneas' },
+                        { id: 'giantCenteredQR', name: 'QR Gigante', desc: 'Foco na leitura rápida' },
+                        { id: 'glassmorphism', name: 'Glassmorphism', desc: 'Vidro fosco translúcido' }
+                      ].map((t) => {
+                        const isSelected = plateStyle.templateId === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => setPlateStyle({ ...plateStyle, templateId: t.id })}
+                            style={{
+                              padding: '10px 8px',
+                              borderRadius: '8px',
+                              border: isSelected ? '2px solid #3B82F6' : '1px solid var(--border-subtle)',
+                              background: isSelected ? 'rgba(59,130,246,0.08)' : 'var(--bg-surface)',
+                              color: 'var(--text-main)',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '2px',
+                              transition: 'all 0.2s',
+                              boxShadow: isSelected ? '0 4px 6px rgba(59,130,246,0.1)' : 'none'
+                            }}
+                          >
+                            <span style={{ fontWeight: 800, fontSize: '11px', color: isSelected ? '#3B82F6' : 'var(--text-main)' }}>{t.name}</span>
+                            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>{t.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2. TEXT CONTENT CUSTOMIZATION */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>2. CONTEÚDO TEXTUAL</div>
+                    
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Título Principal</label>
+                      <input 
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                        value={plateStyle.titleText} 
+                        onChange={e => setPlateStyle({ ...plateStyle, titleText: e.target.value })} 
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Subtítulo / Chamada</label>
+                      <input 
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                        value={plateStyle.subTitleText} 
+                        onChange={e => setPlateStyle({ ...plateStyle, subTitleText: e.target.value })} 
+                      />
+                    </div>
+                    
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Texto de Instruções</label>
+                      <textarea 
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none', minHeight: '60px', fontFamily: 'inherit', resize: 'vertical' }}
+                        value={plateStyle.instructionText} 
+                        onChange={e => setPlateStyle({ ...plateStyle, instructionText: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+
+                  {/* 3. FONTS, TEXTURES & LAYOUT POSITIONS */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Fonte da Placa</label>
+                      <select
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '13px', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
+                        value={plateStyle.fontFamily || 'Inter'}
+                        onChange={e => setPlateStyle({ ...plateStyle, fontFamily: e.target.value })}
+                      >
+                        <option value="Inter">Inter (Padrão Clean)</option>
+                        <option value="Outfit">Outfit (Moderna/Redonda)</option>
+                        <option value="Montserrat">Montserrat (Esportiva/Negrito)</option>
+                        <option value="Playfair Display">Playfair Display (Serif Elegante)</option>
+                        <option value="Fira Code">Fira Code (Tecnológica/Monospace)</option>
+                        <option value="Space Grotesk">Space Grotesk (Tech/Industrial)</option>
+                        <option value="Cinzel">Cinzel (Luxo Clássico)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Textura de Fundo</label>
+                      <select
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '13px', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
+                        value={plateStyle.backgroundPattern || 'none'}
+                        onChange={e => setPlateStyle({ ...plateStyle, backgroundPattern: e.target.value })}
+                      >
+                        <option value="none">Sem Textura (Liso)</option>
+                        <option value="dots">Pontos (Dot Matrix)</option>
+                        <option value="grid">Malha de Grade</option>
+                        <option value="stripes">Linhas Diagonais</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Sombra da Placa</label>
+                      <select
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '13px', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
+                        value={plateStyle.shadowDepth || 'none'}
+                        onChange={e => setPlateStyle({ ...plateStyle, shadowDepth: e.target.value })}
+                      >
+                        <option value="none">Sem Sombra</option>
+                        <option value="soft">Sombra Suave</option>
+                        <option value="medium">Sombra Média</option>
+                        <option value="hard">Sombra Projetada 3D</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Posicionamento do Logo</label>
+                      <select
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '13px', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
+                        value={plateStyle.logoPosition || 'top'}
+                        onChange={e => setPlateStyle({ ...plateStyle, logoPosition: e.target.value })}
+                      >
+                        <option value="top">No Topo</option>
+                        <option value="bottom">No Rodapé (Sem Texto)</option>
+                        <option value="hidden">Ocultar Logo</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* 4. BASE COLOR CUSTOMIZATION */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Cor do Texto</label>
@@ -1206,7 +1349,7 @@ export default function MasterAdminDashboard() {
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
                           value={plateStyle.logoColor || ''} 
                           onChange={e => setPlateStyle({ ...plateStyle, logoColor: e.target.value })} 
-                          placeholder="Igual à cor do texto..."
+                          placeholder="Igual ao texto..."
                         />
                       </div>
                     </div>
@@ -1247,8 +1390,90 @@ export default function MasterAdminDashboard() {
                     </div>
                   </div>
 
-                  <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                  {/* 5. ADVANCED QR CODE DESIGN */}
+                  <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>5. DESIGN DO BOX DO QR CODE</div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Cantos Arredondados</label>
+                        <select
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
+                          value={plateStyle.qrRadius || '24px'}
+                          onChange={e => setPlateStyle({ ...plateStyle, qrRadius: e.target.value })}
+                        >
+                          <option value="0px">Quadrado (0px)</option>
+                          <option value="8px">Leve (8px)</option>
+                          <option value="16px">Médio (16px)</option>
+                          <option value="24px">Arredondado (24px)</option>
+                          <option value="32px">Super Arredondado (32px)</option>
+                          <option value="50%">Círculo (50%)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Fundo QR / Código QR (Frente)</label>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <input 
+                            type="color" 
+                            value={plateStyle.qrBgColor || '#FFFFFF'} 
+                            onChange={e => setPlateStyle({ ...plateStyle, qrBgColor: e.target.value })} 
+                            style={{ width: '32px', height: '32px', border: '1px solid var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', flexShrink: 0 }}
+                            title="Fundo do QR"
+                          />
+                          <input 
+                            type="color" 
+                            value={plateStyle.qrFgColor || '#000000'} 
+                            onChange={e => setPlateStyle({ ...plateStyle, qrFgColor: e.target.value })} 
+                            style={{ width: '32px', height: '32px', border: '1px solid var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', flexShrink: 0 }}
+                            title="Frente (Código)"
+                          />
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>Hex: {plateStyle.qrFgColor}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 6. HEADER BADGE / TAG DE DESTAQUE */}
+                  <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>6. TAG DE DESTAQUE SUPERIOR (OPCIONAL)</div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Texto da Tag (Deixe vazio p/ ocultar)</label>
+                        <input 
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                          value={plateStyle.headerBadgeText || ''} 
+                          onChange={e => setPlateStyle({ ...plateStyle, headerBadgeText: e.target.value })} 
+                          placeholder="Ex: SISTEMA 24h, PORTARIA DIGITAL..."
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Fundo Tag / Cor Fonte</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input 
+                            type="color" 
+                            value={plateStyle.headerBadgeBg || '#3B82F6'} 
+                            onChange={e => setPlateStyle({ ...plateStyle, headerBadgeBg: e.target.value })} 
+                            style={{ width: '32px', height: '32px', border: '1px solid var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', flexShrink: 0 }}
+                            title="Fundo Tag"
+                          />
+                          <input 
+                            type="color" 
+                            value={plateStyle.headerBadgeColor || '#FFFFFF'} 
+                            onChange={e => setPlateStyle({ ...plateStyle, headerBadgeColor: e.target.value })} 
+                            style={{ width: '32px', height: '32px', border: '1px solid var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', flexShrink: 0 }}
+                            title="Fonte Tag"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 7. CUSTOM BORDERS */}
+                  <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                       <input 
                         type="checkbox" 
                         id="showBorder" 
@@ -1256,35 +1481,50 @@ export default function MasterAdminDashboard() {
                         onChange={e => setPlateStyle({ ...plateStyle, showBorder: e.target.checked })}
                         style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                       />
-                      <label htmlFor="showBorder" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', cursor: 'pointer' }}>EXIBIR BORDA NA PLACA</label>
+                      <label htmlFor="showBorder" style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-main)', cursor: 'pointer' }}>7. EXIBIR BORDA NA PLACA</label>
                     </div>
 
                     {plateStyle.showBorder && (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                         <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Cor da Borda</label>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Cor da Borda</label>
+                          <div style={{ display: 'flex', gap: '4px' }}>
                             <input 
                               type="color" 
                               value={plateStyle.borderColor} 
                               onChange={e => setPlateStyle({ ...plateStyle, borderColor: e.target.value })} 
-                              style={{ width: '32px', height: '32px', border: '1px solid var(--border-subtle)', borderRadius: '6px', cursor: 'pointer', flexShrink: 0 }}
+                              style={{ width: '28px', height: '28px', border: '1px solid var(--border-subtle)', borderRadius: '4px', cursor: 'pointer', flexShrink: 0 }}
                             />
                             <input 
-                              style={{ width: '100%', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                              style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '11px', outline: 'none' }}
                               value={plateStyle.borderColor} 
                               onChange={e => setPlateStyle({ ...plateStyle, borderColor: e.target.value })} 
                             />
                           </div>
                         </div>
+
                         <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px' }}>Largura da Borda</label>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Espessura</label>
                           <input 
-                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
+                            style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none' }}
                             value={plateStyle.borderWidth} 
                             onChange={e => setPlateStyle({ ...plateStyle, borderWidth: e.target.value })} 
                             placeholder="Ex: 4px"
                           />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Estilo Borda</label>
+                          <select
+                            style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
+                            value={plateStyle.borderStyle || 'solid'}
+                            onChange={e => setPlateStyle({ ...plateStyle, borderStyle: e.target.value })}
+                          >
+                            <option value="solid">Linha Contínua (Solid)</option>
+                            <option value="dashed">Tracejado (Dashed)</option>
+                            <option value="double">Borda Dupla (Double)</option>
+                            <option value="dotted">Pontilhado (Dotted)</option>
+                          </select>
                         </div>
                       </div>
                     )}
@@ -1303,7 +1543,8 @@ export default function MasterAdminDashboard() {
                       fontSize: '16px', 
                       cursor: 'pointer',
                       opacity: savingStyle ? 0.7 : 1,
-                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                      transition: 'all 0.2s'
                     }}
                   >
                     {savingStyle ? 'Salvando Alterações...' : 'SALVAR E PROPAGAR DESIGN'}
@@ -1312,15 +1553,20 @@ export default function MasterAdminDashboard() {
 
                 {/* Preview Container */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1px' }}>PRÉ-VISUALIZAÇÃO AO VIVO</div>
-                  <div style={{ width: '320px', pointerEvents: 'none' }}>
-                    <PrintablePlate 
-                      propertyId="SCAN-MASTER-LAB"
-                      propertyName="Condomínio Residencial Solar"
-                      unitName="Bloco B - Apto 204"
-                      customStyle={plateStyle}
-                      animateLogo={true}
-                    />
+                  <div style={{ position: 'sticky', top: '20px', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1px' }}>PRÉ-VISUALIZAÇÃO AO VIVO</div>
+                    <div style={{ width: '325px', boxShadow: '0 15px 35px rgba(0,0,0,0.15)', borderRadius: '32px', overflow: 'hidden' }}>
+                      <PrintablePlate 
+                        propertyId="SCAN-MASTER-LAB"
+                        propertyName="Condomínio Residencial Solar"
+                        unitName="Bloco B - Apto 204"
+                        customStyle={plateStyle}
+                        animateLogo={true}
+                      />
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '16px', maxWidth: '280px', textAlign: 'center', lineHeight: 1.4 }}>
+                      * A previsualização utiliza dados de simulação. As alterações salvas serão propagadas para todos os residentes do sistema.
+                    </div>
                   </div>
                 </div>
               </div>
