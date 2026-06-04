@@ -88,6 +88,8 @@ export default function MasterAdminDashboard() {
 
   const [savedPresets, setSavedPresets] = useState([]);
   const [newPresetName, setNewPresetName] = useState('');
+  const [activeSection, setActiveSection] = useState('logo');
+  const [previewOffset, setPreviewOffset] = useState(0);
 
   const palettes = [
     { bg: '#0F172A', text: '#F8FAFC', accent: '#3B82F6', logo: '#60A5FA', primary: '#1E293B', name: 'Midnight Blue' },
@@ -103,6 +105,37 @@ export default function MasterAdminDashboard() {
     { bg: '#080710', text: '#F8FAFC', accent: '#00E5FF', logo: '#00E5FF', primary: '#111', name: 'Neon Cyberpunk' },
     { bg: '#FAF9F6', text: '#2C3E50', accent: '#7F8C8D', logo: '#2C3E50', primary: '#95A5A6', name: 'Minimalist Ivory' }
   ];
+  useEffect(() => {
+    const updateOffset = () => {
+      const idMap = {
+        logo: 'editor-logo-section',
+        header: 'editor-header-section',
+        qr: 'editor-qr-section',
+        phone: 'editor-phone-section',
+        footer: 'editor-footer-section'
+      };
+      const elementId = idMap[activeSection];
+      if (!elementId) return;
+      const element = document.getElementById(elementId);
+      if (element) {
+        setPreviewOffset(element.offsetTop);
+      }
+    };
+
+    updateOffset();
+    
+    const t1 = setTimeout(updateOffset, 50);
+    const t2 = setTimeout(updateOffset, 150);
+    const t3 = setTimeout(updateOffset, 300);
+
+    window.addEventListener('resize', updateOffset);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      window.removeEventListener('resize', updateOffset);
+    };
+  }, [activeSection, plateStyle]);
 
   const handleSavePreset = async () => {
     if (!newPresetName.trim()) {
@@ -1581,7 +1614,7 @@ export default function MasterAdminDashboard() {
                   </div>
 
                   {/* CUSTOMIZAÇÃO DE LOGO (TAMANHO, POSIÇÃO, ÍCONE & TEXTO) */}
-                  <div id="editor-logo-section" style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div id="editor-logo-section" onClickCapture={() => setActiveSection('logo')} onFocusCapture={() => setActiveSection('logo')} style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>PERSONALIZAÇÃO E ALINHAMENTO DO LOGO</div>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px' }}>
@@ -1713,7 +1746,7 @@ export default function MasterAdminDashboard() {
                   </div>
 
                   {/* CELULAR AO LADO DO QR CODE */}
-                  <div id="editor-phone-section" style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div id="editor-phone-section" onClickCapture={() => setActiveSection('phone')} onFocusCapture={() => setActiveSection('phone')} style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <input 
                         type="checkbox" 
@@ -1758,7 +1791,7 @@ export default function MasterAdminDashboard() {
                   </div>
 
                   {/* 2. TEXT CONTENT CUSTOMIZATION */}
-                  <div id="editor-header-section" style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+                  <div id="editor-header-section" onClickCapture={() => setActiveSection('header')} onFocusCapture={() => setActiveSection('header')} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
                     <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>CONTEÚDO TEXTUAL</div>
                     
                     <div>
@@ -1787,8 +1820,13 @@ export default function MasterAdminDashboard() {
                         onChange={e => setPlateStyle({ ...plateStyle, instructionText: e.target.value })} 
                       />
                     </div>
+                  </div>
 
-                    <div id="editor-footer-section" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '12px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* 2.2 FOOTER TEXT & DESIGN CUSTOMIZATION */}
+                  <div id="editor-footer-section" onClickCapture={() => setActiveSection('footer')} onFocusCapture={() => setActiveSection('footer')} style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>CONTEÚDO E ESTILO DO RODAPÉ</div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input 
                           type="checkbox" 
@@ -2014,7 +2052,7 @@ export default function MasterAdminDashboard() {
                   </div>
 
                   {/* 5. ADVANCED QR CODE DESIGN */}
-                  <div id="editor-qr-section" style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div id="editor-qr-section" onClickCapture={() => setActiveSection('qr')} onFocusCapture={() => setActiveSection('qr')} style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ fontWeight: 800, fontSize: '12px', color: 'var(--text-main)' }}>DESIGN DO BOX DO QR CODE</div>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '12px' }}>
@@ -2175,7 +2213,16 @@ export default function MasterAdminDashboard() {
                 </div>
 
                 {/* Preview Container */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'sticky', top: '24px', alignSelf: 'start' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  position: 'sticky', 
+                  top: '24px', 
+                  alignSelf: 'start',
+                  transform: `translateY(${previewOffset}px)`,
+                  transition: 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)'
+                }}>
                   <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1px' }}>PRÉ-VISUALIZAÇÃO AO VIVO</div>
                     <div style={{ width: '325px', boxShadow: '0 15px 35px rgba(0,0,0,0.15)', borderRadius: '32px', overflow: 'hidden' }}>
