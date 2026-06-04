@@ -1398,7 +1398,7 @@ export default function MasterAdminDashboard() {
             </div>
 
             {platesSubTab === 'lab' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '40px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '40px', position: 'relative' }}>
                 {/* Controls */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -2212,18 +2212,19 @@ export default function MasterAdminDashboard() {
                   </button>
                 </div>
 
-                {/* Preview Container */}
-                <div style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  position: 'sticky', 
-                  top: '24px', 
-                  alignSelf: 'start',
-                  transform: `translateY(${previewOffset}px)`,
-                  transition: 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)'
-                }}>
-                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {/* Preview Container Column */}
+                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    right: 0,
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    transform: `translateY(${previewOffset}px)`,
+                    transition: 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1)'
+                  }}>
                     <div style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1px' }}>PRÉ-VISUALIZAÇÃO AO VIVO</div>
                     <div style={{ width: '325px', boxShadow: '0 15px 35px rgba(0,0,0,0.15)', borderRadius: '32px', overflow: 'hidden' }}>
                       <PrintablePlate 
