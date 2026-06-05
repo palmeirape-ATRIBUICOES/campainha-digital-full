@@ -54,6 +54,7 @@ export default function MasterAdminDashboard() {
     headerBadgeColor: '#FFFFFF',
     logoPosition: 'top-center',
     logoSize: 36,
+    logoLayout: 'horizontal',
     showPhoneIllustration: false,
     phoneIllustrationPosition: 'right',
     phoneIllustrationText: 'Aproxime o Celular',
@@ -1638,7 +1639,7 @@ export default function MasterAdminDashboard() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
                         <div>
                           <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Ícone do Logo</label>
                           <select
@@ -1656,19 +1657,31 @@ export default function MasterAdminDashboard() {
                         </div>
 
                         <div>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Cor do Logo (Texto/Ícone)</label>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Layout do Logo</label>
+                          <select
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', fontWeight: 700, outline: 'none', cursor: 'pointer' }}
+                            value={plateStyle.logoLayout || 'horizontal'}
+                            onChange={e => setPlateStyle({ ...plateStyle, logoLayout: e.target.value })}
+                          >
+                            <option value="horizontal">↔️ Lado a Lado</option>
+                            <option value="vertical">↕️ Símbolo Acima</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px' }}>Cor do Logo</label>
                           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <input 
                               type="color" 
                               value={plateStyle.logoColor || '#0F172A'} 
                               onChange={e => setPlateStyle({ ...plateStyle, logoColor: e.target.value })}
-                              style={{ width: '36px', height: '30px', padding: 0, border: '1px solid var(--border-subtle)', borderRadius: '4px', cursor: 'pointer' }}
+                              style={{ width: '36px', height: '30px', padding: 0, border: '1px solid var(--border-subtle)', borderRadius: '4px', cursor: 'pointer', flexShrink: 0 }}
                             />
                             <input 
                               type="text" 
                               value={plateStyle.logoColor || '#0F172A'} 
                               onChange={e => setPlateStyle({ ...plateStyle, logoColor: e.target.value })}
-                              style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '11px', outline: 'none', fontFamily: 'monospace' }}
+                              style={{ flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '11px', outline: 'none', fontFamily: 'monospace' }}
                             />
                           </div>
                         </div>

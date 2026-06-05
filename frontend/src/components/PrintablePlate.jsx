@@ -16,6 +16,7 @@ const defaultStyle = {
   headerBadgeColor: '#FFFFFF',
   logoPosition: 'top-center',
   logoSize: 36,
+  logoLayout: 'horizontal',
   showPhoneIllustration: false,
   phoneIllustrationPosition: 'right',
   phoneIllustrationText: 'Aproxime o Celular',
@@ -508,6 +509,7 @@ const PrintablePlate = React.forwardRef(({
           textMain={style.logoTextMain}
           textSub={style.logoTextSub}
           iconName={style.logoIcon}
+          vertical={style.logoLayout === 'vertical'}
         />
       </div>
     );
