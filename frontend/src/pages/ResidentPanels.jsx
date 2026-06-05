@@ -161,6 +161,7 @@ export function HistoryPanel({ unitId, propertyId }) {
 }
 
 export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyId }) {
+  const isHouseResident = localStorage.getItem('cd_is_house_resident') === 'true';
   const [enabled, setEnabled] = useState(true);
   const [intercomEnabled, setIntercomEnabled] = useState(true);
   const [quietStart, setQuietStart] = useState('22:00');
@@ -361,20 +362,23 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
             </button>
           </div>
 
-          <div style={{ height: '1px', background: '#F1F5F9' }} />
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <span style={{ fontWeight: 700, fontSize: '15px' }}>Interfone de Vizinhos</span>
-              <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>Disponível para receber chamadas de vizinhos</p>
-            </div>
-            <button 
-              onClick={() => setIntercomEnabled(!intercomEnabled)}
-              style={{ background: intercomEnabled ? '#10B981' : '#F1F5F9', border: 'none', width: '50px', height: '26px', borderRadius: '20px', position: 'relative', cursor: 'pointer', transition: 'all 0.3s' }}
-            >
-              <div style={{ position: 'absolute', top: '3px', left: intercomEnabled ? '27px' : '3px', width: '20px', height: '20px', borderRadius: '50%', background: '#FFF', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', transition: 'all 0.3s' }} />
-            </button>
-          </div>
+          {!isHouseResident && (
+            <>
+              <div style={{ height: '1px', background: '#F1F5F9' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontWeight: 700, fontSize: '15px' }}>Interfone de Vizinhos</span>
+                  <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>Disponível para receber chamadas de vizinhos</p>
+                </div>
+                <button 
+                  onClick={() => setIntercomEnabled(!intercomEnabled)}
+                  style={{ background: intercomEnabled ? '#10B981' : '#F1F5F9', border: 'none', width: '50px', height: '26px', borderRadius: '20px', position: 'relative', cursor: 'pointer', transition: 'all 0.3s' }}
+                >
+                  <div style={{ position: 'absolute', top: '3px', left: intercomEnabled ? '27px' : '3px', width: '20px', height: '20px', borderRadius: '50%', background: '#FFF', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', transition: 'all 0.3s' }} />
+                </button>
+              </div>
+            </>
+          )}
 
           <div style={{ opacity: enabled ? 1 : 0.5, pointerEvents: enabled ? 'auto' : 'none' }}>
             <span style={{ fontWeight: 700, fontSize: '13px', display: 'block', marginBottom: '8px' }}>Modo Silencioso (Não incomodar)</span>
