@@ -2926,15 +2926,27 @@ export default function MasterAdminDashboard() {
             })()}
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', padding: '20px' }}>
+          <div style={
+            plateStyle?.plateSizeFormat === 'a4' || !plateStyle?.plateSizeFormat
+              ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', padding: '20px' }
+              : { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '30px', padding: '20px' }
+          }>
             {(properties || []).filter(p => selectedPlates.includes(p.id)).map(prop => (
-              <div key={prop.id} className="print-page-break" style={{ width: '100%' }}>
+              <div 
+                key={prop.id} 
+                className="print-page-break" 
+                style={
+                  plateStyle?.plateSizeFormat === 'a4' || !plateStyle?.plateSizeFormat
+                    ? { width: '100%' }
+                    : { width: 'auto', pageBreakAfter: 'always', display: 'flex', justifyContent: 'center' }
+                }
+              >
                 <PrintablePlate 
                   propertyId={prop.id} 
                   propertyName={prop.name} 
                   customStyle={plateStyle} 
                   animateLogo={false} 
-                  isPrintGrid={true}
+                  isPrintGrid={plateStyle?.plateSizeFormat === 'a4' || !plateStyle?.plateSizeFormat}
                 />
               </div>
             ))}
