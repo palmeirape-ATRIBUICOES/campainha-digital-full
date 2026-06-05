@@ -2868,6 +2868,10 @@ export default function MasterAdminDashboard() {
           #print-area { display: none !important; }
         }
         @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body { visibility: hidden !important; background: #fff !important; }
           #print-area, #print-area * { visibility: visible !important; }
           #print-area {
@@ -2892,22 +2896,46 @@ export default function MasterAdminDashboard() {
         {platesSubTab === 'sequential' ? (
           <div>
             {(() => {
-              const pages = [];
-              for (let i = 0; i < sequentialPlates.length; i += 4) {
-                pages.push(sequentialPlates.slice(i, i + 4));
-              }
-              return pages.map((pagePlates, pageIndex) => (
-                <div key={pageIndex} className="a4-page print-page-break" style={{ 
-                  width: '210mm', minHeight: '297mm', background: '#FFF', 
-                  margin: '0 auto 32px', padding: '10mm', 
-                  display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '10mm',
-                  boxSizing: 'border-box'
-                }}>
-                  {pagePlates.map(plate => (
-                    <div key={plate.code} style={{ 
-                      position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column'
-                    }}>
-                      <div style={{ position: 'absolute', top: '-15px', left: 0, width: '100%', textAlign: 'center', fontSize: '10px', color: '#94A3B8', fontWeight: 700, letterSpacing: '1px' }}>
+              const isA4 = plateStyle?.plateSizeFormat === 'a4' || !plateStyle?.plateSizeFormat;
+              if (isA4) {
+                const pages = [];
+                for (let i = 0; i < sequentialPlates.length; i += 4) {
+                  pages.push(sequentialPlates.slice(i, i + 4));
+                }
+                return pages.map((pagePlates, pageIndex) => (
+                  <div key={pageIndex} className="a4-page print-page-break" style={{ 
+                    width: '210mm', minHeight: '297mm', background: '#FFF', 
+                    margin: '0 auto 32px', padding: '10mm', 
+                    display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '10mm',
+                    boxSizing: 'border-box'
+                  }}>
+                    {pagePlates.map(plate => (
+                      <div key={plate.code} style={{ 
+                        position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column'
+                      }}>
+                        <div style={{ position: 'absolute', top: '-15px', left: 0, width: '100%', textAlign: 'center', fontSize: '10px', color: '#94A3B8', fontWeight: 700, letterSpacing: '1px' }}>
+                          CORTE AQUI ✂️ --- {plate.code} --- ✂️
+                        </div>
+
+                        <PrintablePlate 
+                          propertyId={plate.code}
+                          propertyName="Campainha Digital"
+                          unitName={plate.code}
+                          customStyle={plateStyle}
+                          qrUrl={plate.url}
+                          isPrintGrid={true}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ));
+              } else {
+                return sequentialPlates.map(plate => (
+                  <div key={plate.code} className="print-page-break" style={{ 
+                    width: 'auto', margin: '0 auto 32px', display: 'flex', justifyContent: 'center', pageBreakAfter: 'always', position: 'relative'
+                  }}>
+                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ position: 'absolute', top: '-18px', left: 0, width: '100%', textAlign: 'center', fontSize: '10px', color: '#94A3B8', fontWeight: 700, letterSpacing: '1px' }}>
                         CORTE AQUI ✂️ --- {plate.code} --- ✂️
                       </div>
 
@@ -2917,12 +2945,12 @@ export default function MasterAdminDashboard() {
                         unitName={plate.code}
                         customStyle={plateStyle}
                         qrUrl={plate.url}
-                        isPrintGrid={true}
+                        isPrintGrid={false}
                       />
                     </div>
-                  ))}
-                </div>
-              ));
+                  </div>
+                ));
+              }
             })()}
           </div>
         ) : (

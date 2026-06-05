@@ -674,6 +674,14 @@ const PrintablePlate = React.forwardRef(({
 
     return (
       <>
+        <style>{`
+          @media print {
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+          }
+        `}</style>
         {!isPrintGrid && (
           <style>{`
             @media print {

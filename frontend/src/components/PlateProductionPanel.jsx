@@ -53,9 +53,12 @@ export default function PlateProductionPanel({ customStyle, plates = [], setPlat
     window.print();
   };
 
+  const isA4 = customStyle?.plateSizeFormat === 'a4' || !customStyle?.plateSizeFormat;
   const pages = [];
-  for (let i = 0; i < plates.length; i += 4) {
-    pages.push(plates.slice(i, i + 4));
+  if (isA4) {
+    for (let i = 0; i < plates.length; i += 4) {
+      pages.push(plates.slice(i, i + 4));
+    }
   }
 
   return (
@@ -79,42 +82,70 @@ export default function PlateProductionPanel({ customStyle, plates = [], setPlat
           </button>
           {plates.length > 0 && (
             <button onClick={handlePrint} className="btn-secondary" style={{ flex: 1, padding: '14px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '15px', background: '#0F172A', color: '#FFF', border: 'none' }}>
-              <Printer size={20} /> Imprimir A4
+              <Printer size={20} /> {isA4 ? 'Imprimir A4' : 'Imprimir Placas'}
             </button>
           )}
         </div>
       </div>
 
       <div className="preview-print-area">
-        {pages.map((pagePlates, pageIndex) => (
-          <div key={pageIndex} className="a4-page" style={{ 
-            width: '210mm', minHeight: '297mm', background: '#FFF', 
-            margin: '0 auto 32px', padding: '10mm', 
-            boxShadow: '0 10px 30px rgba(0,0,0,0.1)', border: '1px solid #E2E8F0',
-            display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '10mm'
-          }}>
-            {pagePlates.map(plate => (
-              <div key={plate.code} style={{ 
-                position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column'
-              }}>
-                {/* Indicador de corte com a numeração fora da área útil */}
-                <div style={{ position: 'absolute', top: '-15px', left: 0, width: '100%', textAlign: 'center', fontSize: '10px', color: '#94A3B8', fontWeight: 700, letterSpacing: '1px' }}>
-                  CORTE AQUI ✂️ --- {plate.code} --- ✂️
+        {isA4 ? (
+          pages.map((pagePlates, pageIndex) => (
+            <div key={pageIndex} className="a4-page" style={{ 
+              width: '210mm', minHeight: '297mm', background: '#FFF', 
+              margin: '0 auto 32px', padding: '10mm', 
+              boxShadow: '0 10px 30px rgba(0,0,0,0.1)', border: '1px solid #E2E8F0',
+              display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: '10mm'
+            }}>
+              {pagePlates.map(plate => (
+                <div key={plate.code} style={{ 
+                  position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column'
+                }}>
+                  {/* Indicador de corte com a numeração fora da área útil */}
+                  <div style={{ position: 'absolute', top: '-15px', left: 0, width: '100%', textAlign: 'center', fontSize: '10px', color: '#94A3B8', fontWeight: 700, letterSpacing: '1px' }}>
+                    CORTE AQUI ✂️ --- {plate.code} --- ✂️
+                  </div>
+
+                  <PrintablePlate 
+                    propertyId={plate.code}
+                    propertyName="Campainha Digital"
+                    unitName={plate.code}
+                    customStyle={customStyle}
+                    qrUrl={plate.url}
+                    isPrintGrid={true}
+                  />
+
                 </div>
+              ))}
+            </div>
+          ))
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '30px', padding: '20px' }}>
+            {plates.map(plate => (
+              <div key={plate.code} className="a4-page" style={{ 
+                width: 'auto', background: '#FFF', 
+                margin: '0 auto', padding: '20px', 
+                boxShadow: '0 10px 30px rgba(0,0,0,0.1)', border: '1px solid #E2E8F0',
+                display: 'flex', justifyContent: 'center', position: 'relative'
+              }}>
+                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ position: 'absolute', top: '-18px', left: 0, width: '100%', textAlign: 'center', fontSize: '10px', color: '#94A3B8', fontWeight: 700, letterSpacing: '1px' }}>
+                    CORTE AQUI ✂️ --- {plate.code} --- ✂️
+                  </div>
 
-                <PrintablePlate 
-                  propertyId={plate.code}
-                  propertyName="Campainha Digital"
-                  unitName={plate.code}
-                  customStyle={customStyle}
-                  qrUrl={plate.url}
-                  isPrintGrid={true}
-                />
-
+                  <PrintablePlate 
+                    propertyId={plate.code}
+                    propertyName="Campainha Digital"
+                    unitName={plate.code}
+                    customStyle={customStyle}
+                    qrUrl={plate.url}
+                    isPrintGrid={false}
+                  />
+                </div>
               </div>
             ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
