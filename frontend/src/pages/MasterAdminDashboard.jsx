@@ -467,9 +467,7 @@ export default function MasterAdminDashboard() {
   const [localPartners, setLocalPartners] = useState([]);
   const [showAddPartner, setShowAddPartner] = useState(false);
   const [newPartnerName, setNewPartnerName] = useState('');
-  const [newPartnerCategory, setNewPartnerCategory] = useState('farmacia');
-  const [newPartnerRating, setNewPartnerRating] = useState('4.8');
-  const [newPartnerDist, setNewPartnerDist] = useState('1.0km');
+  const [newPartnerCategory, setNewPartnerCategory] = useState('image');
   const [newPartnerTel, setNewPartnerTel] = useState('');
   const [newPartnerImg, setNewPartnerImg] = useState('');
   const [savingPartners, setSavingPartners] = useState(false);
@@ -561,21 +559,15 @@ export default function MasterAdminDashboard() {
 
   const handleAddLocalPartner = async (e) => {
     e.preventDefault();
-    const defaultImages = {
-      farmacia: 'https://images.unsplash.com/photo-1586015555751-63bb77f4322a?w=100&h=100&fit=crop',
-      gas: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=100&h=100&fit=crop',
-      agua: 'https://images.unsplash.com/photo-1548839140-29a749e1cf3d?w=100&h=100&fit=crop',
-      mercado: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=100&h=100&fit=crop'
-    };
 
     const newPartner = {
       id: Date.now().toString(),
-      name: newPartnerName,
-      category: newPartnerCategory,
-      rating: parseFloat(newPartnerRating) || 5.0,
-      dist: newPartnerDist,
-      tel: newPartnerTel,
-      img: newPartnerImg.trim() || defaultImages[newPartnerCategory] || 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=100&h=100&fit=crop'
+      name: newPartnerName.trim(),
+      category: newPartnerCategory, // 'image' or 'video'
+      rating: 5.0,
+      dist: '',
+      tel: newPartnerTel.trim(),
+      img: newPartnerImg.trim()
     };
 
     const updatedPartners = [...localPartners, newPartner];
@@ -1228,82 +1220,53 @@ export default function MasterAdminDashboard() {
                 {/* Form to Add Partner */}
                 {showAddPartner && (
                   <form onSubmit={handleAddLocalPartner} style={{ background: 'var(--bg-deep)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border-subtle)', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Cadastrar Novo Parceiro Regional</h4>
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Cadastrar Novo Anúncio / Parceiro</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Nome do Estabelecimento</label>
+                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Título / Descrição (Opcional)</label>
                         <input 
                           type="text" 
                           value={newPartnerName} 
                           onChange={e => setNewPartnerName(e.target.value)} 
-                          placeholder="Ex: Farmácia do Bairro" 
-                          required
+                          placeholder="Ex: Internet Fibra Óptica 500 Mega" 
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Categoria</label>
+                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Tipo de Mídia</label>
                         <select 
                           value={newPartnerCategory} 
                           onChange={e => setNewPartnerCategory(e.target.value)} 
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
                         >
-                          <option value="farmacia">Farmácia</option>
-                          <option value="gas">Gás / Fogo</option>
-                          <option value="agua">Água</option>
-                          <option value="mercado">Mercado</option>
+                          <option value="image">Imagem 🖼️</option>
+                          <option value="video">Vídeo (MP4) 🎥</option>
                         </select>
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '14px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Telefone / WhatsApp</label>
+                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Link de Ação / WhatsApp / Site (Opcional)</label>
                         <input 
                           type="text" 
                           value={newPartnerTel} 
                           onChange={e => setNewPartnerTel(e.target.value)} 
-                          placeholder="Ex: (11) 99999-8888" 
-                          required
+                          placeholder="Ex: https://wa.me/5511999998888 ou (11) 99999-8888" 
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Avaliação (Nota)</label>
+                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>URL da Imagem ou Vídeo (MP4)</label>
                         <input 
-                          type="number" 
-                          step="0.1" 
-                          min="1" 
-                          max="5"
-                          value={newPartnerRating} 
-                          onChange={e => setNewPartnerRating(e.target.value)} 
-                          placeholder="Ex: 4.8" 
+                          type="url" 
+                          value={newPartnerImg} 
+                          onChange={e => setNewPartnerImg(e.target.value)} 
+                          placeholder="https://exemplo.com/imagem.jpg ou .mp4" 
                           required
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
                         />
                       </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Distância (Texto)</label>
-                        <input 
-                          type="text" 
-                          value={newPartnerDist} 
-                          onChange={e => setNewPartnerDist(e.target.value)} 
-                          placeholder="Ex: 1.2km" 
-                          required
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>URL da Foto (Opcional - deixe em branco para usar padrão)</label>
-                      <input 
-                        type="url" 
-                        value={newPartnerImg} 
-                        onChange={e => setNewPartnerImg(e.target.value)} 
-                        placeholder="https://exemplo.com/foto.jpg" 
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
-                      />
                     </div>
 
                     <button 
@@ -1314,7 +1277,7 @@ export default function MasterAdminDashboard() {
                         fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
                       }}
                     >
-                      <Plus size={14} /> Cadastrar Parceiro
+                      <Plus size={14} /> Cadastrar Anúncio
                     </button>
                   </form>
                 )}
@@ -1322,50 +1285,53 @@ export default function MasterAdminDashboard() {
                 {/* Table / List of existing partners */}
                 {partnersList.length === 0 ? (
                   <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)', border: '2px dashed var(--border-subtle)', borderRadius: '16px' }}>
-                    Nenhum parceiro customizado cadastrado ainda. A aplicação exibirá os parceiros padrão (fallback).
+                    Nenhum anúncio ou parceiro cadastrado ainda.
                   </div>
                 ) : (
                   <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: '16px' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead style={{ background: 'var(--bg-deep)' }}>
                         <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
-                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Logo</th>
-                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Nome</th>
-                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Categoria</th>
-                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Avaliação</th>
-                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Contato</th>
-                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Distância</th>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Mídia</th>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Título / Descrição</th>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Tipo</th>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Link / Ação</th>
                           <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right' }}>Ação</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {partnersList.map((partner, index) => (
-                          <tr key={partner.id || index} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                            <td style={{ padding: '12px 16px' }}>
-                              <img src={partner.img} alt={partner.name} style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
-                            </td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>{partner.name}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                              <span style={{ padding: '4px 8px', borderRadius: '12px', background: 'var(--bg-deep)', fontSize: '11px', fontWeight: 700 }}>
-                                {partner.category === 'farmacia' ? '💊 Farmácia' : partner.category === 'gas' ? '🔥 Gás / Fogo' : partner.category === 'agua' ? '💧 Água' : '🛒 Mercado'}
-                              </span>
-                            </td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 800, color: '#F59E0B' }}>⭐ {partner.rating}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>{partner.tel}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>📍 {partner.dist}</td>
-                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteLocalPartner(partner.id)}
-                                disabled={savingPartners}
-                                style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
-                                title="Excluir parceiro"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {partnersList.map((partner, index) => {
+                          const isVideo = partner.category === 'video';
+                          return (
+                            <tr key={partner.id || index} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                              <td style={{ padding: '12px 16px' }}>
+                                {isVideo ? (
+                                  <video src={partner.img} style={{ width: '60px', height: '45px', borderRadius: '6px', objectFit: 'cover', background: '#000' }} muted />
+                                ) : (
+                                  <img src={partner.img} alt={partner.name} style={{ width: '60px', height: '45px', borderRadius: '6px', objectFit: 'cover' }} />
+                                )}
+                              </td>
+                              <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>{partner.name || 'Sem título'}</td>
+                              <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                <span style={{ padding: '4px 8px', borderRadius: '12px', background: 'var(--bg-deep)', fontSize: '11px', fontWeight: 700 }}>
+                                  {isVideo ? '🎥 Vídeo' : '🖼️ Imagem'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{partner.tel || 'Nenhum'}</td>
+                              <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteLocalPartner(partner.id)}
+                                  disabled={savingPartners}
+                                  style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
+                                  title="Excluir parceiro"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
