@@ -422,24 +422,26 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
               {/* COMPONENTE INVISÍVEL PARA DOWNLOAD */}
               <PrintablePlate ref={printRef} qrImage={qrImage} />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                <button 
-                  type="button"
-                  onClick={() => setShowPreviewModal(true)}
-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#F1F5F9', color: '#0F172A', border: '1px solid #E2E8F0', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
-                >
-                  <Eye size={18} /> Visualizar Placa
-                </button>
+              {!isHouseResident && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setShowPreviewModal(true)}
+                    style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#F1F5F9', color: '#0F172A', border: '1px solid #E2E8F0', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
+                  >
+                    <Eye size={18} /> Visualizar Placa
+                  </button>
 
-                <button 
-                  type="button"
-                  onClick={handleDownloadPlate}
-                  disabled={loading}
-                  style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#0F172A', color: '#FFF', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
-                >
-                  <Download size={18} /> {loading ? 'Gerando Placa...' : 'Baixar Placa Completa'}
-                </button>
-              </div>
+                  <button 
+                    type="button"
+                    onClick={handleDownloadPlate}
+                    disabled={loading}
+                    style={{ width: '100%', padding: '12px', borderRadius: '12px', background: '#0F172A', color: '#FFF', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}
+                  >
+                    <Download size={18} /> {loading ? 'Gerando Placa...' : 'Baixar Placa Completa'}
+                  </button>
+                </div>
+              )}
 
               <div style={{ marginTop: '16px', width: '100%', borderTop: '1px solid #E2E8F0', paddingTop: '16px', textAlign: 'left' }}>
                 <p style={{ fontSize: '13px', fontWeight: 700, color: '#64748B', marginBottom: '8px' }}>Comprou uma placa nova?</p>
