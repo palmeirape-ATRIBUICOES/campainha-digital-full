@@ -232,6 +232,7 @@ const PrintablePlate = React.forwardRef(({
 
   const format = style.plateSizeFormat || 'a4';
   const isSmallFormat = format !== 'a4';
+  const dimensions = getPlateDimensions();
 
   let containerStyle = {
     width: '100%',
