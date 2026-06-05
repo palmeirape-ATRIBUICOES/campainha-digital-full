@@ -230,12 +230,13 @@ const PrintablePlate = React.forwardRef(({
     }
   };
 
-  const dimensions = getPlateDimensions();
+  const format = style.plateSizeFormat || 'a4';
+  const isSmallFormat = format !== 'a4';
 
   let containerStyle = {
     width: '100%',
     aspectRatio: dimensions.aspectRatio,
-    padding: '36px 24px 16px 24px',
+    padding: isSmallFormat ? '24px 18px 12px 18px' : '36px 24px 16px 24px',
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
@@ -573,9 +574,9 @@ const PrintablePlate = React.forwardRef(({
             <div style={{ 
               display: 'flex', 
               flexDirection: showPhone ? (style.phoneIllustrationPosition === 'left' ? 'row-reverse' : 'row') : 'column', 
-              alignItems: 'center', 
+              alignItems: showPhone ? 'stretch' : 'center', 
               justifyContent: 'center', 
-              gap: '16px', 
+              gap: isSmallFormat ? '10px' : '16px', 
               width: '100%' 
             }}>
               <div 
@@ -690,7 +691,7 @@ const PrintablePlate = React.forwardRef(({
                 height: var(--print-height, 297mm) !important;
                 max-width: none !important;
                 aspect-ratio: auto !important;
-                border-radius: 0px !important;
+                ${style?.plateSizeFormat === 'a4' || !style?.plateSizeFormat ? 'border-radius: 0px !important;' : ''}
                 box-shadow: none !important;
               }
             }
@@ -774,11 +775,11 @@ const PrintablePlate = React.forwardRef(({
         <div style={{
           display: 'flex',
           flexDirection: showPhone ? (style.phoneIllustrationPosition === 'left' ? 'row-reverse' : 'row') : 'column',
-          alignItems: 'center',
+          alignItems: showPhone ? 'stretch' : 'center',
           justifyContent: 'center',
-          gap: '16px',
+          gap: isSmallFormat ? '10px' : '16px',
           width: '100%',
-          margin: isGiantQR ? '8px 0' : '14px 0'
+          margin: isSmallFormat ? '8px 0' : (isGiantQR ? '8px 0' : '14px 0')
         }}>
           <div 
             {...getInteractiveProps('qr')}
