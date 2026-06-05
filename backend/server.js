@@ -1356,6 +1356,8 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
         clientCode: true,
         plateCode: true,
         trialEndsAt: true,
+        isHouseResident: true,
+        isCondoResident: true,
         propertiesManaged: { select: { id: true, name: true, isVila: true } },
         propertiesVilaAdmin: { select: { id: true, name: true, isVila: true } },
         units: { select: { id: true, name: true, propertyId: true, property: { select: { name: true, isVila: true } } } }

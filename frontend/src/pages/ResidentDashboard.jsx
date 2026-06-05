@@ -71,7 +71,7 @@ export default function ResidentDashboard() {
   const [unitName, setUnitName] = useState(() => localStorage.getItem('cd_unit_name') || 'Minha Casa');
   const [accessCode, setAccessCode] = useState('');
   const [visitorSocketId, setVisitorSocketId] = useState(null);
-  const isHouseResident = localStorage.getItem('cd_is_house_resident') === 'true';
+  const [isHouseResident, setIsHouseResident] = useState(() => localStorage.getItem('cd_is_house_resident') === 'true');
   const isDependent = localStorage.getItem('cd_is_dependent') === 'true';
   // Apenas quem logou por email pode gerenciar moradores e criar códigos de visitante
   // Usa useState para atualizar quando fetchUserProfile detectar o tipo (sessões antigas)
@@ -91,9 +91,7 @@ export default function ResidentDashboard() {
     { id: 'delivery', label: 'Delivery', messages: ['Pode deixar com o porteiro', 'Deixar no Locker'] }
   ];
 
-  const [quickMsgs] = useState(() => {
-    return isHouseResident ? HOUSE_QUICK_MSGS : CONDO_QUICK_MSGS;
-  });
+  const quickMsgs = isHouseResident ? HOUSE_QUICK_MSGS : CONDO_QUICK_MSGS;
   const [activeMsgCat, setActiveMsgCat] = useState('general');
   const [sentMsg, setSentMsg] = useState('');
   const [neighborBlock, setNeighborBlock] = useState('');
@@ -488,6 +486,10 @@ export default function ResidentDashboard() {
           }
           if (data.isVila !== undefined) {
             localStorage.setItem('residentIsVila', data.isVila ? 'true' : 'false');
+          }
+          if (data.isHouseResident !== undefined) {
+            localStorage.setItem('cd_is_house_resident', data.isHouseResident ? 'true' : 'false');
+            setIsHouseResident(data.isHouseResident);
           }
           if (data.units?.[0]?.id) {
             localStorage.setItem('residentUnitId', data.units[0].id);
