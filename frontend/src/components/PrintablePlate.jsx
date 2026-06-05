@@ -235,7 +235,7 @@ const PrintablePlate = React.forwardRef(({
   let containerStyle = {
     width: '100%',
     aspectRatio: dimensions.aspectRatio,
-    padding: '36px 24px',
+    padding: '36px 24px 16px 24px',
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
@@ -284,7 +284,7 @@ const PrintablePlate = React.forwardRef(({
   switch (style.templateId) {
     case 'minimalist':
       containerStyle.backgroundColor = style.backgroundColor === '#FFFFFF' || style.backgroundColor === '#1E293B' ? '#FAF9F6' : style.backgroundColor;
-      containerStyle.padding = '44px 32px';
+      containerStyle.padding = '44px 32px 18px 32px';
       containerStyle.border = '1px solid rgba(0,0,0,0.15)';
       containerStyle.borderRadius = '16px';
       containerStyle.boxShadow = 'none';
@@ -319,7 +319,7 @@ const PrintablePlate = React.forwardRef(({
         WebkitBackdropFilter: 'blur(16px)',
         border: '1px solid rgba(255, 255, 255, 0.25)',
         borderRadius: '28px',
-        padding: '28px 20px',
+        padding: '28px 20px 14px 20px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -335,7 +335,7 @@ const PrintablePlate = React.forwardRef(({
 
     case 'bento':
       containerStyle.backgroundColor = style.backgroundColor === '#FFFFFF' ? '#F1F5F9' : style.backgroundColor;
-      containerStyle.padding = '24px 20px';
+      containerStyle.padding = '24px 20px 12px 20px';
       break;
 
     case 'splitDiagonal':
@@ -362,7 +362,7 @@ const PrintablePlate = React.forwardRef(({
       containerStyle.backgroundColor = '#0B3C5D';
       containerStyle.borderRadius = '16px';
       containerStyle.border = '8px double #FFFFFF';
-      containerStyle.padding = '36px 28px';
+      containerStyle.padding = '36px 28px 18px 28px';
       textPrimaryColor = '#FFFFFF';
       accentColorStyle = '#F5D76E';
       logoTextColor = '#FFFFFF';
@@ -402,7 +402,7 @@ const PrintablePlate = React.forwardRef(({
       containerStyle.backgroundColor = '#F4EAD4';
       containerStyle.borderRadius = '40px';
       containerStyle.border = '3px dashed #6E473B';
-      containerStyle.padding = '40px 24px';
+      containerStyle.padding = '40px 24px 20px 24px';
       textPrimaryColor = '#4E3629';
       accentColorStyle = '#8D5B4C';
       logoTextColor = '#4E3629';
@@ -437,7 +437,7 @@ const PrintablePlate = React.forwardRef(({
 
     case 'giantCenteredQR':
       containerStyle.backgroundColor = style.backgroundColor || '#FFFFFF';
-      containerStyle.padding = '24px 20px';
+      containerStyle.padding = '24px 20px 12px 20px';
       break;
 
     case 'glassmorphism':
@@ -454,7 +454,7 @@ const PrintablePlate = React.forwardRef(({
         WebkitBackdropFilter: 'blur(20px)',
         border: '1px solid rgba(255, 255, 255, 0.3)',
         borderRadius: '24px',
-        padding: '30px 20px',
+        padding: '30px 20px 14px 20px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -471,6 +471,11 @@ const PrintablePlate = React.forwardRef(({
 
     default:
       break;
+  }
+
+  // Override template color defaults if the user has explicitly selected a custom logo color
+  if (style.logoColor && style.logoColor.trim() !== '') {
+    logoTextColor = style.logoColor;
   }
 
   // 5. Dynamic Logo Renderer
