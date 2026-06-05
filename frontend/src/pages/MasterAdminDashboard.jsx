@@ -470,6 +470,7 @@ export default function MasterAdminDashboard() {
   const [newPartnerCategory, setNewPartnerCategory] = useState('image');
   const [newPartnerTel, setNewPartnerTel] = useState('');
   const [newPartnerImg, setNewPartnerImg] = useState('');
+  const [newPartnerTag, setNewPartnerTag] = useState('WhatsApp');
   const [savingPartners, setSavingPartners] = useState(false);
 
   useEffect(() => {
@@ -567,7 +568,8 @@ export default function MasterAdminDashboard() {
       rating: 5.0,
       dist: '',
       tel: newPartnerTel.trim(),
-      img: newPartnerImg.trim()
+      img: newPartnerImg.trim(),
+      tag: newPartnerTag.trim() || 'WhatsApp'
     };
 
     const updatedPartners = [...localPartners, newPartner];
@@ -577,6 +579,7 @@ export default function MasterAdminDashboard() {
     setNewPartnerName('');
     setNewPartnerTel('');
     setNewPartnerImg('');
+    setNewPartnerTag('WhatsApp');
     setShowAddPartner(false);
   };
 
@@ -1221,7 +1224,7 @@ export default function MasterAdminDashboard() {
                 {showAddPartner && (
                   <form onSubmit={handleAddLocalPartner} style={{ background: 'var(--bg-deep)', borderRadius: '16px', padding: '20px', border: '1px solid var(--border-subtle)', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <h4 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>Cadastrar Novo Anúncio / Parceiro</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Título / Descrição (Opcional)</label>
                         <input 
@@ -1242,6 +1245,16 @@ export default function MasterAdminDashboard() {
                           <option value="image">Imagem 🖼️</option>
                           <option value="video">Vídeo (MP4) 🎥</option>
                         </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Texto da Tag / Botão</label>
+                        <input 
+                          type="text" 
+                          value={newPartnerTag} 
+                          onChange={e => setNewPartnerTag(e.target.value)} 
+                          placeholder="Ex: WhatsApp, Ver Site, Promoção" 
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                        />
                       </div>
                     </div>
 
@@ -1295,6 +1308,7 @@ export default function MasterAdminDashboard() {
                           <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Mídia</th>
                           <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Título / Descrição</th>
                           <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Tipo</th>
+                          <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Tag / Botão</th>
                           <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Link / Ação</th>
                           <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right' }}>Ação</th>
                         </tr>
@@ -1315,6 +1329,11 @@ export default function MasterAdminDashboard() {
                               <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>
                                 <span style={{ padding: '4px 8px', borderRadius: '12px', background: 'var(--bg-deep)', fontSize: '11px', fontWeight: 700 }}>
                                   {isVideo ? '🎥 Vídeo' : '🖼️ Imagem'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                <span style={{ padding: '4px 8px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', fontSize: '11px', fontWeight: 700 }}>
+                                  {partner.tag || 'WhatsApp'}
                                 </span>
                               </td>
                               <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{partner.tel || 'Nenhum'}</td>

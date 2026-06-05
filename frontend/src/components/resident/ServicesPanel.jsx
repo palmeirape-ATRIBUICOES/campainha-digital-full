@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Pill, Flame, Droplets, ShoppingBag, ChevronRight, Phone, Star, MapPin, Settings, Save, Sparkles } from 'lucide-react';
+import { Pill, Flame, Droplets, ShoppingBag, ChevronRight, Phone, Star, MapPin, Settings, Save, Sparkles, MessageCircle, ExternalLink } from 'lucide-react';
 import { API } from '../../config';
 
 const PRESETS = {
@@ -348,6 +348,10 @@ export default function ServicesPanel() {
       <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {dynamicPartners.map((p) => {
           const isVideo = p.category === 'video';
+          const isWhatsApp = (p.tag && p.tag.toLowerCase().includes('whatsapp')) || 
+                             (p.tel && (p.tel.includes('wa.me') || p.tel.includes('api.whatsapp.com') || p.tel.includes('whatsapp')));
+          const tagText = p.tag || (isWhatsApp ? 'WhatsApp' : '');
+          
           return (
             <div key={p.id} style={{ 
               background: '#FFF', borderRadius: '16px', padding: '16px', 
@@ -355,23 +359,53 @@ export default function ServicesPanel() {
               boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
               overflow: 'hidden'
             }}>
-              {isVideo ? (
-                <video 
-                  src={p.img} 
-                  controls 
-                  autoPlay 
-                  loop 
-                  muted 
-                  playsInline 
-                  style={{ width: '100%', borderRadius: '12px', background: '#000', maxHeight: '300px', objectFit: 'contain' }} 
-                />
-              ) : (
-                <img 
-                  src={p.img} 
-                  alt={p.name} 
-                  style={{ width: '100%', borderRadius: '12px', objectFit: 'contain', maxHeight: '300px', background: '#F8FAFC' }} 
-                />
-              )}
+              <div style={{ position: 'relative', width: '100%', borderRadius: '12px', overflow: 'hidden', display: 'flex', background: '#F8FAFC' }}>
+                {isVideo ? (
+                  <video 
+                    src={p.img} 
+                    controls 
+                    autoPlay 
+                    loop 
+                    muted 
+                    playsInline 
+                    style={{ width: '100%', borderRadius: '12px', background: '#000', maxHeight: '300px', objectFit: 'contain' }} 
+                  />
+                ) : (
+                  <img 
+                    src={p.img} 
+                    alt={p.name} 
+                    style={{ width: '100%', borderRadius: '12px', objectFit: 'contain', maxHeight: '300px' }} 
+                  />
+                )}
+
+                {tagText && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: isWhatsApp ? '#25D366' : '#3B82F6',
+                    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.15)',
+                    borderRadius: '20px',
+                    padding: '4px 10px',
+                    zIndex: 2,
+                    color: '#FFF'
+                  }}>
+                    {isWhatsApp ? (
+                      <MessageCircle size={11} color="#FFF" fill="#FFF" />
+                    ) : p.tel?.trim().startsWith('http') ? (
+                      <ExternalLink size={11} color="#FFF" />
+                    ) : (
+                      <Phone size={11} color="#FFF" />
+                    )}
+                    <span style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {tagText}
+                    </span>
+                  </div>
+                )}
+              </div>
               
               {p.name && (
                 <h5 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0F172A', textAlign: 'center' }}>
@@ -379,26 +413,63 @@ export default function ServicesPanel() {
                 </h5>
               )}
               
-              {p.tel && (
-                <button 
-                  onClick={() => {
-                    const cleanTel = p.tel.trim();
-                    if (cleanTel.startsWith('http://') || cleanTel.startsWith('https://')) {
-                      window.open(cleanTel, '_blank');
-                    } else {
-                      window.open(`tel:${cleanTel}`);
-                    }
-                  }} 
-                  style={{ 
-                    width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0',
-                    borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 700,
-                    color: '#3B82F6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
-                  }}
-                >
-                  <Phone size={14} />
-                  {p.tel.trim().startsWith('http') ? 'SAIBA MAIS' : 'LIGAR AGORA'}
-                </button>
-              )}
+              {p.tel && (() => {
+                const cleanTel = p.tel.trim();
+                const isLink = cleanTel.startsWith('http://') || cleanTel.startsWith('https://');
+                
+                let btnBg = '#3B82F6';
+                let btnColor = '#FFF';
+                let btnBorder = 'none';
+                let btnShadow = '0 4px 12px rgba(59, 130, 246, 0.15)';
+                let btnIcon = <ExternalLink size={14} />;
+                let btnText = p.tag || 'SAIBA MAIS';
+
+                if (isWhatsApp) {
+                  btnBg = '#25D366';
+                  btnShadow = '0 4px 12px rgba(37, 211, 102, 0.2)';
+                  btnIcon = <MessageCircle size={14} color="#FFF" fill="#FFF" />;
+                  btnText = p.tag || 'CONVERSAR NO WHATSAPP';
+                } else if (!isLink) {
+                  btnBg = '#1E293B';
+                  btnShadow = '0 4px 12px rgba(30, 41, 59, 0.15)';
+                  btnIcon = <Phone size={14} />;
+                  btnText = p.tag || 'LIGAR AGORA';
+                }
+
+                return (
+                  <button 
+                    onClick={() => {
+                      if (isLink) {
+                        window.open(cleanTel, '_blank');
+                      } else {
+                        window.open(`tel:${cleanTel}`);
+                      }
+                    }} 
+                    style={{ 
+                      width: '100%', 
+                      background: btnBg, 
+                      border: btnBorder,
+                      boxShadow: btnShadow,
+                      borderRadius: '12px', 
+                      padding: '12px', 
+                      fontSize: '13px', 
+                      fontWeight: 800,
+                      color: btnColor, 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      gap: '8px',
+                      transition: 'all 0.2s',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}
+                  >
+                    {btnIcon}
+                    {btnText}
+                  </button>
+                );
+              })()}
             </div>
           );
         })}
