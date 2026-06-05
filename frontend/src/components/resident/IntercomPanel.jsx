@@ -20,6 +20,7 @@ export default function IntercomPanel({ propertyId, unitId, socketRef, unitName,
   const [updatingIntercom, setUpdatingIntercom] = useState(false);
 
   const isVila = localStorage.getItem('residentIsVila') === 'true';
+  const isHouseResident = localStorage.getItem('cd_is_house_resident') === 'true';
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -125,133 +126,137 @@ export default function IntercomPanel({ propertyId, unitId, socketRef, unitName,
       </h4>
 
       {/* Toggle para receber ou não chamadas de vizinhos */}
-      <div style={{
-        background: '#FFF', border: '1px solid #E2E8F0', borderRadius: '12px',
-        padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, paddingRight: '8px' }}>
-          <span style={{ fontWeight: 700, fontSize: '12px', color: '#1E293B' }}>Permitir chamadas de vizinhos</span>
-          <span style={{ fontSize: '10px', color: '#64748B' }}>Permitir que outros apartamentos liguem para você</span>
-        </div>
-        <button
-          onClick={toggleIntercom}
-          disabled={updatingIntercom}
-          style={{
-            background: intercomEnabled ? '#10B981' : '#E2E8F0',
-            border: 'none', width: '46px', height: '24px', borderRadius: '20px',
-            position: 'relative', cursor: 'pointer', transition: 'all 0.3s',
-            opacity: updatingIntercom ? 0.6 : 1, flexShrink: 0
-          }}
-        >
+      {!isHouseResident && (
+        <>
           <div style={{
-            position: 'absolute', top: '2px',
-            left: intercomEnabled ? '24px' : '2px',
-            width: '20px', height: '20px', borderRadius: '50%',
-            background: '#FFF', boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            transition: 'all 0.3s'
-          }} />
-        </button>
-      </div>
-
-      {isVila ? (
-        // --- Vila Mode: list available neighbors directly ---
-        <div>
-          <label style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', display: 'block', marginBottom: '8px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-            Vizinhos Disponíveis para Chamada
-          </label>
-          
-          {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
-              <div style={{ width: '20px', height: '20px', border: '2px solid #E2E8F0', borderTopColor: '#3B82F6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            background: '#FFF', border: '1px solid #E2E8F0', borderRadius: '12px',
+            padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, paddingRight: '8px' }}>
+              <span style={{ fontWeight: 700, fontSize: '12px', color: '#1E293B' }}>Permitir chamadas de vizinhos</span>
+              <span style={{ fontSize: '10px', color: '#64748B' }}>Permitir que outros apartamentos liguem para você</span>
             </div>
-          ) : availableUnits.length === 0 ? (
-            <div style={{ padding: '24px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px dashed #E2E8F0', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
-              Nenhum vizinho disponível no momento.
+            <button
+              onClick={toggleIntercom}
+              disabled={updatingIntercom}
+              style={{
+                background: intercomEnabled ? '#10B981' : '#E2E8F0',
+                border: 'none', width: '46px', height: '24px', borderRadius: '20px',
+                position: 'relative', cursor: 'pointer', transition: 'all 0.3s',
+                opacity: updatingIntercom ? 0.6 : 1, flexShrink: 0
+              }}
+            >
+              <div style={{
+                position: 'absolute', top: '2px',
+                left: intercomEnabled ? '24px' : '2px',
+                width: '20px', height: '20px', borderRadius: '50%',
+                background: '#FFF', boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'all 0.3s'
+              }} />
+            </button>
+          </div>
+
+          {isVila ? (
+            // --- Vila Mode: list available neighbors directly ---
+            <div>
+              <label style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', display: 'block', marginBottom: '8px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                Vizinhos Disponíveis para Chamada
+              </label>
+              
+              {loading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+                  <div style={{ width: '20px', height: '20px', border: '2px solid #E2E8F0', borderTopColor: '#3B82F6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                </div>
+              ) : availableUnits.length === 0 ? (
+                <div style={{ padding: '24px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px dashed #E2E8F0', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
+                  Nenhum vizinho disponível no momento.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {availableUnits.map(n => {
+                    const residentNames = n.residents?.map(r => r.name).join(', ');
+                    return (
+                      <div key={n.id} style={{ background: '#FFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Building2 size={18} color="#3B82F6"/>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '14px', color: '#0F172A' }}>{n.name}</div>
+                          {residentNames && (
+                            <div style={{ fontSize: '11px', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={residentNames}>
+                              👤 {residentNames}
+                            </div>
+                          )}
+                        </div>
+                        <button onClick={() => call(n)}
+                          style={{ padding: '8px 14px', borderRadius: '10px', border: 'none',
+                            background: called === n.id ? '#10B981' : 'linear-gradient(135deg,#10B981,#059669)',
+                            color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}>
+                          <Phone size={13}/> {called === n.id ? 'Chamando...' : 'Chamar'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {availableUnits.map(n => {
-                const residentNames = n.residents?.map(r => r.name).join(', ');
-                return (
-                  <div key={n.id} style={{ background: '#FFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Building2 size={18} color="#3B82F6"/>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#0F172A' }}>{n.name}</div>
-                      {residentNames && (
-                        <div style={{ fontSize: '11px', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={residentNames}>
-                          👤 {residentNames}
-                        </div>
-                      )}
-                    </div>
-                    <button onClick={() => call(n)}
-                      style={{ padding: '8px 14px', borderRadius: '10px', border: 'none',
-                        background: called === n.id ? '#10B981' : 'linear-gradient(135deg,#10B981,#059669)',
-                        color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}>
-                      <Phone size={13}/> {called === n.id ? 'Chamando...' : 'Chamar'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      ) : (
-        // --- Standard Condo Mode: Block/Street Search ---
-        <>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', display: 'block', marginBottom: '4px' }}>BLOCO / RUA</label>
-              <input value={block} onChange={e => setBlock(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && search()}
-                placeholder="Ex: A ou Rua 1"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '13px', outline: 'none', background: '#F8FAFC' }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', display: 'block', marginBottom: '4px' }}>Nº CASA/APTO</label>
-              <input value={number} onChange={e => setNumber(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && search()}
-                placeholder="Ex: 101"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '13px', outline: 'none', background: '#F8FAFC' }} />
-            </div>
-          </div>
-          <button onClick={search} disabled={searching || (!block && !number)}
-            style={{ width: '100%', padding: '11px', borderRadius: '10px', border: 'none',
-              background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#fff',
-              fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', gap: '6px',
-              opacity: (!block && !number) ? 0.5 : 1 }}>
-            <Search size={14}/> {searching ? 'Buscando...' : 'Buscar Vizinho'}
-          </button>
-
-          {error && <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600, textAlign: 'center', marginTop: '8px' }}>{error}</p>}
-
-          {results.length > 0 && (
-            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {results.map(n => (
-                <div key={n.id} style={{ background: '#FFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Building2 size={18} color="#3B82F6"/>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '14px' }}>{n.name}</div>
-                    <div style={{ fontSize: '11px', color: '#64748B' }}>
-                      {n.block && `Bloco ${n.block} `}{n.street && `${n.street} `}{n.number && `Nº ${n.number}`}
-                    </div>
-                  </div>
-                  <button onClick={() => call(n)}
-                    style={{ padding: '8px 14px', borderRadius: '10px', border: 'none',
-                      background: called === n.id ? '#10B981' : 'linear-gradient(135deg,#10B981,#059669)',
-                      color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}>
-                    <Phone size={13}/> {called === n.id ? 'Chamando...' : 'Chamar'}
-                  </button>
+            // --- Standard Condo Mode: Block/Street Search ---
+            <>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', display: 'block', marginBottom: '4px' }}>BLOCO / RUA</label>
+                  <input value={block} onChange={e => setBlock(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && search()}
+                    placeholder="Ex: A ou Rua 1"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '13px', outline: 'none', background: '#F8FAFC' }} />
                 </div>
-              ))}
-            </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', display: 'block', marginBottom: '4px' }}>Nº CASA/APTO</label>
+                  <input value={number} onChange={e => setNumber(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && search()}
+                    placeholder="Ex: 101"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '13px', outline: 'none', background: '#F8FAFC' }} />
+                </div>
+              </div>
+              <button onClick={search} disabled={searching || (!block && !number)}
+                style={{ width: '100%', padding: '11px', borderRadius: '10px', border: 'none',
+                  background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#fff',
+                  fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  opacity: (!block && !number) ? 0.5 : 1 }}>
+                <Search size={14}/> {searching ? 'Buscando...' : 'Buscar Vizinho'}
+              </button>
+
+              {error && <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600, textAlign: 'center', marginTop: '8px' }}>{error}</p>}
+
+              {results.length > 0 && (
+                <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {results.map(n => (
+                    <div key={n.id} style={{ background: '#FFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Building2 size={18} color="#3B82F6"/>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: '14px' }}>{n.name}</div>
+                        <div style={{ fontSize: '11px', color: '#64748B' }}>
+                          {n.block && `Bloco ${n.block} `}{n.street && `${n.street} `}{n.number && `Nº ${n.number}`}
+                        </div>
+                      </div>
+                      <button onClick={() => call(n)}
+                        style={{ padding: '8px 14px', borderRadius: '10px', border: 'none',
+                          background: called === n.id ? '#10B981' : 'linear-gradient(135deg,#10B981,#059669)',
+                          color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}>
+                        <Phone size={13}/> {called === n.id ? 'Chamando...' : 'Chamar'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </>
       )}

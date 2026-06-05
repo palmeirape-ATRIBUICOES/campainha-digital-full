@@ -472,6 +472,29 @@ export default function MasterAdminDashboard() {
   const [newPartnerImg, setNewPartnerImg] = useState('');
   const [newPartnerTag, setNewPartnerTag] = useState('WhatsApp');
   const [savingPartners, setSavingPartners] = useState(false);
+  const [fileLoading, setFileLoading] = useState(false);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setFileLoading(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setNewPartnerImg(event.target.result);
+      if (file.type.startsWith('video/')) {
+        setNewPartnerCategory('video');
+      } else {
+        setNewPartnerCategory('image');
+      }
+      setFileLoading(false);
+    };
+    reader.onerror = () => {
+      alert('Erro ao ler o arquivo.');
+      setFileLoading(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('cd_token');
@@ -1083,120 +1106,7 @@ export default function MasterAdminDashboard() {
                 </form>
               </div>
 
-              {/* 2. CONFIGURAÇÕES DO BANNER DE PARCERIAS */}
-              <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
-                <div style={{ marginBottom: '24px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '20px' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Sparkles size={20} color="#10B981" /> 📢 Banner de Parcerias (Internet / IPTV)
-                  </h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px', margin: 0 }}>Configure o banner publicitário em destaque na aba Parceiros da Região.</p>
-                </div>
 
-                <form onSubmit={handleSaveBannerSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '580px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={bannerEnabled} 
-                      onChange={e => setBannerEnabled(e.target.checked)} 
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    Ativar e exibir o banner para os moradores
-                  </label>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Título do Banner</label>
-                      <input 
-                        type="text" 
-                        value={bannerTitle} 
-                        onChange={e => setBannerTitle(e.target.value)} 
-                        placeholder="Ex: Internet Fibra + IPTV" 
-                        required
-                        style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Texto do Botão</label>
-                      <input 
-                        type="text" 
-                        value={bannerBtnText} 
-                        onChange={e => setBannerBtnText(e.target.value)} 
-                        placeholder="Ex: Falar com Consultor" 
-                        required
-                        style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Descrição do Banner</label>
-                    <textarea 
-                      value={bannerDesc} 
-                      onChange={e => setBannerDesc(e.target.value)} 
-                      placeholder="Ex: Assine a melhor internet de fibra óptica da região com canais de TV inclusos e suporte 24h." 
-                      required
-                      rows={2}
-                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none', fontFamily: 'inherit', resize: 'none' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Link de Ação (WhatsApp ou Site)</label>
-                    <input 
-                      type="url" 
-                      value={bannerLink} 
-                      onChange={e => setBannerLink(e.target.value)} 
-                      placeholder="Ex: https://wa.me/5511999999999" 
-                      required
-                      style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Preset de Imagem</label>
-                      <select 
-                        value={bannerPreset} 
-                        onChange={e => setBannerPreset(e.target.value)} 
-                        style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
-                      >
-                        <option value="internet">Internet Fibra (Padrão)</option>
-                        <option value="iptv">IPTV / Canais (Padrão)</option>
-                        <option value="general">Geral / Conectividade</option>
-                        <option value="custom">URL Customizada</option>
-                      </select>
-                    </div>
-                    {bannerPreset === 'custom' && (
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>URL da Imagem de Fundo</label>
-                        <input 
-                          type="url" 
-                          value={bannerCustomUrl} 
-                          onChange={e => setBannerCustomUrl(e.target.value)} 
-                          placeholder="https://exemplo.com/foto.jpg" 
-                          required
-                          style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', fontSize: '14px', outline: 'none' }}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={savingBanner}
-                    style={{
-                      alignSelf: 'flex-start',
-                      background: '#10B981', color: '#FFF', border: 'none', padding: '12px 24px', borderRadius: '12px',
-                      fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
-                      gap: '8px', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', transition: 'all 0.2s',
-                      opacity: savingBanner ? 0.7 : 1
-                    }}
-                  >
-                    <Save size={16} />
-                    {savingBanner ? 'Salvando...' : 'Salvar Alterações do Banner'}
-                  </button>
-                </form>
-              </div>
 
               {/* 3. CONFIGURAÇÕES DE PARCEIROS LOCAIS */}
               <div style={{ background: 'var(--bg-surface)', borderRadius: '24px', border: '1px solid var(--border-subtle)', padding: '36px', boxShadow: '0 10px 30px rgba(0,0,0,0.02)' }}>
@@ -1270,15 +1180,26 @@ export default function MasterAdminDashboard() {
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>URL da Imagem ou Vídeo (MP4)</label>
-                        <input 
-                          type="url" 
-                          value={newPartnerImg} 
-                          onChange={e => setNewPartnerImg(e.target.value)} 
-                          placeholder="https://exemplo.com/imagem.jpg ou .mp4" 
-                          required
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
-                        />
+                        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Subir Arquivo (Imagem ou Vídeo)</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <input 
+                            type="file" 
+                            accept="image/*,video/*" 
+                            onChange={handleFileChange}
+                            required={!newPartnerImg}
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', outline: 'none' }}
+                          />
+                          {fileLoading && (
+                            <span style={{ fontSize: '11px', color: '#3B82F6', fontWeight: 700 }}>
+                              Lendo arquivo...
+                            </span>
+                          )}
+                          {!fileLoading && newPartnerImg && (
+                            <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>
+                              ✓ Pronto ({newPartnerCategory === 'video' ? 'Vídeo' : 'Imagem'})
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
