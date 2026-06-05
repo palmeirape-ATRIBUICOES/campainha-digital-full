@@ -2868,8 +2868,16 @@ export default function MasterAdminDashboard() {
           #print-area { display: none !important; }
         }
         @media print {
-          body > *:not(#print-area) { display: none !important; }
-          #print-area { display: block !important; width: 100% !important; background: #fff !important; }
+          body { visibility: hidden !important; background: #fff !important; }
+          #print-area, #print-area * { visibility: visible !important; }
+          #print-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            background: #fff !important;
+            display: block !important;
+          }
           .print-page-break { page-break-inside: avoid; page-break-after: auto; }
           .a4-page {
             margin: 0 !important;
