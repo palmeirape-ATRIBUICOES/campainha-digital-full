@@ -420,7 +420,9 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
               </div>
 
               {/* COMPONENTE INVISÍVEL PARA DOWNLOAD */}
-              <PrintablePlate ref={printRef} qrImage={qrImage} />
+              <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, pointerEvents: 'none' }}>
+                <PrintablePlate ref={printRef} qrImage={qrImage} />
+              </div>
 
               {!isHouseResident && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
