@@ -1252,7 +1252,8 @@ export default function AdminPanel() {
         top: 0,
         height: '100vh',
         zIndex: 50,
-        flexShrink: 0
+        flexShrink: 0,
+        overflowX: 'hidden'
       }}>
         {/* Header da Sidebar: Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
@@ -1291,7 +1292,7 @@ export default function AdminPanel() {
         )}
 
         {/* Menu de Navegação Vertical */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, overflowY: 'auto' }}>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
           {[
             { key: 'properties', label: 'Propriedades', icon: Home, desc: 'Gerencie placas físicas e downloads de QR Codes.' },
             { key: 'units',      label: 'Unidades', icon: Building2, desc: 'Cadastre e edite os blocos, ruas e casas.' },

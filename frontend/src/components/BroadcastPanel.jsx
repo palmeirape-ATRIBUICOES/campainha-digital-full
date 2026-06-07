@@ -92,28 +92,28 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
     setSending(false);
   };
 
-  const inputStyle = { width:'100%', padding:'12px 14px', borderRadius:'12px', border:'1px solid #E2E8F0', fontSize:'14px', outline:'none', background:'#F8FAFC', fontFamily:'inherit' };
+  const inputStyle = { width:'100%', padding:'12px 14px', borderRadius:'12px', border:'1px solid var(--border-subtle)', fontSize:'14px', outline:'none', background:'var(--bg-deep)', color:'var(--text-main)', fontFamily:'inherit' };
 
   return (
-    <div style={{ padding:'20px 0' }}>
+    <div style={{ padding:'20px 0', color:'var(--text-main)' }}>
       <h3 style={{ fontSize:'18px', fontWeight:800, marginBottom:'4px' }}>📢 Comunicados</h3>
-      <p style={{ fontSize:'12px', color:'#64748B', marginBottom:'20px' }}>Envie mensagens para todos os moradores do condomínio</p>
+      <p style={{ fontSize:'12px', color:'var(--text-muted)', marginBottom:'20px' }}>Envie mensagens para todos os moradores do condomínio</p>
 
       {/* Composer */}
-      <div style={{ background:'#FFF', border:'1px solid #E2E8F0', borderRadius:'16px', padding:'20px', marginBottom:'24px', boxShadow:'0 4px 12px rgba(0,0,0,0.03)' }}>
+      <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', borderRadius:'16px', padding:'20px', marginBottom:'24px', boxShadow:'0 4px 12px rgba(0,0,0,0.03)' }}>
         <div style={{ marginBottom:'12px' }}>
-          <label style={{ fontSize:'11px', fontWeight:700, color:'#64748B', marginBottom:'6px', display:'block', letterSpacing:'0.5px' }}>TÍTULO</label>
+          <label style={{ fontSize:'11px', fontWeight:700, color:'var(--text-muted)', marginBottom:'6px', display:'block', letterSpacing:'0.5px' }}>TÍTULO</label>
           <input style={inputStyle} placeholder="Ex: Aviso importante sobre manutenção" value={title} onChange={e => setTitle(e.target.value)} />
         </div>
         <div style={{ marginBottom:'12px' }}>
-          <label style={{ fontSize:'11px', fontWeight:700, color:'#64748B', marginBottom:'6px', display:'block', letterSpacing:'0.5px' }}>MENSAGEM *</label>
+          <label style={{ fontSize:'11px', fontWeight:700, color:'var(--text-muted)', marginBottom:'6px', display:'block', letterSpacing:'0.5px' }}>MENSAGEM *</label>
           <textarea style={{ ...inputStyle, minHeight:'100px', resize:'vertical' }} placeholder="Digite sua mensagem para todos os moradores..." value={body} onChange={e => setBody(e.target.value)} />
         </div>
         <div style={{ display:'flex', gap:'8px', marginBottom:'16px' }}>
-          <button onClick={() => setPriority('normal')} style={{ flex:1, padding:'10px', borderRadius:'10px', border: priority==='normal' ? '2px solid #3B82F6' : '1px solid #E2E8F0', background: priority==='normal' ? 'rgba(59,130,246,0.05)' : '#FFF', cursor:'pointer', fontWeight:600, fontSize:'13px', color: priority==='normal' ? '#3B82F6' : '#64748B', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
+          <button onClick={() => setPriority('normal')} style={{ flex:1, padding:'10px', borderRadius:'10px', border: priority==='normal' ? '2px solid #3B82F6' : '1px solid var(--border-subtle)', background: priority==='normal' ? 'rgba(59,130,246,0.05)' : 'var(--bg-surface)', cursor:'pointer', fontWeight:600, fontSize:'13px', color: priority==='normal' ? '#3B82F6' : 'var(--text-muted)', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
             <MessageSquare size={14}/> Normal
           </button>
-          <button onClick={() => setPriority('urgent')} style={{ flex:1, padding:'10px', borderRadius:'10px', border: priority==='urgent' ? '2px solid #EF4444' : '1px solid #E2E8F0', background: priority==='urgent' ? 'rgba(239,68,68,0.05)' : '#FFF', cursor:'pointer', fontWeight:600, fontSize:'13px', color: priority==='urgent' ? '#EF4444' : '#64748B', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
+          <button onClick={() => setPriority('urgent')} style={{ flex:1, padding:'10px', borderRadius:'10px', border: priority==='urgent' ? '2px solid #EF4444' : '1px solid var(--border-subtle)', background: priority==='urgent' ? 'rgba(239,68,68,0.05)' : 'var(--bg-surface)', cursor:'pointer', fontWeight:600, fontSize:'13px', color: priority==='urgent' ? '#EF4444' : 'var(--text-muted)', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
             <AlertTriangle size={14}/> Urgente
           </button>
         </div>
@@ -123,21 +123,21 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
       </div>
 
       {/* Histórico */}
-      <h4 style={{ fontSize:'14px', fontWeight:700, marginBottom:'12px', color:'#64748B', display:'flex', alignItems:'center', gap:'8px' }}>
+      <h4 style={{ fontSize:'14px', fontWeight:700, marginBottom:'12px', color:'var(--text-muted)', display:'flex', alignItems:'center', gap:'8px' }}>
         <Clock size={14}/> Mensagens Enviadas ({messages.length})
       </h4>
-      {loading ? <p style={{ textAlign:'center', color:'#64748B', padding:'20px' }}>Carregando...</p> : (
+      {loading ? <p style={{ textAlign:'center', color:'var(--text-muted)', padding:'20px' }}>Carregando...</p> : (
         <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
           {messages.map(m => (
-            <div key={m.id} style={{ background:'#FFF', border:'1px solid #E2E8F0', borderRadius:'14px', padding:'14px 16px' }}>
+            <div key={m.id} style={{ background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', borderRadius:'14px', padding:'14px 16px' }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px' }}>
                 <span style={{ fontWeight:700, fontSize:'14px', display:'flex', alignItems:'center', gap:'6px' }}>
                   {m.priority === 'urgent' && <AlertTriangle size={14} color="#EF4444"/>}
                   {m.title}
                 </span>
-                <span style={{ fontSize:'11px', color:'#64748B' }}>{fmt(m.createdAt)}</span>
+                <span style={{ fontSize:'11px', color:'var(--text-muted)' }}>{fmt(m.createdAt)}</span>
               </div>
-              <p style={{ fontSize:'13px', color:'#475569', margin:0, lineHeight:1.6 }}>{m.body}</p>
+              <p style={{ fontSize:'13px', color:'var(--text-main)', margin:0, lineHeight:1.6 }}>{m.body}</p>
               {m.readBy && m.readBy.length > 0 && (
                 <div style={{ marginTop:'8px', fontSize:'11px', color:'#10B981', display:'flex', alignItems:'center', gap:'4px' }}>
                   <Users size={11}/> Lido por {m.readBy.length} morador{m.readBy.length !== 1 ? 'es' : ''}
@@ -145,7 +145,7 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
               )}
             </div>
           ))}
-          {messages.length === 0 && <p style={{ textAlign:'center', color:'#94A3B8', padding:'24px', fontSize:'13px' }}>Nenhuma mensagem enviada ainda.</p>}
+          {messages.length === 0 && <p style={{ textAlign:'center', color:'var(--text-muted)', padding:'24px', fontSize:'13px' }}>Nenhuma mensagem enviada ainda.</p>}
         </div>
       )}
     </div>

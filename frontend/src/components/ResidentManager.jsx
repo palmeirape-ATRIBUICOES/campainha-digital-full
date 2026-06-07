@@ -103,7 +103,7 @@ export default function ResidentManager({ propertyId, property, adminEmail, onRe
   };
 
   const tabBtn = (key, label, icon) => (
-    <button onClick={() => setTab(key)} style={{ flex:1, padding:'12px', borderRadius:'10px', border:'none', cursor:'pointer', fontWeight:700, fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', background: tab===key ? '#3B82F6' : '#F1F5F9', color: tab===key ? '#fff' : '#64748B', transition:'all 0.2s' }}>
+    <button onClick={() => setTab(key)} style={{ flex:1, padding:'12px', borderRadius:'10px', border:'none', cursor:'pointer', fontWeight:700, fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', background: tab===key ? '#3B82F6' : 'var(--bg-deep)', color: tab===key ? '#fff' : 'var(--text-muted)', transition:'all 0.2s' }}>
       {icon} {label}
     </button>
   );
@@ -225,21 +225,21 @@ export default function ResidentManager({ propertyId, property, adminEmail, onRe
       {/* Porteiro */}
       {tab === 'doorman' && (
         <div>
-          <p style={{ fontSize:'12px', color:'#64748B', marginBottom:'16px' }}>Configure o e-mail do porteiro. Ele receberá um código de acesso para o painel da portaria.</p>
-          <div style={{ background:'#FFF', border:'1px solid #E2E8F0', borderRadius:'14px', padding:'20px' }}>
+          <p style={{ fontSize:'12px', color:'var(--text-muted)', marginBottom:'16px' }}>Configure o e-mail do porteiro. Ele receberá um código de acesso para o painel da portaria.</p>
+          <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', borderRadius:'14px', padding:'20px', color:'var(--text-main)' }}>
             <div style={{ marginBottom:'14px' }}>
-              <label style={{ fontSize:'11px', fontWeight:700, color:'#64748B', marginBottom:'6px', display:'block' }}>E-MAIL DO PORTEIRO</label>
+              <label style={{ fontSize:'11px', fontWeight:700, color:'var(--text-muted)', marginBottom:'6px', display:'block' }}>E-MAIL DO PORTEIRO</label>
               <div style={{ display:'flex', gap:'8px' }}>
-                <input type="email" placeholder="porteiro@email.com" value={doormanEmail} onChange={e => setDoormanEmail(e.target.value)} style={{ flex:1, padding:'12px', borderRadius:'10px', border:'1px solid #E2E8F0', fontSize:'14px', outline:'none', background:'#F8FAFC' }}/>
+                <input type="email" placeholder="porteiro@email.com" value={doormanEmail} onChange={e => setDoormanEmail(e.target.value)} style={{ flex:1, padding:'12px', borderRadius:'10px', border:'1px solid var(--border-subtle)', fontSize:'14px', outline:'none', background:'var(--bg-deep)', color:'var(--text-main)' }}/>
                 <button onClick={saveDoorman} disabled={saving} style={{ background: saved ? '#10B981' : '#3B82F6', color:'#fff', border:'none', padding:'12px 20px', borderRadius:'10px', fontWeight:700, fontSize:'13px', cursor:'pointer', transition:'all 0.2s' }}>
                   {saved ? '✓ Salvo' : saving ? '...' : 'Salvar'}
                 </button>
               </div>
             </div>
             {property?.doormanCode && (
-              <div style={{ background:'#F8FAFC', padding:'12px', borderRadius:'10px', border:'1px solid #E2E8F0', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ background:'var(--bg-deep)', padding:'12px', borderRadius:'10px', border:'1px solid var(--border-subtle)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                 <div>
-                  <span style={{ fontSize:'11px', color:'#64748B', fontWeight:600 }}>CÓDIGO DO PORTEIRO</span>
+                  <span style={{ fontSize:'11px', color:'var(--text-muted)', fontWeight:600 }}>CÓDIGO DO PORTEIRO</span>
                   <div style={{ fontSize:'18px', fontWeight:900, color:'#3B82F6', letterSpacing:'3px', fontFamily:'monospace' }}>{property.doormanCode}</div>
                 </div>
                 <div style={{ display:'flex', gap:'6px' }}>
