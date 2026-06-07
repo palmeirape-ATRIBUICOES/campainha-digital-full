@@ -475,6 +475,14 @@ const PrintablePlate = React.forwardRef(({
       break;
   }
 
+  // Se plateCorners for 'straight', forçar cantos retos (borderRadius = 0)
+  if (style.plateCorners === 'straight') {
+    containerStyle.borderRadius = '0px';
+    if (innerContainerStyle) {
+      innerContainerStyle.borderRadius = '0px';
+    }
+  }
+
   // Override template color defaults if the user has explicitly selected a custom logo color
   if (style.logoColor && style.logoColor.trim() !== '') {
     logoTextColor = style.logoColor;

@@ -2078,15 +2078,29 @@ export default function MasterAdminDashboard() {
 
                   {/* 7. CUSTOM BORDERS */}
                   <div style={{ padding: '16px', background: 'var(--bg-deep)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                      <input 
-                        type="checkbox" 
-                        id="showBorder" 
-                        checked={plateStyle.showBorder} 
-                        onChange={e => setPlateStyle({ ...plateStyle, showBorder: e.target.checked })}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                      />
-                      <label htmlFor="showBorder" style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-main)', cursor: 'pointer' }}>7. EXIBIR BORDA NA PLACA</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input 
+                          type="checkbox" 
+                          id="showBorder" 
+                          checked={plateStyle.showBorder} 
+                          onChange={e => setPlateStyle({ ...plateStyle, showBorder: e.target.checked })}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        />
+                        <label htmlFor="showBorder" style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-main)', cursor: 'pointer' }}>7. EXIBIR BORDA NA PLACA</label>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Cantos da Placa:</label>
+                        <select
+                          style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
+                          value={plateStyle.plateCorners || 'rounded'}
+                          onChange={e => setPlateStyle({ ...plateStyle, plateCorners: e.target.value })}
+                        >
+                          <option value="rounded">Arredondados</option>
+                          <option value="straight">Retos</option>
+                        </select>
+                      </div>
                     </div>
 
                     {plateStyle.showBorder && (
