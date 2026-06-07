@@ -59,6 +59,8 @@ model User {
   sentFamilyMessages      FamilyMessage[] @relation("FamilyMessageSender")
   receivedFamilyMessages  FamilyMessage[] @relation("FamilyMessageReceiver")
   
+  photo                   String?   // Foto de perfil do morador (Base64)
+
   // Assinaturas de Push Notification (um por aparelho)
   pushSubscriptions PushSubscription[]
 }
@@ -168,6 +170,12 @@ model Message {
   priority        String   @default("normal")
   senderId        String
   createdAt       DateTime @default(now())
+
+  // Segmentação de destinatários e mídias
+  targetType      String   @default("all") // "all" | "block" | "unit" | "resident"
+  targetValue     String?  // Nome do bloco, ID da unidade ou ID do morador
+  mediaUrl        String?  // String Base64 da foto ou vídeo
+  mediaType       String?  // "image" | "video"
 }
 
 model MailboxMessage {

@@ -58,7 +58,10 @@ export default function MessagesPanel({ messages, unreadCount, onClear }) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                  <span style={{ fontWeight: 700, fontSize: '13px', color: '#1E293B' }}>{m.title}</span>
+                  <span style={{ fontWeight: 700, fontSize: '13px', color: '#1E293B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {m.title}
+                    {m.mediaUrl && <span style={{ fontSize: '9px', color: '#3B82F6', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '2px', background: '#EFF6FF', padding: '1px 5px', borderRadius: '4px', border: '0.5px solid rgba(59,130,246,0.15)' }}>📎 Anexo</span>}
+                  </span>
                   <span style={{ fontSize: '10px', color: '#94A3B8', whiteSpace: 'nowrap', marginLeft: '8px' }}>{fmt(m.createdAt)}</span>
                 </div>
                 <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.5,
@@ -78,13 +81,24 @@ export default function MessagesPanel({ messages, unreadCount, onClear }) {
       {selected !== null && messages[selected] && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', padding: '0' }}
           onClick={() => setSelected(null)}>
-          <div style={{ background: '#FFF', borderRadius: '20px 20px 0 0', padding: '24px', width: '100%', maxHeight: '70vh', overflow: 'auto' }}
+          <div style={{ background: '#FFF', borderRadius: '20px 20px 0 0', padding: '24px', width: '100%', maxHeight: '75vh', overflow: 'auto' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
               <h3 style={{ fontWeight: 800, fontSize: '16px', margin: 0 }}>{messages[selected].title}</h3>
               <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20}/></button>
             </div>
-            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, margin: '0 0 8px' }}>{messages[selected].body}</p>
+            
+            {messages[selected].mediaUrl && (
+              <div style={{ marginBottom: '16px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E2E8F0', maxHeight: '240px', display: 'flex', justifyContent: 'center', background: '#F8FAFC' }}>
+                {messages[selected].mediaType === 'video' ? (
+                  <video src={messages[selected].mediaUrl} controls style={{ maxWidth: '100%', maxHeight: '240px', objectFit: 'contain' }} />
+                ) : (
+                  <img src={messages[selected].mediaUrl} alt="Anexo" style={{ maxWidth: '100%', maxHeight: '240px', objectFit: 'contain' }} />
+                )}
+              </div>
+            )}
+
+            <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, margin: '0 0 12px' }}>{messages[selected].body}</p>
             <p style={{ fontSize: '11px', color: '#94A3B8', margin: 0 }}>{fmt(messages[selected].createdAt)}</p>
           </div>
         </div>

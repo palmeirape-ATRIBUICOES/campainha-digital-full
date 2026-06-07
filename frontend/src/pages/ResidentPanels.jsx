@@ -177,6 +177,8 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
   const [showScanner, setShowScanner] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const printRef = useRef(null);
+  const [photo, setPhoto] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     // Buscar configurações do usuário do backend
@@ -197,6 +199,7 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
         setQuietEnd(data.quietModeEnd || '07:00');
         setClientCode(data.clientCode || '');
         setPlateCode(data.plateCode || '');
+        setPhoto(data.photo || '');
         
         const uName = data.unitName || data.propertyName || '';
         if (uName) {
@@ -214,6 +217,28 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
         }
       }
     } catch {}
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('A imagem é muito grande. O limite máximo é de 10MB.');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setPhoto(event.target.result);
+      setUploadingPhoto(false);
+    };
+    reader.onerror = () => {
+      alert('Erro ao ler a imagem.');
+      setUploadingPhoto(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const loadQrCode = async (code, isPlate) => {
@@ -318,12 +343,15 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
           intercomEnabled: intercomEnabled,
           quietModeStart: quietStart, 
           quietModeEnd: quietEnd,
-          propertyName: unitName
+          propertyName: unitName,
+          photo: photo
         })
       });
       if (res.ok) {
+        localStorage.setItem('residentUserPhoto', photo);
         onSave();
         alert('Configurações salvas!');
+        window.location.reload();
       } else {
         alert('Erro ao salvar as configurações.');
       }
@@ -343,6 +371,30 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
   return (
     <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
+      {/* Foto de Perfil */}
+      <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: '#FFF', borderRadius: '20px', padding: '24px', border: '1px solid #E2E8F0' }}>
+        <div style={{ position: 'relative', width: '90px', height: '90px' }}>
+          {photo ? (
+            <img src={photo} alt="Foto de perfil" style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #3B82F6', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+          ) : (
+            <div style={{ width: '90px', height: '90px', borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', border: '1px solid #E2E8F0' }}>
+              <User size={44} />
+            </div>
+          )}
+          <input type="file" accept="image/*" id="profile-photo-upload" onChange={handlePhotoChange} style={{ display: 'none' }} />
+          <label htmlFor="profile-photo-upload" style={{ position: 'absolute', bottom: 0, right: 0, background: '#3B82F6', color: '#FFF', width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #FFF', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+            <Camera size={14} />
+          </label>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Sua Foto de Perfil</span>
+          <p style={{ fontSize: '11px', color: '#64748B', margin: '4px 0 0 0' }}>Toque no ícone azul para alterar</p>
+          {photo && (
+            <button onClick={() => setPhoto('')} style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '11px', fontWeight: 700, cursor: 'pointer', marginTop: '6px' }}>Remover Foto</button>
+          )}
+        </div>
+      </section>
+
       {/* Horário de Funcionamento */}
       <section>
         <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>

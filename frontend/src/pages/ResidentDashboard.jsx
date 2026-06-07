@@ -106,6 +106,7 @@ export default function ResidentDashboard() {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [userContact, setUserContact] = useState('');
+  const [userPhoto, setUserPhoto] = useState(() => localStorage.getItem('residentUserPhoto') || '');
   const [trialEndsAt, setTrialEndsAt] = useState(null);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [visitorOrPackageName, setVisitorOrPackageName] = useState('');
@@ -423,7 +424,7 @@ export default function ResidentDashboard() {
         const isVila = localStorage.getItem('residentIsVila') === 'true';
         const url = isVila
           ? `${API}/api/vila/${currentPropId}/messages?unitId=${savedUnitId || localStorage.getItem('residentUnitId') || ''}`
-          : `${API}/api/properties/${currentPropId}/messages`;
+          : `${API}/api/properties/${currentPropId}/messages?unitId=${savedUnitId || localStorage.getItem('residentUnitId') || ''}&userId=${localStorage.getItem('cd_user_id') || ''}`;
 
         const res = await fetch(url);
         if (res.ok) {
@@ -493,6 +494,11 @@ export default function ResidentDashboard() {
           }
           if (data.units?.[0]?.id) {
             localStorage.setItem('residentUnitId', data.units[0].id);
+            localStorage.setItem('residentUnitBlock', data.units[0].block || '');
+          }
+          if (data.photo !== undefined) {
+            localStorage.setItem('residentUserPhoto', data.photo || '');
+            setUserPhoto(data.photo || '');
           }
           fetchMessages();
           setUserContact(data.email || data.phone || data.clientCode || data.plateCode || '');
@@ -634,6 +640,23 @@ export default function ResidentDashboard() {
 
     // Receber mensagens broadcast do condomínio
     s.on('broadcast_message', (msg) => {
+      const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
+      const currentUserId = localStorage.getItem('cd_user_id');
+      const currentUnitBlock = localStorage.getItem('residentUnitBlock') || '';
+
+      if (msg.targetType && msg.targetType !== 'all') {
+        let isTarget = false;
+        if (msg.targetType === 'unit' && msg.targetValue === currentUnitId) {
+          isTarget = true;
+        } else if (msg.targetType === 'resident' && msg.targetValue === currentUserId) {
+          isTarget = true;
+        } else if (msg.targetType === 'block' && msg.targetValue && currentUnitBlock && 
+                   msg.targetValue.trim().toLowerCase() === currentUnitBlock.trim().toLowerCase()) {
+          isTarget = true;
+        }
+        if (!isTarget) return;
+      }
+
       setBroadcastMessages(prev => [msg, ...prev]);
       setUnreadCount(prev => prev + 1);
       if ('Notification' in window && Notification.permission === 'granted') {
@@ -1424,9 +1447,23 @@ export default function ResidentDashboard() {
         style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 1000, opacity: showMenu ? 1 : 0, visibility: showMenu ? 'visible' : 'hidden', transition: 'all 0.3s' }} 
       />
       <div style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '280px', background: '#FFF', zIndex: 1001, transform: showMenu ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)', padding: '32px 24px', display: 'flex', flexDirection: 'column', boxShadow: '8px 0 32px rgba(0,0,0,0.1)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <Logo size={32} />
-          <button onClick={() => setShowMenu(false)} style={{ background: '#F1F5F9', border: 'none', padding: '8px', borderRadius: '12px', cursor: 'pointer' }}><Settings size={20} color="#64748B" /></button>
+          <button onClick={() => setShowMenu(false)} style={{ background: '#F1F5F9', border: 'none', padding: '8px', borderRadius: '12px', cursor: 'pointer' }}><X size={20} color="#64748B" /></button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid #F1F5F9', marginBottom: '20px' }}>
+          {userPhoto ? (
+            <img src={userPhoto} alt="Perfil" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #3B82F6', flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', border: '1px solid #E2E8F0', flexShrink: 0 }}>
+              <User size={24} />
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{unitName}</span>
+            <span style={{ fontSize: '11px', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userContact}</span>
+          </div>
         </div>
         
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>

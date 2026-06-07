@@ -1358,9 +1358,10 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
         trialEndsAt: true,
         isHouseResident: true,
         isCondoResident: true,
+        photo: true,
         propertiesManaged: { select: { id: true, name: true, isVila: true } },
         propertiesVilaAdmin: { select: { id: true, name: true, isVila: true } },
-        units: { select: { id: true, name: true, propertyId: true, property: { select: { name: true, isVila: true } } } }
+        units: { select: { id: true, name: true, block: true, propertyId: true, property: { select: { name: true, isVila: true } } } }
       }
     });
     
@@ -1392,11 +1393,14 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
 
 app.put('/api/user/settings', authenticate, async (req, res) => {
   try {
-    const { doorbellEnabled, intercomEnabled, quietModeStart, quietModeEnd, generateClientCode, propertyName } = req.body;
+    const { doorbellEnabled, intercomEnabled, quietModeStart, quietModeEnd, generateClientCode, propertyName, photo } = req.body;
     
     let data = { doorbellEnabled, quietModeStart, quietModeEnd };
     if (intercomEnabled !== undefined) {
       data.intercomEnabled = !!intercomEnabled;
+    }
+    if (photo !== undefined) {
+      data.photo = photo;
     }
     
     if (generateClientCode) {
@@ -3528,9 +3532,32 @@ app.get('/api/properties/:propertyId/online-status', async (req, res) => {
 // Buscar mensagens de comunicados de uma propriedade
 app.get('/api/properties/:propertyId/messages', async (req, res) => {
   const { propertyId } = req.params;
+  const { unitId, userId } = req.query;
+  
   try {
+    let block = null;
+    if (unitId) {
+      const unit = await prisma.unit.findUnique({
+        where: { id: unitId }
+      });
+      if (unit) {
+        block = unit.block;
+      }
+    }
+
+    const where = { propertyId };
+    if (unitId || userId) {
+      where.OR = [
+        { targetType: 'all' },
+        { targetType: null },
+        ...(block ? [{ targetType: 'block', targetValue: { equals: block, mode: 'insensitive' } }] : []),
+        ...(unitId ? [{ targetType: 'unit', targetValue: unitId }] : []),
+        ...(userId ? [{ targetType: 'resident', targetValue: userId }] : [])
+      ];
+    }
+
     const messages = await prisma.message.findMany({
-      where: { propertyId },
+      where,
       orderBy: { createdAt: 'desc' }
     });
     res.json(messages);
@@ -3543,7 +3570,7 @@ app.get('/api/properties/:propertyId/messages', async (req, res) => {
 // Criar comunicado geral do condomínio e enviar push/socket
 app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
   const { propertyId } = req.params;
-  const { adminEmail, title, body, priority } = req.body;
+  const { adminEmail, title, body, priority, targetType, targetValue, mediaUrl, mediaType } = req.body;
   
   if (!body || !body.trim()) {
     return res.status(400).json({ error: 'O corpo da mensagem é obrigatório.' });
@@ -3564,7 +3591,11 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
         title: title || 'Aviso do Condomínio',
         body: body.trim(),
         priority: priority || 'normal',
-        senderId: adminEmail || 'Admin'
+        senderId: adminEmail || 'Admin',
+        targetType: targetType || 'all',
+        targetValue: targetValue || null,
+        mediaUrl: mediaUrl || null,
+        mediaType: mediaType || null
       }
     });
     
@@ -3579,9 +3610,24 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
     
     const residentIds = new Set();
     for (const unit of units) {
+      let matches = false;
+      if (!targetType || targetType === 'all') {
+        matches = true;
+      } else if (targetType === 'block' && targetValue && unit.block) {
+        matches = unit.block.trim().toLowerCase() === targetValue.trim().toLowerCase();
+      } else if (targetType === 'unit' && targetValue) {
+        matches = unit.id === targetValue;
+      }
+      
       for (const resident of unit.residents) {
-        if (!resident.trialEndsAt || new Date(resident.trialEndsAt) >= new Date()) {
-          residentIds.add(resident.id);
+        let resMatches = matches;
+        if (targetType === 'resident' && targetValue) {
+          resMatches = resident.id === targetValue;
+        }
+        if (resMatches) {
+          if (!resident.trialEndsAt || new Date(resident.trialEndsAt) >= new Date()) {
+            residentIds.add(resident.id);
+          }
         }
       }
     }

@@ -152,9 +152,18 @@ export default function ResidentManager({ propertyId, property, adminEmail, onRe
                       <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
                         {residentsList.map(res => (
                           <div key={res.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'var(--bg-deep)', padding:'10px 14px', borderRadius:'10px', border:'1px solid var(--border-subtle)' }}>
-                            <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
-                              <span style={{ fontSize:'13px', fontWeight:700, color:'var(--text-main)' }}>{res.name}</span>
-                              <span style={{ fontSize:'11px', color:'var(--text-muted)' }}>{res.email || 'Cadastrado via Código Único'}</span>
+                            <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+                              {res.photo ? (
+                                <img src={res.photo} alt={res.name} style={{ width:'36px', height:'36px', borderRadius:'50%', objectFit:'cover', border:'1.5px solid #3B82F6', flexShrink: 0 }} />
+                              ) : (
+                                <div style={{ width:'36px', height:'36px', borderRadius:'50%', background:'var(--border-subtle)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:700, color:'var(--text-muted)', border:'1px solid var(--border-subtle)', flexShrink: 0 }}>
+                                  {res.name.charAt(0).toUpperCase()}
+                                </div>
+                              )}
+                              <div style={{ display:'flex', flexDirection:'column', gap:'2px' }}>
+                                <span style={{ fontSize:'13px', fontWeight:700, color:'var(--text-main)' }}>{res.name}</span>
+                                <span style={{ fontSize:'11px', color:'var(--text-muted)' }}>{res.email || 'Cadastrado via Código Único'}</span>
+                              </div>
                             </div>
                             <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
                               <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end' }}>
