@@ -6,7 +6,6 @@ import Logo from '../components/Logo';
 import UnitManager from '../components/UnitManager';
 import BroadcastPanel from '../components/BroadcastPanel';
 import ResidentManager from '../components/ResidentManager';
-import PlateProductionPanel from '../components/PlateProductionPanel';
 import html2canvas from 'html2canvas';
 import PrintablePlate from '../components/PrintablePlate';
 
@@ -791,7 +790,7 @@ export default function AdminPanel() {
         setMailboxMessages(data);
       }
     } catch (e) {
-      console.error('Mailbox fetch failed:', e);
+      console.warn('Mailbox fetch failed:', e);
     } finally {
       setLoadingMailbox(false);
     }
@@ -806,7 +805,7 @@ export default function AdminPanel() {
         setActiveAlerts(data);
       }
     } catch (e) {
-      console.error('Alerts fetch failed:', e);
+      console.warn('Alerts fetch failed:', e);
     }
   };
 
@@ -819,7 +818,7 @@ export default function AdminPanel() {
         setOnlineStatus(data);
       }
     } catch (e) {
-      console.error('Online status fetch failed:', e);
+      console.warn('Online status fetch failed:', e);
     }
   };
 
@@ -882,6 +881,7 @@ export default function AdminPanel() {
   // Polling automático para alertas de segurança e solicitações de portão na Grade Visual
   useEffect(() => {
     if (!selectedProperty) return;
+    if (activeTab !== 'control_panel') return;
     
     // Roda a cada 4 segundos se a aba ativa for o painel de controle
     const interval = setInterval(() => {
@@ -1227,93 +1227,219 @@ export default function AdminPanel() {
 
   // ── Dashboard Principal ────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', paddingBottom: '60px' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)' }}>
+      {/* Estilos específicos da Sidebar */}
+      <style>{`
+        .sidebar-btn-hover:hover {
+          background-color: rgba(255, 255, 255, 0.04) !important;
+          color: var(--text-main) !important;
+        }
+        .sidebar-btn-hover:hover svg {
+          color: var(--text-main) !important;
+        }
+      `}</style>
 
-
-      {/* Paywall removido - condomínios gerenciam unidades diretamente */}
-
-      <header style={{ background: 'var(--bg-surface-elevated)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {/* Sidebar Lateral */}
+      <aside style={{
+        width: '280px',
+        background: 'var(--bg-surface-elevated)',
+        borderRight: '1px solid var(--border-subtle)',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '24px',
+        boxSizing: 'border-box',
+        position: 'sticky',
+        top: 0,
+        height: '100vh',
+        zIndex: 50,
+        flexShrink: 0
+      }}>
+        {/* Header da Sidebar: Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
           <Logo size={32} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+
+        {/* Seletor Global de Propriedade */}
+        {properties.length > 0 && (
+          <div style={{ marginBottom: '28px' }}>
+            <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+              Propriedade Ativa
+            </label>
+            <select
+              value={selectedProperty || ''}
+              onChange={e => {
+                setSelectedProperty(e.target.value);
+                localStorage.setItem('cd_admin_propertyId', e.target.value);
+              }}
+              className="input-glass"
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '12px',
+                fontSize: '14px',
+                background: 'var(--bg-surface)',
+                color: 'var(--text-main)',
+                border: '1px solid var(--border-subtle)',
+                fontWeight: 700,
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+        )}
+
+        {/* Menu de Navegação Vertical */}
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, overflowY: 'auto' }}>
+          {[
+            { key: 'properties', label: 'Propriedades', icon: Home, desc: 'Gerencie placas físicas e downloads de QR Codes.' },
+            { key: 'units',      label: 'Unidades', icon: Building2, desc: 'Cadastre e edite os blocos, ruas e casas.' },
+            { key: 'people',     label: 'Pessoas / Moradores', icon: Users, desc: 'Gerencie e vincule moradores.' },
+            { key: 'mailbox',    label: 'Caixa Postal', icon: MessageCircle, desc: 'Mensagens enviadas pelos moradores.' },
+            { key: 'control_panel', label: 'Painel de Controle', icon: Zap, desc: 'Visualização interativa das unidades em tempo real.' },
+            { key: 'broadcast',  label: 'Comunicados', icon: Send, desc: 'Envie avisos gerais para todos.' },
+            { key: 'history',    label: 'Histórico', icon: Clock, desc: 'Lista de visitas completas.' }
+          ].filter(tab => {
+            const isDoorman = localStorage.getItem('cd_admin_role') === 'doorman';
+            if (isDoorman) {
+              return tab.key === 'control_panel';
+            }
+            const currentProp = properties.find(p => p.id === selectedProperty);
+            const isIndividual = currentProp ? currentProp.type === 'individual' : false;
+            if (isIndividual && ['units', 'people', 'broadcast', 'mailbox', 'control_panel'].includes(tab.key)) return false;
+            return true;
+          }).map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <HoverHelp key={tab.key} text={tab.desc} style={{ width: '100%' }}>
+                <button
+                  onClick={() => setActiveTab(tab.key)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: isActive ? 'var(--primary-glow)' : 'transparent',
+                    border: 'none',
+                    color: isActive ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    textAlign: 'left'
+                  }}
+                  className={isActive ? '' : 'sidebar-btn-hover'}
+                >
+                  <Icon size={18} color={isActive ? 'var(--primary)' : 'var(--text-muted)'} />
+                  <span>{tab.label}</span>
+                </button>
+              </HoverHelp>
+            );
+          })}
+        </nav>
+
+        {/* Rodapé da Sidebar: Modo Noturno, Usuário e Sair */}
+        <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '20px', marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Usuário logado */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)' }}>
+            <User size={16} />
+            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
+              {localStorage.getItem('cd_admin_name') || 'Administrador'}
+            </span>
+          </div>
+
           {/* Botão de Modo Noturno */}
-          <button onClick={() => setDarkMode(!darkMode)} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 12px', borderRadius: '100px', transition: 'all 0.2s' }}>
-            {darkMode ? <><Sun size={16} color="#F59E0B" /> Modo Claro</> : <><Moon size={16} color="#3B82F6" /> Modo Noturno</>}
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: 750,
+              color: 'var(--text-muted)',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
+          >
+            {darkMode ? (
+              <><Sun size={15} color="#F59E0B" /> <span>Modo Claro</span></>
+            ) : (
+              <><Moon size={15} color="#3B82F6" /> <span>Modo Noturno</span></>
+            )}
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', borderRight: '1px solid var(--border-subtle)', paddingRight: '12px' }}>
-            <span>👤 {localStorage.getItem('cd_admin_email') || localStorage.getItem('cd_admin_name') || 'Admin'}</span>
-          </div>
-
-          <button onClick={() => {
-            [
-              'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
-              'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
-              'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
-              'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
-              'cd_admin_name', 'cd_admin_password', 'cd_property_type'
-            ].forEach(k => localStorage.removeItem(k));
-            document.body.classList.remove('dark-theme');
-            navigate('/');
-          }} style={{ color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
-            <LogOut size={18} /> Sair
+          {/* Botão Sair */}
+          <button
+            onClick={() => {
+              [
+                'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+                'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+                'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+                'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+                'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+              ].forEach(k => localStorage.removeItem(k));
+              document.body.classList.remove('dark-theme');
+              navigate('/');
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: 750,
+              color: '#EF4444',
+              background: 'rgba(239,68,68,0.08)',
+              border: 'none',
+              cursor: 'pointer',
+              justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
+          >
+            <LogOut size={15} /> Sair
           </button>
         </div>
-      </header>
+      </aside>
 
-      {isDemoMode && (
-        <div style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)', color: '#FFF', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Zap size={20} color="#FFD700" style={{ animation: 'float 3s infinite' }} />
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>
-              ✨ <strong>Modo de Demonstração Ativo!</strong> Explore as abas acima para aprender a gerenciar sua vila/condomínio. Veja as dicas marcadas com 💡.
+      {/* Área Principal de Conteúdo */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Banner de Demonstração */}
+        {isDemoMode && (
+          <div style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)', color: '#FFF', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Zap size={16} color="#FFD700" />
+              <div style={{ fontSize: '13px', fontWeight: 600 }}>
+                <strong>Modo de Demonstração Ativo!</strong> Navegue pelas opções ao lado para testar o sistema.
+              </div>
             </div>
-          </div>
-          <button onClick={() => {
-            setIsDemoMode(false);
-            setProperties([]);
-            setSelectedProperty(null);
-            setMailboxMessages([]);
-            setActiveAlerts([]);
-            setOnboardingStep(null);
-            fetchProperties();
-          }} style={{ background: '#FFF', color: '#6D28D9', border: 'none', padding: '8px 16px', borderRadius: '100px', fontWeight: 750, fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', transition: 'all 0.2s' }}>
-            Sair da Demonstração
-          </button>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', padding: '0 24px', gap: '0', overflowX: 'auto' }}>
-        {[
-          { key: 'properties', label: '🏠 Propriedades', desc: 'Gerencie placas físicas e downloads de QR Codes.' },
-          { key: 'production', label: '🖨️ Produção de Placas', desc: 'Gere placas para impressão física (4 por folha A4).' },
-          { key: 'units',      label: '🏢 Unidades', desc: 'Cadastre e edite os blocos, ruas e casas da vila.' },
-          { key: 'people',     label: '👥 Pessoas', desc: 'Gerencie e vincule moradores aos códigos de acesso.' },
-          { key: 'mailbox',    label: '📬 Caixa Postal', desc: 'Veja as mensagens de suporte enviadas pelos moradores.' },
-          { key: 'control_panel', label: '🎮 Painel de Controle', desc: 'Visualização interativa das unidades em tempo real.' },
-          { key: 'broadcast',  label: '📢 Comunicados', desc: 'Envie avisos gerais para todos os moradores de uma vez.' },
-          { key: 'history',    label: '📋 Histórico', desc: 'Lista de visitas completas com foto e data/hora.' }
-        ].filter(tab => {
-          const isDoorman = localStorage.getItem('cd_admin_role') === 'doorman';
-          if (isDoorman) {
-            return tab.key === 'control_panel';
-          }
-          const currentProp = properties.find(p => p.id === selectedProperty);
-          const isIndividual = currentProp ? currentProp.type === 'individual' : false;
-          if (isIndividual && ['units', 'people', 'broadcast', 'mailbox', 'control_panel'].includes(tab.key)) return false;
-          return true;
-        }).map(tab => (
-          <HoverHelp key={tab.key} text={tab.desc}>
-            <button onClick={() => setActiveTab(tab.key)} style={{ padding: '14px 16px', background: 'none', border: 'none', borderBottom: activeTab === tab.key ? '2px solid var(--primary)' : '2px solid transparent', color: activeTab === tab.key ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
-              {tab.label}
+            <button onClick={() => {
+              setIsDemoMode(false);
+              setProperties([]);
+              setSelectedProperty(null);
+              setMailboxMessages([]);
+              setActiveAlerts([]);
+              setOnboardingStep(null);
+              fetchProperties();
+            }} style={{ background: '#FFF', color: '#6D28D9', border: 'none', padding: '6px 14px', borderRadius: '100px', fontWeight: 750, fontSize: '12px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+              Sair da Demo
             </button>
-          </HoverHelp>
-        ))}
-      </div>
+          </div>
+        )}
 
-      <main className="container fade-in" style={{ marginTop: '32px' }}>
+        <main style={{ padding: '32px 40px', flex: 1 }}>
 
         {/* Painel de Chamada Ativa WebRTC */}
         {activeCall && (
@@ -1725,10 +1851,7 @@ export default function AdminPanel() {
           </>
         )}
 
-        {/* ── ABA: PRODUCAO DE PLACAS ── */}
-        {activeTab === 'production' && (
-          <PlateProductionPanel />
-        )}
+
 
         {/* ── ABA: UNIDADES ── */}
         {activeTab === 'units' && selectedProperty && (
@@ -3181,6 +3304,7 @@ export default function AdminPanel() {
           </div>
         </div>
       )}
+      </div> {/* Closes main content column */}
     </div>
   );
 }
