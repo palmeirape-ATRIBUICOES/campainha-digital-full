@@ -21,15 +21,17 @@ const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'Cj-7L7Qzqfe3d_AxJ_KR
 webpush.setVapidDetails('mailto:admin@campainha.digital', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const { execSync } = require('child_process');
+let dbPushError = null;
 
 // Debug: Verificação de conexão com o banco de dados
 async function checkDatabaseConnection() {
   try {
     console.log('[DB] Sincronizando schema com banco de dados via prisma db push...');
-    execSync('npx prisma db push --skip-generate', { stdio: 'inherit' });
-    console.log('[DB] Sincronização do schema concluída!');
+    const output = execSync('npx prisma db push --skip-generate', { encoding: 'utf8' });
+    console.log('[DB] Sincronização do schema concluída:', output);
   } catch (pushErr) {
-    console.error('[DB] Erro ao rodar prisma db push:', pushErr.message);
+    dbPushError = (pushErr.stdout || '') + '\n' + (pushErr.stderr || '') + '\n' + pushErr.message;
+    console.error('[DB] Erro ao rodar prisma db push:', dbPushError);
   }
 
   try {
@@ -1731,7 +1733,12 @@ app.get('/api/properties', async (req, res) => {
     res.json(propsWithUrls);
   } catch (err) {
     console.error('Fetch properties managed error:', err);
-    res.status(500).json({ error: 'Erro ao buscar propriedades.', details: err.message, stack: err.stack });
+    res.status(500).json({ 
+      error: 'Erro ao buscar propriedades.', 
+      details: err.message, 
+      stack: err.stack,
+      dbPushError: dbPushError
+    });
   }
 });
 
