@@ -1638,7 +1638,7 @@ export default function ResidentDashboard() {
   const daysRemaining = trialEndsDate 
     ? Math.ceil((trialEndsDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
     : 0;
-  const isTrialExpiringSoon = trialEndsDate && daysRemaining >= 0 && daysRemaining <= 3 && !isTrialExpired;
+  const isTrialExpiringSoon = trialEndsDate && daysRemaining >= 0 && daysRemaining <= 15 && !isTrialExpired;
   const formattedExpiryDate = trialEndsDate ? trialEndsDate.toLocaleDateString('pt-BR') : '';
 
   if (!savedUnitId && !token) {
@@ -1916,20 +1916,6 @@ export default function ResidentDashboard() {
                 </div>
               )}
 
-              {trialEndsDate && !isTrialExpired && !isTrialExpiringSoon && (
-                <div style={{ width: '100%', maxWidth: '380px', background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', border: '1px solid #A7F3D0', borderRadius: '18px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.04)' }}>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <div style={{ background: '#10B981', color: '#FFF', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <ShieldCheck size={16} />
-                    </div>
-                    <div>
-                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#065F46', margin: 0 }}>Plano Premium Ativo</h4>
-                      <p style={{ fontSize: '11px', color: '#047857', margin: 0 }}>Válido até {formattedExpiryDate}</p>
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '3px 8px', borderRadius: '100px' }}>ANUAL</span>
-                </div>
-              )}
 
               {/* Novo Card de Perfil & Hub de Controle Unificado */}
               <div style={{ 
