@@ -537,6 +537,30 @@ export default function VisitorCall() {
               </div>
             </div>
           )}
+
+          {/* LGPD Compliance Warning Notice */}
+          <div style={{
+            marginTop: '24px',
+            padding: '16px',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '20px',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'flex-start',
+            textAlign: 'left',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+          }}>
+            <ShieldCheck size={20} color="var(--primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: 'var(--text-main)' }}>
+                Aviso de Privacidade (LGPD)
+              </p>
+              <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                Ao tocar a campainha digital, a sua imagem (câmera) e áudio serão transmitidos em tempo real para o morador para fins exclusivos de identificação e segurança de acesso.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -561,9 +585,25 @@ export default function VisitorCall() {
             </span>
           </div>
 
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
-            📷 Sua câmera está ativa para identificação.
-          </p>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            justifyContent: 'center',
+            padding: '12px 16px',
+            background: 'rgba(59, 130, 246, 0.05)',
+            border: '1px solid rgba(59, 130, 246, 0.15)',
+            borderRadius: '16px',
+            marginBottom: '24px',
+            fontSize: '12px',
+            color: 'var(--text-muted)',
+            textAlign: 'left'
+          }}>
+            <ShieldCheck size={18} color="var(--primary)" style={{ flexShrink: 0 }} />
+            <span>
+              <strong>LGPD:</strong> Câmera ativa exclusivamente para identificação do visitante e controle de acesso seguro.
+            </span>
+          </div>
 
           <button
             className="btn-secondary"
@@ -622,9 +662,28 @@ export default function VisitorCall() {
           <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '12px', color: '#F59E0B' }}>
             Morador Monitorando
           </h2>
-          <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '24px' }}>
+          <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '20px' }}>
             Sua câmera e áudio estão sendo transmitidos. Aguarde uma resposta.
           </p>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            justifyContent: 'center',
+            padding: '12px 16px',
+            background: 'rgba(245, 158, 11, 0.05)',
+            border: '1px solid rgba(245, 158, 11, 0.15)',
+            borderRadius: '16px',
+            marginBottom: '24px',
+            fontSize: '12px',
+            color: 'var(--text-muted)',
+            textAlign: 'left'
+          }}>
+            <ShieldCheck size={18} color="#F59E0B" style={{ flexShrink: 0 }} />
+            <span>
+              <strong>LGPD:</strong> Transmissão segura e em tempo real para fins de identificação patrimonial e residencial.
+            </span>
+          </div>
 
           <button
             className="btn-secondary"
