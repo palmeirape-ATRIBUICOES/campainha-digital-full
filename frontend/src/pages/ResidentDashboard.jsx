@@ -349,6 +349,94 @@ export default function ResidentDashboard() {
     }
   };
 
+  const toggleHomeSetting = async (field, value) => {
+    let updatedDoorbell = doorbellEnabled;
+    let updatedIntercom = intercomEnabled;
+    let updatedQuietStart = quietModeStart;
+    let updatedQuietEnd = quietModeEnd;
+    let updatedPhoto = userPhoto;
+
+    if (field === 'doorbellEnabled') {
+      setDoorbellEnabled(value);
+      updatedDoorbell = value;
+    } else if (field === 'intercomEnabled') {
+      setIntercomEnabled(value);
+      updatedIntercom = value;
+    } else if (field === 'quietModeStart') {
+      setQuietModeStart(value);
+      updatedQuietStart = value;
+    } else if (field === 'quietModeEnd') {
+      setQuietModeEnd(value);
+      updatedQuietEnd = value;
+    } else if (field === 'photo') {
+      setUserPhoto(value);
+      updatedPhoto = value;
+    }
+
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/user/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ 
+          doorbellEnabled: updatedDoorbell, 
+          intercomEnabled: updatedIntercom,
+          quietModeStart: updatedQuietStart, 
+          quietModeEnd: updatedQuietEnd,
+          photo: updatedPhoto
+        })
+      });
+      if (res.ok) {
+        if (field === 'photo') {
+          localStorage.setItem('residentUserPhoto', value);
+        }
+      } else {
+        console.error('Erro ao salvar configuração rápida no servidor.');
+      }
+    } catch (err) {
+      console.error('Erro de rede ao salvar configuração rápida.', err);
+    }
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 300;
+        const MAX_HEIGHT = 300;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        toggleHomeSetting('photo', compressedBase64);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -522,94 +610,6 @@ export default function ResidentDashboard() {
           }
         }
       } catch {}
-    };
-
-    const toggleHomeSetting = async (field, value) => {
-      let updatedDoorbell = doorbellEnabled;
-      let updatedIntercom = intercomEnabled;
-      let updatedQuietStart = quietModeStart;
-      let updatedQuietEnd = quietModeEnd;
-      let updatedPhoto = userPhoto;
-
-      if (field === 'doorbellEnabled') {
-        setDoorbellEnabled(value);
-        updatedDoorbell = value;
-      } else if (field === 'intercomEnabled') {
-        setIntercomEnabled(value);
-        updatedIntercom = value;
-      } else if (field === 'quietModeStart') {
-        setQuietModeStart(value);
-        updatedQuietStart = value;
-      } else if (field === 'quietModeEnd') {
-        setQuietModeEnd(value);
-        updatedQuietEnd = value;
-      } else if (field === 'photo') {
-        setUserPhoto(value);
-        updatedPhoto = value;
-      }
-
-      try {
-        const token = localStorage.getItem('cd_token');
-        const res = await fetch(`${API}/api/user/settings`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': token },
-          body: JSON.stringify({ 
-            doorbellEnabled: updatedDoorbell, 
-            intercomEnabled: updatedIntercom,
-            quietModeStart: updatedQuietStart, 
-            quietModeEnd: updatedQuietEnd,
-            photo: updatedPhoto
-          })
-        });
-        if (res.ok) {
-          if (field === 'photo') {
-            localStorage.setItem('residentUserPhoto', value);
-          }
-        } else {
-          console.error('Erro ao salvar configuração rápida no servidor.');
-        }
-      } catch (err) {
-        console.error('Erro de rede ao salvar configuração rápida.', err);
-      }
-    };
-
-    const handlePhotoUpload = async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 300;
-          const MAX_HEIGHT = 300;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-          toggleHomeSetting('photo', compressedBase64);
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
     };
 
     // Auto-healer: se o usuário já estiver logado mas não tiver o token de segurança na sessão

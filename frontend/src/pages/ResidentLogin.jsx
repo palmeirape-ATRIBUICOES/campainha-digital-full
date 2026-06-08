@@ -148,14 +148,14 @@ export default function ResidentLogin() {
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
-    const identifier = loginType === 'email' ? email : accessCode;
-    if (!identifier) return setError('Digite seu e-mail ou código para recuperar.');
+    const targetIdentifier = loginType === 'email' ? identifier : accessCode;
+    if (!targetIdentifier) return setError('Digite seu e-mail ou código para recuperar.');
     
     setLoading(true);
     try {
       const res = await fetch(`${API}/api/auth/forgot-password`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier })
+        body: JSON.stringify({ identifier: targetIdentifier })
       });
       const data = await res.json();
       if (res.ok) {
@@ -170,12 +170,12 @@ export default function ResidentLogin() {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    const identifier = email || accessCode;
+    const targetIdentifier = identifier || accessCode;
     setError(''); setLoading(true);
     try {
       const res = await fetch(`${API}/api/auth/reset-password`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, token: accessCode, newPassword: password })
+        body: JSON.stringify({ identifier: targetIdentifier, token: accessCode, newPassword: password })
       });
       const data = await res.json();
       if (res.ok) {
