@@ -3,225 +3,225 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id              String    @id @default(uuid())
-  
-  // Recuperação de senha
-  recoveryToken     String?   @unique
-  recoveryTokenExp  DateTime?
-
-  email           String?   @unique
-  phone           String?   @unique
-  password        String
-  name            String
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  isSuperAdmin    Boolean   @default(false)
-  isAdmin         Boolean   @default(false) 
-  isResident      Boolean   @default(false)
-  isDoorman       Boolean   @default(false)
-  isReseller      Boolean   @default(false)
-  isHouseResident Boolean   @default(false)
-  isCondoResident Boolean   @default(false)
-
-  // Morador dependente (criado pelo morador principal)
-  isDependent     Boolean   @default(false)
-  parentUserId    String?   // ID do morador principal que criou este dependente
-
-  // Admin de Vila
-  isVilaAdmin     Boolean   @default(false)
-  
-  propertiesManaged Property[] @relation("PropertyAdmin")
-  propertiesDoorman Property[] @relation("PropertyDoorman")
-  propertiesVilaAdmin Property[] @relation("PropertyVilaAdmin")
-  units             Unit[]     @relation("UnitResidents")
-  
-  doorbellEnabled   Boolean   @default(true)
-  intercomEnabled   Boolean   @default(true)
-  quietModeStart    String?   
-  quietModeEnd      String?   
-  
-  trialEndsAt       DateTime?
-  promoActive       Boolean   @default(false)
-
-  // Código único do cliente (gerado pelo master admin ou pelo próprio usuário)
-  clientCode        String?   @unique
-  // Código da placa pré-configurada (Opção 1: placa entregue pronta)
-  plateCode         String?   @unique
-
-  // Mensagens internas entre morador principal e dependentes
-  sentFamilyMessages      FamilyMessage[] @relation("FamilyMessageSender")
-  receivedFamilyMessages  FamilyMessage[] @relation("FamilyMessageReceiver")
-  
-  photo                   String?   // Foto de perfil do morador (Base64)
-
-  // Assinaturas de Push Notification (um por aparelho)
-  pushSubscriptions PushSubscription[]
+  id                                       String                    @id @default(uuid())
+  recoveryToken                            String?                   @unique
+  recoveryTokenExp                         DateTime?
+  email                                    String?                   @unique
+  phone                                    String?                   @unique
+  password                                 String
+  name                                     String
+  createdAt                                DateTime                  @default(now())
+  updatedAt                                DateTime                  @updatedAt
+  isSuperAdmin                             Boolean                   @default(false)
+  isAdmin                                  Boolean                   @default(false)
+  isResident                               Boolean                   @default(false)
+  isDoorman                                Boolean                   @default(false)
+  isReseller                               Boolean                   @default(false)
+  doorbellEnabled                          Boolean                   @default(true)
+  quietModeStart                           String?
+  quietModeEnd                             String?
+  trialEndsAt                              DateTime?
+  promoActive                              Boolean                   @default(false)
+  clientCode                               String?                   @unique
+  plateCode                                String?                   @unique
+  isCondoResident                          Boolean                   @default(false)
+  isHouseResident                          Boolean                   @default(false)
+  isDependent                              Boolean                   @default(false)
+  parentUserId                             String?
+  isVilaAdmin                              Boolean                   @default(false)
+  intercomEnabled                          Boolean                   @default(true)
+  ramal_sip                                String?
+  ramal_webrtc                             String?
+  senha_sip                                String?
+  role                                     String                    @default("MORADOR")
+  photo                                    String?                   // Foto de perfil do morador (Base64)
+  AnnouncementReadReceipt                  AnnouncementReadReceipt[]
+  AssemblyVote                             AssemblyVote[]
+  receivedFamilyMessages                   FamilyMessage[]           @relation("FamilyMessageReceiver")
+  sentFamilyMessages                       FamilyMessage[]           @relation("FamilyMessageSender")
+  FinancialAgreement                       FinancialAgreement[]
+  propertiesManaged                        Property[]                @relation("PropertyAdmin")
+  propertiesDoorman                        Property[]                @relation("PropertyDoorman")
+  propertiesVilaAdmin                      Property[]                @relation("PropertyVilaAdmin")
+  pushSubscriptions                        PushSubscription[]
+  TicketReply                              TicketReply[]
+  VoipCallLog_VoipCallLog_receiverIdToUser VoipCallLog[]             @relation("VoipCallLog_receiverIdToUser")
+  VoipCallLog_VoipCallLog_senderIdToUser   VoipCallLog[]             @relation("VoipCallLog_senderIdToUser")
+  units                                    Unit[]                    @relation("UnitResidents")
 }
 
 model FamilyMessage {
-  id          String   @id @default(uuid())
-  senderId    String
-  sender      User     @relation("FamilyMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  receiverId  String
-  receiver    User     @relation("FamilyMessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  content     String
-  read        Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  receiver   User     @relation("FamilyMessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  sender     User     @relation("FamilyMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
 }
-
 
 model PushSubscription {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   endpoint  String   @unique
   p256dh    String
   auth      String
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Property {
-  id              String    @id @default(uuid())
-  type            String    @default("house") 
-  name            String
-  
-  adminId         String?
-  admin           User?     @relation("PropertyAdmin", fields: [adminId], references: [id])
-  
-  doormanId       String?
-  doorman         User?     @relation("PropertyDoorman", fields: [doormanId], references: [id])
-  
-  clientName      String?
-  clientPhone     String?
-  clientDocument  String?
-  clientAddress   String?
-  companyName     String?
-  plan            String    @default("BASIC")
-
-  // ─── Geofence (raio de segurança do visitante) ──────────────────────────
-  geofenceEnabled Boolean   @default(false)
-  geofenceLat     Float?    // Latitude do imóvel (decimal)
-  geofenceLng     Float?    // Longitude do imóvel (decimal)
-  geofenceRadius  Int       @default(10) // Raio em metros (padrão: 10m)
-  subdomain       String?   @unique
-  
-  createdAt       DateTime  @default(now())
-  nextPaymentAt   DateTime
-  
-  // ─── Vila (conjunto de casas com um único QR code) ──────────────────────
-  isVila          Boolean   @default(false)
-  vilaHouseCount  Int       @default(0)    // Número de casas definido pelo admin
-  vilaAdminId     String?
-  vilaAdmin       User?     @relation("PropertyVilaAdmin", fields: [vilaAdminId], references: [id])
-
-  units           Unit[]
-  messages        Message[]
-  visitors        Visitor[]
-  mailboxMessages MailboxMessage[]
-  alerts          UnitAlert[]
-  connections     InternalConnection[]
-  vilaMessages    VilaMessage[]
+  id                String               @id @default(uuid())
+  type              String               @default("house")
+  name              String
+  adminId           String?
+  doormanId         String?
+  clientName        String?
+  clientPhone       String?
+  clientDocument    String?
+  clientAddress     String?
+  companyName       String?
+  plan              String               @default("BASIC")
+  createdAt         DateTime             @default(now())
+  nextPaymentAt     DateTime
+  subdomain         String?              @unique
+  geofenceEnabled   Boolean              @default(false)
+  geofenceLat       Float?
+  geofenceLng       Float?
+  geofenceRadius    Int                  @default(10)
+  isVila            Boolean              @default(false)
+  vilaAdminId       String?
+  vilaHouseCount    Int                  @default(0)
+  dominio_pbx       String?
+  Announcement      Announcement[]
+  Assembly          Assembly[]
+  BlockedDate       BlockedDate[]
+  CommonAreaBooking CommonAreaBooking[]
+  FinancialEntry    FinancialEntry[]
+  connections       InternalConnection[]
+  mailboxMessages   MailboxMessage[]
+  messages          Message[]
+  Package           Package[]
+  admin             User?                @relation("PropertyAdmin", fields: [adminId], references: [id])
+  doorman           User?                @relation("PropertyDoorman", fields: [doormanId], references: [id])
+  vilaAdmin         User?                @relation("PropertyVilaAdmin", fields: [vilaAdminId], references: [id])
+  Ticket            Ticket[]
+  units             Unit[]
+  alerts            UnitAlert[]
+  vilaMessages      VilaMessage[]
+  visitors          Visitor[]
 }
 
 model Unit {
-  id                  String     @id @default(uuid())
+  id                  String               @id @default(uuid())
   propertyId          String
-  property            Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   name                String
   block               String?
   street              String?
   number              String?
-  inviteCode          String?    @unique 
-  residents           User[]     @relation("UnitResidents")
-  visitors            Visitor[]
-  mailboxMessages     MailboxMessage[]
-  alerts              UnitAlert[]
-  sentConnections     InternalConnection[] @relation("SenderConnection")
+  inviteCode          String?              @unique
+  ramal_grupo         String?
+  AssemblyPresence    AssemblyPresence[]
+  AssemblyVote        AssemblyVote[]
+  CommonAreaBooking   CommonAreaBooking[]
+  FinancialAgreement  FinancialAgreement[]
+  FinancialEntry      FinancialEntry[]
   receivedConnections InternalConnection[] @relation("ReceiverConnection")
+  sentConnections     InternalConnection[] @relation("SenderConnection")
+  mailboxMessages     MailboxMessage[]
+  Package             Package[]
+  Ticket              Ticket[]
+  property            Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  alerts              UnitAlert[]
+  visitors            Visitor[]
   visitorCodes        VisitorCode[]
+  residents           User[]               @relation("UnitResidents")
 }
 
 model Visitor {
-  id              String   @id @default(uuid())
-  unitId          String
-  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  propertyId      String
-  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  photo           String?  
-  callerName      String   @default("Visitante")
-  status          String   @default("ringing") // "ringing" | "answered" | "missed" | "rejected"
-  duration        Int?     @default(0) // duração da chamada em segundos
-  timestamp       DateTime @default(now())
+  id         String   @id @default(uuid())
+  unitId     String
+  propertyId String
+  photo      String?
+  callerName String   @default("Visitante")
+  timestamp  DateTime @default(now())
+  status     String   @default("ringing")
+  duration   Int?     @default(0)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unit       Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
 }
 
 model Message {
-  id              String   @id @default(uuid())
-  propertyId      String
-  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  title           String
-  body            String   
-  priority        String   @default("normal")
-  senderId        String
-  createdAt       DateTime @default(now())
-
-  // Segmentação de destinatários e mídias
-  targetType      String   @default("all") // "all" | "block" | "unit" | "resident"
-  targetValue     String?  // Nome do bloco, ID da unidade ou ID do morador
-  mediaUrl        String?  // String Base64 da foto ou vídeo
-  mediaType       String?  // "image" | "video"
+  id               String   @id @default(uuid())
+  propertyId       String
+  title            String
+  body             String
+  priority         String   @default("normal")
+  senderId         String
+  createdAt        DateTime @default(now())
+  mediaUrl         String?
+  targetBlocks     String?
+  targetResidentId String?
+  targetType       String?  @default("all")
+  targetUnitId     String?
+  status           String   @default("active")
+  targetValue      String?  // Valor do bloco, unidade ou morador selecionado
+  mediaType        String?  // "image" | "video"
+  property         Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 }
 
 model MailboxMessage {
-  id              String   @id @default(uuid())
-  unitId          String
-  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  propertyId      String
-  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  subject         String
-  body            String
-  status          String   @default("pending") // "pending" | "read" | "resolved"
-  createdAt       DateTime @default(now())
+  id         String   @id @default(uuid())
+  unitId     String
+  propertyId String
+  subject    String
+  body       String
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  photo      String?
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unit       Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
 }
 
 model UnitAlert {
-  id              String   @id @default(uuid())
-  unitId          String
-  unit            Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  propertyId      String
-  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  type            String   @default("alert") // "release" | "message" | "alert" | "package"
-  title           String
-  description     String?
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  id          String   @id @default(uuid())
+  unitId      String
+  propertyId  String
+  type        String   @default("alert")
+  title       String
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  unit        Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
 }
 
 model InternalConnection {
-  id              String   @id @default(uuid())
-  propertyId      String
-  property        Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  senderUnitId    String
-  senderUnit      Unit     @relation("SenderConnection", fields: [senderUnitId], references: [id], onDelete: Cascade)
-  receiverUnitId  String
-  receiverUnit    Unit     @relation("ReceiverConnection", fields: [receiverUnitId], references: [id], onDelete: Cascade)
-  status          String   @default("pending") // "pending" | "connected" | "blocked"
-  createdAt       DateTime @default(now())
-  messages        InternalMessage[]
+  id             String            @id @default(uuid())
+  propertyId     String
+  senderUnitId   String
+  receiverUnitId String
+  status         String            @default("pending")
+  createdAt      DateTime          @default(now())
+  property       Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  receiverUnit   Unit              @relation("ReceiverConnection", fields: [receiverUnitId], references: [id], onDelete: Cascade)
+  senderUnit     Unit              @relation("SenderConnection", fields: [senderUnitId], references: [id], onDelete: Cascade)
+  messages       InternalMessage[]
 }
 
 model InternalMessage {
-  id              String   @id @default(uuid())
-  connectionId    String
-  connection      InternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  senderUnitId    String
-  body            String
-  createdAt       DateTime @default(now())
+  id           String             @id @default(uuid())
+  connectionId String
+  senderUnitId String
+  body         String
+  createdAt    DateTime           @default(now())
+  connection   InternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 }
 
 model SystemSetting {
@@ -234,23 +234,189 @@ model VisitorCode {
   id          String   @id @default(uuid())
   code        String   @unique
   unitId      String
-  unit        Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
   visitorName String
   expiresAt   DateTime
   createdAt   DateTime @default(now())
+  unit        Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
 }
 
-// Mensagens da Vila: Admin ↔ Moradores (individual ou broadcast)
 model VilaMessage {
   id          String   @id @default(uuid())
   propertyId  String
-  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   senderId    String
   senderName  String
-  unitId      String?  // null = broadcast para todos; non-null = mensagem individual
+  unitId      String?
   isFromAdmin Boolean  @default(false)
   content     String
   read        Boolean  @default(false)
   createdAt   DateTime @default(now())
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 }
 
+model Announcement {
+  id                      String                    @id
+  propertyId              String
+  title                   String
+  body                    String
+  priority                String                    @default("normal")
+  targetType              String                    @default("all")
+  mediaUrl                String?
+  createdAt               DateTime                  @default(now())
+  Property                Property                  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  AnnouncementReadReceipt AnnouncementReadReceipt[]
+}
+
+model AnnouncementReadReceipt {
+  id             String       @id
+  announcementId String
+  userId         String
+  readAt         DateTime     @default(now())
+  Announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  User           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Assembly {
+  id               String             @id
+  propertyId       String
+  title            String
+  description      String
+  pauta            String
+  date             DateTime
+  status           String             @default("CONVOCADO")
+  documents        String?
+  ataUrl           String?
+  createdAt        DateTime           @default(now())
+  Property         Property           @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  AssemblyPresence AssemblyPresence[]
+  AssemblyVote     AssemblyVote[]
+}
+
+model AssemblyPresence {
+  id         String   @id
+  assemblyId String
+  unitId     String
+  signedAt   DateTime @default(now())
+  Assembly   Assembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  Unit       Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+}
+
+model AssemblyVote {
+  id         String   @id
+  assemblyId String
+  unitId     String
+  userId     String
+  pautaIndex Int
+  option     String
+  votedAt    DateTime @default(now())
+  Assembly   Assembly @relation(fields: [assemblyId], references: [id], onDelete: Cascade)
+  Unit       Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BlockedDate {
+  id          String   @id
+  propertyId  String
+  areaName    String
+  blockedDate DateTime
+  reason      String?
+  createdAt   DateTime @default(now())
+  Property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model CommonAreaBooking {
+  id            String   @id
+  propertyId    String
+  unitId        String
+  areaName      String
+  bookingDate   DateTime
+  status        String   @default("approved")
+  createdAt     DateTime @default(now())
+  guestList     String?
+  payerName     String?
+  paymentAmount Float?
+  paymentMethod String?
+  userId        String?
+  Property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  Unit          Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+}
+
+model FinancialAgreement {
+  id           String   @id
+  unitId       String
+  userId       String
+  totalAmount  Float
+  installments Int
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  Unit         Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FinancialEntry {
+  id           String    @id
+  propertyId   String
+  unitId       String
+  value        Float
+  dueDate      DateTime
+  paidDate     DateTime?
+  category     String
+  status       String    @default("PENDENTE")
+  comprovante  String?
+  barcode      String?
+  pixCopyPaste String?
+  createdAt    DateTime  @default(now())
+  Property     Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  Unit         Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+}
+
+model Package {
+  id          String    @id
+  propertyId  String
+  unitId      String
+  carrier     String
+  description String?
+  photoUrl    String?
+  receivedAt  DateTime  @default(now())
+  withdrawnAt DateTime?
+  signature   String?
+  createdAt   DateTime  @default(now())
+  Property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  Unit        Unit      @relation(fields: [unitId], references: [id], onDelete: Cascade)
+}
+
+model Ticket {
+  id          String        @id
+  propertyId  String
+  unitId      String
+  category    String
+  subject     String
+  body        String
+  priority    String        @default("MEDIUM")
+  status      String        @default("ABERTO")
+  createdAt   DateTime      @default(now())
+  Property    Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  Unit        Unit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  TicketReply TicketReply[]
+}
+
+model TicketReply {
+  id        String   @id
+  ticketId  String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+  Ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VoipCallLog {
+  id                                String   @id
+  senderId                          String?
+  receiverId                        String?
+  callerName                        String   @default("Interfone")
+  status                            String   @default("ringing")
+  duration                          Int      @default(0)
+  createdAt                         DateTime @default(now())
+  User_VoipCallLog_receiverIdToUser User?    @relation("VoipCallLog_receiverIdToUser", fields: [receiverId], references: [id])
+  User_VoipCallLog_senderIdToUser   User?    @relation("VoipCallLog_senderIdToUser", fields: [senderId], references: [id])
+}

@@ -26,12 +26,12 @@ let dbPushError = null;
 // Debug: Verificação de conexão com o banco de dados
 async function checkDatabaseConnection() {
   try {
-    console.log('[DB] Executando npx prisma db pull...');
-    const output = execSync('npx prisma db pull', { encoding: 'utf8' });
-    console.log('[DB] Pull concluído:', output);
-  } catch (pullErr) {
-    dbPushError = (pullErr.stdout || '') + '\n' + (pullErr.stderr || '') + '\n' + pullErr.message;
-    console.error('[DB] Erro ao rodar prisma db pull:', dbPushError);
+    console.log('[DB] Sincronizando schema com banco de dados via prisma db push...');
+    const output = execSync('npx prisma db push --skip-generate', { encoding: 'utf8' });
+    console.log('[DB] Sincronização do schema concluída:', output);
+  } catch (pushErr) {
+    dbPushError = (pushErr.stdout || '') + '\n' + (pushErr.stderr || '') + '\n' + pushErr.message;
+    console.error('[DB] Erro ao rodar prisma db push:', dbPushError);
   }
 
   try {
@@ -1643,11 +1643,128 @@ app.get('/api/visitors/by-user/:userId', async (req, res) => {
 
 // ─── Propriedades / Unidades APIs ─────────────────────────────────────────────
 
-// Buscar todas as propriedades de um administrador (por e-mail) (TEMPORÁRIO DIAGNÓSTICO)
+// Buscar todas as propriedades de um administrador (por e-mail)
 app.get('/api/properties', async (req, res) => {
   try {
-    const schemaContent = fs.readFileSync(path.join(__dirname, 'prisma/schema.prisma'), 'utf8');
-    res.json({ schema: schemaContent, dbPushError });
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: 'E-mail do administrador é obrigatório.' });
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        units: {
+          include: {
+            property: {
+              include: {
+                doorman: true,
+                units: {
+                  orderBy: { name: 'asc' },
+                  include: {
+                    residents: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        propertiesManaged: {
+          include: {
+            doorman: true,
+            units: {
+              orderBy: { name: 'asc' },
+              include: {
+                residents: true
+              }
+            }
+          }
+        },
+        propertiesDoorman: {
+          include: {
+            doorman: true,
+            units: {
+              orderBy: { name: 'asc' },
+              include: {
+                residents: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!user) return res.status(404).json({ error: 'Administrador não encontrado.' });
+
+    // Injeta a url e qrCodeUrl dinamicamente para o frontend ler perfeitamente
+    let frontendUrl = process.env.FRONTEND_URL || 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    
+    // Corrige automaticamente se o FRONTEND_URL de produção foi configurado sem o subdiretório do GitHub Pages
+    if (frontendUrl.includes('palmeirape-atribuicoes.github.io') && !frontendUrl.includes('campainha-digital-full')) {
+      frontendUrl = 'https://palmeirape-atribuicoes.github.io/campainha-digital-full';
+    }
+
+    const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+
+    let propertiesList = [...user.propertiesManaged];
+    if (user.propertiesDoorman && user.propertiesDoorman.length > 0) {
+      propertiesList = [...propertiesList, ...user.propertiesDoorman];
+    }
+    if (propertiesList.length === 0 && user.units && user.units.length > 0 && user.units[0].property) {
+      propertiesList.push(user.units[0].property);
+    }
+
+    const propsWithUrls = propertiesList.map(p => {
+      const url = `${frontendUrl}/#/chamada/${p.id}`;
+
+      // Transforma cada unit.inviteCode em accessCode para compatibilidade com o frontend
+      const unitsWithAccess = p.units.map(u => ({
+        ...u,
+        accessCode: u.inviteCode
+      }));
+      return {
+        ...p,
+        url,
+        qrCodeUrl: `${backendUrl}/api/qrcode?text=${encodeURIComponent(url)}`,
+        units: unitsWithAccess,
+        doormanEmail: p.doorman?.email || null,
+        doormanCode: p.doorman?.clientCode || null
+      };
+    });
+
+    res.json(propsWithUrls);
+  } catch (err) {
+    console.error('Fetch properties managed error:', err);
+    res.status(500).json({ error: 'Erro ao buscar propriedades.', details: err.message, stack: err.stack });
+  }
+});
+
+// Endpoint diagnóstico para buscar o condomínio Liber e o usuário morado1@hotmail.com
+app.get('/api/diagnose-liber', async (req, res) => {
+  try {
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: 'morado1@hotmail.com', mode: 'insensitive' } },
+      include: {
+        units: {
+          include: {
+            property: true
+          }
+        }
+      }
+    });
+
+    const allProperties = await prisma.property.findMany({
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        adminId: true,
+        createdAt: true
+      }
+    });
+
+    res.json({
+      user,
+      allProperties
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
