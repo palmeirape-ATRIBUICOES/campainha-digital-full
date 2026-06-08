@@ -539,28 +539,19 @@ export default function VisitorCall() {
           )}
 
           {/* LGPD Compliance Warning Notice */}
-          <div style={{
-            marginTop: '24px',
-            padding: '16px',
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '20px',
-            display: 'flex',
-            gap: '12px',
-            alignItems: 'flex-start',
-            textAlign: 'left',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+          <p style={{
+            marginTop: '32px',
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            textAlign: 'center',
+            lineHeight: '1.4',
+            maxWidth: '320px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            opacity: 0.65
           }}>
-            <ShieldCheck size={20} color="var(--primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div>
-              <p style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: 'var(--text-main)' }}>
-                Aviso de Privacidade (LGPD)
-              </p>
-              <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                Ao tocar a campainha digital, a sua imagem (câmera) e áudio serão transmitidos em tempo real para o morador para fins exclusivos de identificação e segurança de acesso.
-              </p>
-            </div>
-          </div>
+            <strong>Aviso de Privacidade (LGPD):</strong> Ao tocar a campainha, a sua câmera e áudio serão transmitidos temporariamente em tempo real para identificação e segurança de acesso.
+          </p>
         </div>
       )}
 
