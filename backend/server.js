@@ -1740,8 +1740,15 @@ app.get('/api/properties', async (req, res) => {
 // Endpoint diagnóstico para buscar o condomínio Liber e o usuário morado1@hotmail.com
 app.get('/api/diagnose-liber', async (req, res) => {
   try {
-    const user = await prisma.user.findFirst({
-      where: { email: { equals: 'morado1@hotmail.com', mode: 'insensitive' } },
+    const matchingUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { email: { contains: 'morad', mode: 'insensitive' } },
+          { name: { contains: 'morad', mode: 'insensitive' } },
+          { email: { contains: 'liber', mode: 'insensitive' } },
+          { name: { contains: 'liber', mode: 'insensitive' } }
+        ]
+      },
       include: {
         units: {
           include: {
@@ -1751,19 +1758,31 @@ app.get('/api/diagnose-liber', async (req, res) => {
       }
     });
 
-    const allProperties = await prisma.property.findMany({
+    const liberProperty = await prisma.property.findUnique({
+      where: { id: 'VILA-WI638I' },
+      include: {
+        units: {
+          include: {
+            residents: true
+          }
+        }
+      }
+    });
+
+    const allUsers = await prisma.user.findMany({
       select: {
         id: true,
+        email: true,
         name: true,
-        type: true,
-        adminId: true,
+        role: true,
         createdAt: true
       }
     });
 
     res.json({
-      user,
-      allProperties
+      matchingUsers,
+      liberProperty,
+      allUsers
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
