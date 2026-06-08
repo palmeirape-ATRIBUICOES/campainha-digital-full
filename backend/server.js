@@ -20,8 +20,18 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || 'BOL7TRhhhHHze0bnWJY7w3
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'Cj-7L7Qzqfe3d_AxJ_KRL_wOq4jT2_ZWorgUXZDg8oE';
 webpush.setVapidDetails('mailto:admin@campainha.digital', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
+const { execSync } = require('child_process');
+
 // Debug: Verificação de conexão com o banco de dados
 async function checkDatabaseConnection() {
+  try {
+    console.log('[DB] Sincronizando schema com banco de dados via prisma db push...');
+    execSync('npx prisma db push --skip-generate', { stdio: 'inherit' });
+    console.log('[DB] Sincronização do schema concluída!');
+  } catch (pushErr) {
+    console.error('[DB] Erro ao rodar prisma db push:', pushErr.message);
+  }
+
   try {
     await prisma.$connect();
     console.log('[DB] Conectado ao banco de dados com sucesso!');
