@@ -46,7 +46,8 @@ const defaultStyle = {
   showBorder: true,
   borderColor: "#E2E8F0",
   borderWidth: "4px",
-  logoColor: "#0F172A"
+  logoColor: "#0F172A",
+  plateCorners: "straight"
 };
 
 const PrintablePlate = React.forwardRef(({ 

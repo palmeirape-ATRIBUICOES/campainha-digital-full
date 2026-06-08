@@ -3287,7 +3287,8 @@ const defaultPlateStyle = {
   showBorder: true,
   borderColor: "#E2E8F0",
   borderWidth: "4px",
-  logoColor: "#0F172A"
+  logoColor: "#0F172A",
+  plateCorners: "straight"
 };
 
 // Retorna configurações do sistema (público para o frontend de cadastro poder ler)

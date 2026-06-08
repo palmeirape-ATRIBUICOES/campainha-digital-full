@@ -2094,7 +2094,7 @@ export default function MasterAdminDashboard() {
                         <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Cantos da Placa:</label>
                         <select
                           style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '12px', outline: 'none', cursor: 'pointer' }}
-                          value={plateStyle.plateCorners || 'rounded'}
+                          value={plateStyle.plateCorners || 'straight'}
                           onChange={e => setPlateStyle({ ...plateStyle, plateCorners: e.target.value })}
                         >
                           <option value="rounded">Arredondados</option>
