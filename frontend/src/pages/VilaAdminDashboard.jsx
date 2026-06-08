@@ -41,6 +41,9 @@ export default function VilaAdminDashboard() {
   const [vilaName, setVilaName] = useState('');
   const [houseCount, setHouseCount] = useState(1);
   const [feedback, setFeedback] = useState(null);
+  const [vilaAdminPhoto, setVilaAdminPhoto] = useState(() => localStorage.getItem('cd_vila_admin_photo') || '');
+  const [vilaAdminName, setVilaAdminName] = useState(() => localStorage.getItem('cd_vila_admin_name') || 'Admin');
+  const vilaAdminPhotoInputRef = useRef(null);
   
   // QR Code & Placa Física States
   const [qrImage, setQrImage] = useState('');
@@ -90,8 +93,105 @@ export default function VilaAdminDashboard() {
   useEffect(() => {
     if (!adminId) {
       navigate('/auth');
+    } else {
+      fetchVilaAdminProfile();
     }
   }, [adminId, navigate]);
+
+  const fetchVilaAdminProfile = async () => {
+    try {
+      const token = localStorage.getItem('cd_token');
+      if (!token) return;
+      const res = await fetch(`${API}/api/user/settings`, {
+        headers: { 'Authorization': token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.photo) {
+          setVilaAdminPhoto(data.photo);
+          localStorage.setItem('cd_vila_admin_photo', data.photo);
+        }
+        if (data.name) {
+          setVilaAdminName(data.name);
+          localStorage.setItem('cd_vila_admin_name', data.name);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching vila admin profile:', err);
+    }
+  };
+
+  const saveVilaAdminSettings = async (field, value) => {
+    let updatedPhoto = vilaAdminPhoto;
+    let updatedName = vilaAdminName;
+    if (field === 'photo') {
+      setVilaAdminPhoto(value);
+      updatedPhoto = value;
+    } else if (field === 'name') {
+      setVilaAdminName(value);
+      updatedName = value;
+    }
+    try {
+      const token = localStorage.getItem('cd_token');
+      if (!token) return;
+      const res = await fetch(`${API}/api/user/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({
+          photo: updatedPhoto,
+          name: updatedName
+        })
+      });
+      if (res.ok) {
+        if (field === 'photo') {
+          localStorage.setItem('cd_vila_admin_photo', value);
+        } else if (field === 'name') {
+          localStorage.setItem('cd_vila_admin_name', value);
+        }
+      }
+    } catch (err) {
+      console.error('Error saving vila admin settings:', err);
+    }
+  };
+
+  const handleVilaAdminPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 300;
+        const MAX_HEIGHT = 300;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        saveVilaAdminSettings('photo', compressedBase64);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const selectedUnitRef = useRef(selectedUnit);
   useEffect(() => {
@@ -730,11 +830,205 @@ export default function VilaAdminDashboard() {
         {/* ── INÍCIO ── */}
         {tab === 'home' && (
           <div style={{ padding: isMobile ? '20px' : '40px 48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
-            <div style={{ width: '100%', maxWidth: '600px', textAlign: 'center' }}>
-              <h2 style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A', margin: 0 }}>🏠 Painel da Vila Digital</h2>
-              <p style={{ color: '#64748B', marginTop: '6px', margin: 0 }}>
-                Gerencie sua vila, campainhas e comunique-se em tempo real.
-              </p>
+            {/* Seletor Invisível de Arquivo para Foto de Perfil */}
+            <input 
+              type="file" 
+              ref={vilaAdminPhotoInputRef} 
+              onChange={handleVilaAdminPhotoUpload} 
+              accept="image/*" 
+              style={{ display: 'none' }} 
+            />
+
+            {/* Hub de Controle do Gestor da Vila */}
+            <div style={{
+              width: '100%',
+              maxWidth: '600px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+              marginBottom: '12px'
+            }}>
+              {/* Card de Perfil do Vila Admin */}
+              <div style={{
+                background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                borderRadius: '24px',
+                padding: '24px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '20px',
+                color: '#FFF',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
+                textAlign: 'left'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  {/* Foto de Perfil Interativa */}
+                  <div 
+                    onClick={() => vilaAdminPhotoInputRef.current?.click()}
+                    style={{
+                      position: 'relative',
+                      width: '64px',
+                      height: '64px',
+                      borderRadius: '50%',
+                      cursor: 'pointer',
+                      border: '2px solid #10B981',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                    }}
+                  >
+                    {vilaAdminPhoto ? (
+                      <img src={vilaAdminPhoto} alt="Perfil Admin" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#10B981',
+                        fontWeight: 800,
+                        fontSize: '20px'
+                      }}>
+                        {vilaAdminName ? vilaAdminName.slice(0, 2).toUpperCase() : 'GV'}
+                      </div>
+                    )}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0, left: 0, right: 0,
+                      background: 'rgba(0,0,0,0.6)',
+                      height: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#FFF'
+                    }}>
+                      <Camera size={10} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 900, margin: 0 }}>{vilaAdminName}</h3>
+                      <span style={{
+                        background: 'rgba(16, 185, 129, 0.2)',
+                        color: '#34D399',
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '99px',
+                        border: '1px solid rgba(16, 185, 129, 0.3)'
+                      }}>
+                        Gestor de Vila
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#94A3B8', margin: '4px 0 0' }}>
+                      {vilaName || 'Minha Vila Digital'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Copiar link rápido da Vila */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Acesso Rápido
+                  </span>
+                  <button 
+                    onClick={() => {
+                      const url = `${window.location.origin}${window.location.pathname}#/chamada/${propertyId}`;
+                      navigator.clipboard.writeText(url);
+                      alert('Link de chamada copiado com sucesso!');
+                    }}
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: '10px',
+                      color: '#34D399',
+                      padding: '8px 12px',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    🔗 Copiar Link de Chamada
+                  </button>
+                </div>
+              </div>
+
+              {/* Bento Grid de Estatísticas Vila */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '12px'
+              }}>
+                {/* Casas / Campainhas */}
+                <div 
+                  onClick={() => setTab('units')}
+                  style={{
+                    background: '#FFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '20px',
+                    padding: '16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    transition: 'all 0.2s',
+                    textAlign: 'left',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                  }}
+                  className="hover-premium"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>Casas / Campainhas</span>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Bell size={14} />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', margin: 0 }}>{units.length}</h3>
+                    <span style={{ fontSize: '10px', color: '#64748B' }}>Configuradas</span>
+                  </div>
+                </div>
+
+                {/* Caixa Postal / Mensagens */}
+                <div 
+                  onClick={() => setTab('messages')}
+                  style={{
+                    background: '#FFF',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '20px',
+                    padding: '16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    transition: 'all 0.2s',
+                    textAlign: 'left',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+                  }}
+                  className="hover-premium"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>Mensagens</span>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(249, 115, 22, 0.1)', color: '#F97316', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MessageSquare size={14} />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', margin: 0 }}>{messages.length}</h3>
+                    <span style={{ fontSize: '10px', color: '#64748B' }}>No Histórico</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* QR Code Principal da Vila */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, Send, Zap, Sun, Moon, Phone, PhoneCall, PhoneOff } from 'lucide-react';
+import { Plus, Download, Trash2, Home, Building2, TreePine, X, ShieldCheck, LogOut, ChevronRight, Settings, Camera, ScanLine, Clock, User, RefreshCw, Copy, Check, MessageCircle, CreditCard, Users, Send, Zap, Sun, Moon, Phone, PhoneCall, PhoneOff, Mail, AlertCircle, Menu } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import Logo from '../components/Logo';
@@ -85,6 +85,10 @@ export default function AdminPanel() {
   const [previewPlateProperty, setPreviewPlateProperty] = useState(null);
   const [downloadingPlate, setDownloadingPlate] = useState(false);
   const plateRef = useRef(null);
+  const [adminPhoto, setAdminPhoto] = useState(() => localStorage.getItem('cd_admin_photo') || '');
+  const [adminName, setAdminName] = useState(() => localStorage.getItem('cd_admin_name') || 'Administrador');
+  const adminPhotoInputRef = useRef(null);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   
   // Novos estados para Caixa Postal, Alertas de Portão e Grade Visual Interativa
   const [mailboxMessages, setMailboxMessages] = useState([]);
@@ -720,8 +724,104 @@ export default function AdminPanel() {
       navigate('/auth');
       return;
     }
+    fetchAdminProfile();
     fetchProperties();
   }, []);
+
+  const fetchAdminProfile = async () => {
+    try {
+      const token = localStorage.getItem('cd_token');
+      if (!token) return;
+      const res = await fetch(`${API}/api/user/settings`, {
+        headers: { 'Authorization': token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.photo) {
+          setAdminPhoto(data.photo);
+          localStorage.setItem('cd_admin_photo', data.photo);
+        }
+        if (data.name) {
+          setAdminName(data.name);
+          localStorage.setItem('cd_admin_name', data.name);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching admin profile:', err);
+    }
+  };
+
+  const saveAdminSettings = async (field, value) => {
+    let updatedPhoto = adminPhoto;
+    let updatedName = adminName;
+    if (field === 'photo') {
+      setAdminPhoto(value);
+      updatedPhoto = value;
+    } else if (field === 'name') {
+      setAdminName(value);
+      updatedName = value;
+    }
+    try {
+      const token = localStorage.getItem('cd_token');
+      if (!token) return;
+      const res = await fetch(`${API}/api/user/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({
+          photo: updatedPhoto,
+          name: updatedName
+        })
+      });
+      if (res.ok) {
+        if (field === 'photo') {
+          localStorage.setItem('cd_admin_photo', value);
+        } else if (field === 'name') {
+          localStorage.setItem('cd_admin_name', value);
+        }
+      }
+    } catch (err) {
+      console.error('Error saving admin settings:', err);
+    }
+  };
+
+  const handleAdminPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 300;
+        const MAX_HEIGHT = 300;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        saveAdminSettings('photo', compressedBase64);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const fetchProperties = async () => {
     try {
@@ -1225,6 +1325,12 @@ export default function AdminPanel() {
 
 
 
+  const activeProperty = properties.find(p => p.id === selectedProperty);
+  const totalUnits = activeProperty?.units?.length || 0;
+  const totalResidents = activeProperty?.units?.reduce((acc, u) => acc + (u.residents?.length || 0), 0) || 0;
+  const totalMailbox = mailboxMessages.filter(m => m.status === 'pending').length;
+  const totalAlerts = activeAlerts.length;
+
   // ── Dashboard Principal ────────────────────────────────────────────────────
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)' }}>
@@ -1236,6 +1342,17 @@ export default function AdminPanel() {
         }
         .sidebar-btn-hover:hover svg {
           color: var(--text-main) !important;
+        }
+        @media (max-width: 768px) {
+          aside {
+            display: none !important;
+          }
+          .mobile-only-header {
+            display: flex !important;
+          }
+          .admin-main-content {
+            padding: 20px 16px !important;
+          }
         }
       `}</style>
 
@@ -1417,6 +1534,207 @@ export default function AdminPanel() {
 
       {/* Área Principal de Conteúdo */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Mobile Top Header (Hidden on Desktop via CSS) */}
+        <div className="mobile-only-header" style={{
+          display: 'none',
+          position: 'sticky',
+          top: 0,
+          zIndex: 90,
+          background: 'var(--bg-surface-elevated)',
+          borderBottom: '1px solid var(--border-subtle)',
+          padding: '12px 20px',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button 
+              onClick={() => setShowMobileMenu(true)}
+              style={{
+                background: 'var(--text-main)',
+                color: 'var(--bg-surface)',
+                border: 'none',
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <Menu size={20} />
+            </button>
+            <Logo size={24} />
+          </div>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-main)' }}>
+            Síndico
+          </span>
+        </div>
+
+        {/* Mobile Sidebar/Drawer (Slide-in) */}
+        <div 
+          onClick={() => setShowMobileMenu(false)}
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 1000,
+            opacity: showMobileMenu ? 1 : 0,
+            visibility: showMobileMenu ? 'visible' : 'hidden',
+            transition: 'all 0.3s'
+          }}
+        />
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, bottom: 0,
+          width: '280px',
+          background: 'var(--bg-surface-elevated)',
+          zIndex: 1001,
+          transform: showMobileMenu ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+          padding: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '8px 0 32px rgba(0,0,0,0.2)',
+          borderRight: '1px solid var(--border-subtle)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <Logo size={28} />
+            <button 
+              onClick={() => setShowMobileMenu(false)} 
+              style={{ background: 'var(--bg-deep)', border: 'none', padding: '8px', borderRadius: '10px', cursor: 'pointer', color: 'var(--text-muted)' }}
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border-subtle)', marginBottom: '20px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid #3B82F6', overflow: 'hidden', flexShrink: 0 }}>
+              {adminPhoto ? (
+                <img src={adminPhoto} alt="Admin" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6', fontWeight: 800 }}>
+                  {adminName ? adminName.slice(0, 2).toUpperCase() : 'AD'}
+                </div>
+              )}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-main)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {adminName}
+              </span>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {localStorage.getItem('cd_admin_email')}
+              </span>
+            </div>
+          </div>
+
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, overflowY: 'auto' }}>
+            {[
+              { key: 'properties', label: 'Propriedades', icon: Home },
+              { key: 'units',      label: 'Unidades', icon: Building2 },
+              { key: 'people',     label: 'Pessoas / Moradores', icon: Users },
+              { key: 'mailbox',    label: 'Caixa Postal', icon: MessageCircle },
+              { key: 'control_panel', label: 'Painel de Controle', icon: Zap },
+              { key: 'broadcast',  label: 'Comunicados', icon: Send },
+              { key: 'history',    label: 'Histórico', icon: Clock }
+            ].filter(tab => {
+              const isDoorman = localStorage.getItem('cd_admin_role') === 'doorman';
+              if (isDoorman) return tab.key === 'control_panel';
+              const currentProp = properties.find(p => p.id === selectedProperty);
+              const isIndividual = currentProp ? currentProp.type === 'individual' : false;
+              if (isIndividual && ['units', 'people', 'broadcast', 'mailbox', 'control_panel'].includes(tab.key)) return false;
+              return true;
+            }).map(tab => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => { setActiveTab(tab.key); setShowMobileMenu(false); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: isActive ? 'var(--primary-glow)' : 'transparent',
+                    border: 'none',
+                    color: isActive ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  <Icon size={18} color={isActive ? 'var(--primary)' : 'var(--text-muted)'} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 700,
+                color: 'var(--text-muted)',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--border-subtle)',
+                cursor: 'pointer',
+                justifyContent: 'center'
+              }}
+            >
+              {darkMode ? (
+                <><Sun size={15} color="#F59E0B" /> <span>Modo Claro</span></>
+              ) : (
+                <><Moon size={15} color="#3B82F6" /> <span>Modo Noturno</span></>
+              )}
+            </button>
+            
+            <button
+              onClick={() => {
+                [
+                  'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+                  'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+                  'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+                  'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+                  'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+                ].forEach(k => localStorage.removeItem(k));
+                document.body.classList.remove('dark-theme');
+                navigate('/');
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 700,
+                color: '#EF4444',
+                background: 'rgba(239,68,68,0.08)',
+                border: 'none',
+                cursor: 'pointer',
+                justifyContent: 'center'
+              }}
+            >
+              <LogOut size={15} /> Sair
+            </button>
+          </div>
+        </div>
+
         {/* Banner de Demonstração */}
         {isDemoMode && (
           <div style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)', color: '#FFF', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
@@ -1440,7 +1758,7 @@ export default function AdminPanel() {
           </div>
         )}
 
-        <main style={{ padding: '32px 40px', flex: 1 }}>
+        <main className="admin-main-content" style={{ padding: '32px 40px', flex: 1 }}>
 
         {/* Painel de Chamada Ativa WebRTC */}
         {activeCall && (
@@ -1651,6 +1969,261 @@ export default function AdminPanel() {
         {/* ── ABA: PROPRIEDADES ── */}
         {activeTab === 'properties' && (
           <>
+            {/* Seletor Invisível de Arquivo para Foto de Perfil */}
+            <input 
+              type="file" 
+              ref={adminPhotoInputRef} 
+              onChange={handleAdminPhotoUpload} 
+              accept="image/*" 
+              style={{ display: 'none' }} 
+            />
+
+            {/* Hub do Administrador (Card de Perfil + Bento Grid) */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+              marginBottom: '32px'
+            }}>
+              {/* Card de Perfil Administrativo */}
+              <div style={{
+                background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+                borderRadius: '24px',
+                padding: '24px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '20px',
+                color: '#FFF',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  {/* Foto de Perfil Interativa */}
+                  <div 
+                    onClick={() => adminPhotoInputRef.current?.click()}
+                    style={{
+                      position: 'relative',
+                      width: '64px',
+                      height: '64px',
+                      borderRadius: '50%',
+                      cursor: 'pointer',
+                      border: '2px solid #3B82F6',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                    }}
+                  >
+                    {adminPhoto ? (
+                      <img src={adminPhoto} alt="Perfil Admin" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#3B82F6',
+                        fontWeight: 800,
+                        fontSize: '20px'
+                      }}>
+                        {adminName ? adminName.slice(0, 2).toUpperCase() : 'AD'}
+                      </div>
+                    )}
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0, left: 0, right: 0,
+                      background: 'rgba(0,0,0,0.6)',
+                      height: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#FFF'
+                    }}>
+                      <Camera size={10} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 900, margin: 0 }}>{adminName}</h3>
+                      <span style={{
+                        background: 'rgba(59, 130, 246, 0.2)',
+                        color: '#60A5FA',
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '99px',
+                        border: '1px solid rgba(59, 130, 246, 0.3)'
+                      }}>
+                        Síndico
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#94A3B8', margin: '4px 0 0' }}>
+                      {localStorage.getItem('cd_admin_email') || 'admin@email.com'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Seletor Rápido de Condomínio no Perfil */}
+                {properties.length > 0 && (
+                  <div style={{ width: '100%', maxWidth: '280px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>
+                      Condomínio Selecionado
+                    </span>
+                    <select
+                      value={selectedProperty || ''}
+                      onChange={e => {
+                        setSelectedProperty(e.target.value);
+                        localStorage.setItem('cd_admin_propertyId', e.target.value);
+                      }}
+                      className="input-glass"
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '12px',
+                        fontSize: '14px',
+                        background: '#1E293B',
+                        color: '#FFF',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        fontWeight: 700,
+                        outline: 'none',
+                        cursor: 'pointer',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Bento Grid de Estatísticas Operacionais */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                gap: '16px'
+              }}>
+                {/* Unidades */}
+                <div 
+                  onClick={() => setActiveTab('units')}
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '20px',
+                    padding: '16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    transition: 'all 0.2s'
+                  }}
+                  className="hover-premium"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Unidades</span>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Building2 size={14} />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>{totalUnits}</h3>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Configuradas</span>
+                  </div>
+                </div>
+
+                {/* Moradores */}
+                <div 
+                  onClick={() => setActiveTab('people')}
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '20px',
+                    padding: '16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    transition: 'all 0.2s'
+                  }}
+                  className="hover-premium"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Moradores</span>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Users size={14} />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>{totalResidents}</h3>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Ativos</span>
+                  </div>
+                </div>
+
+                {/* Correspondências / Caixa Postal */}
+                <div 
+                  onClick={() => setActiveTab('mailbox')}
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '20px',
+                    padding: '16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    transition: 'all 0.2s'
+                  }}
+                  className="hover-premium"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Caixa Postal</span>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Mail size={14} />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>{totalMailbox}</h3>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Pendentes</span>
+                  </div>
+                </div>
+
+                {/* Alertas Ativos */}
+                <div 
+                  onClick={() => setActiveTab('control_panel')}
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '20px',
+                    padding: '16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    transition: 'all 0.2s'
+                  }}
+                  className="hover-premium"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>Alertas</span>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <AlertCircle size={14} />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>{totalAlerts}</h3>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Ativos</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '32px' }}>
               <div>
                 <h2 style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-1px' }}>Minhas Propriedades</h2>

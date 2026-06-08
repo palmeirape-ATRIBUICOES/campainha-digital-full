@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag, BellOff, BellRing, Users } from 'lucide-react';
+import { Phone, MicOff, PhoneOff, Bell, ShieldCheck, EyeOff, Download, AlertCircle, Video, VideoOff, LogOut, History, Settings, Home, KeyRound, MessageCircle, Building2, Mail, ShoppingBag, BellOff, BellRing, Users, Camera, Moon, LockOpen } from 'lucide-react';
 import { HistoryPanel, SettingsPanel, DEFAULT_CATEGORIES } from './ResidentPanels';
 import Logo from '../components/Logo';
 import MessagesPanel from '../components/resident/MessagesPanel';
@@ -80,6 +80,7 @@ export default function ResidentDashboard() {
   );
   const [downloadingPlate, setDownloadingPlate] = useState(false);
   const plateRef = useRef(null);
+  const fileInputRef = useRef(null);
   const HOUSE_QUICK_MSGS = [
     { id: 'general', label: 'Geral', messages: ['Já estou indo', 'Já está Aberto', 'Pode entrar'] },
     { id: 'services', label: 'Serviços', messages: ['Pode entrar pra marcar a luz', 'Pode entrar para marcar a água'] },
@@ -107,6 +108,10 @@ export default function ResidentDashboard() {
   const [pushLoading, setPushLoading] = useState(false);
   const [userContact, setUserContact] = useState('');
   const [userPhoto, setUserPhoto] = useState(() => localStorage.getItem('residentUserPhoto') || '');
+  const [doorbellEnabled, setDoorbellEnabled] = useState(true);
+  const [intercomEnabled, setIntercomEnabled] = useState(true);
+  const [quietModeStart, setQuietModeStart] = useState('22:00');
+  const [quietModeEnd, setQuietModeEnd] = useState('07:00');
   const [trialEndsAt, setTrialEndsAt] = useState(null);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [visitorOrPackageName, setVisitorOrPackageName] = useState('');
@@ -500,6 +505,10 @@ export default function ResidentDashboard() {
             localStorage.setItem('residentUserPhoto', data.photo || '');
             setUserPhoto(data.photo || '');
           }
+          if (data.doorbellEnabled !== undefined) setDoorbellEnabled(data.doorbellEnabled);
+          if (data.intercomEnabled !== undefined) setIntercomEnabled(data.intercomEnabled);
+          if (data.quietModeStart !== undefined) setQuietModeStart(data.quietModeStart || '22:00');
+          if (data.quietModeEnd !== undefined) setQuietModeEnd(data.quietModeEnd || '07:00');
           fetchMessages();
           setUserContact(data.email || data.phone || data.clientCode || data.plateCode || '');
 
@@ -513,6 +522,94 @@ export default function ResidentDashboard() {
           }
         }
       } catch {}
+    };
+
+    const toggleHomeSetting = async (field, value) => {
+      let updatedDoorbell = doorbellEnabled;
+      let updatedIntercom = intercomEnabled;
+      let updatedQuietStart = quietModeStart;
+      let updatedQuietEnd = quietModeEnd;
+      let updatedPhoto = userPhoto;
+
+      if (field === 'doorbellEnabled') {
+        setDoorbellEnabled(value);
+        updatedDoorbell = value;
+      } else if (field === 'intercomEnabled') {
+        setIntercomEnabled(value);
+        updatedIntercom = value;
+      } else if (field === 'quietModeStart') {
+        setQuietModeStart(value);
+        updatedQuietStart = value;
+      } else if (field === 'quietModeEnd') {
+        setQuietModeEnd(value);
+        updatedQuietEnd = value;
+      } else if (field === 'photo') {
+        setUserPhoto(value);
+        updatedPhoto = value;
+      }
+
+      try {
+        const token = localStorage.getItem('cd_token');
+        const res = await fetch(`${API}/api/user/settings`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': token },
+          body: JSON.stringify({ 
+            doorbellEnabled: updatedDoorbell, 
+            intercomEnabled: updatedIntercom,
+            quietModeStart: updatedQuietStart, 
+            quietModeEnd: updatedQuietEnd,
+            photo: updatedPhoto
+          })
+        });
+        if (res.ok) {
+          if (field === 'photo') {
+            localStorage.setItem('residentUserPhoto', value);
+          }
+        } else {
+          console.error('Erro ao salvar configuração rápida no servidor.');
+        }
+      } catch (err) {
+        console.error('Erro de rede ao salvar configuração rápida.', err);
+      }
+    };
+
+    const handlePhotoUpload = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 300;
+          const MAX_HEIGHT = 300;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          toggleHomeSetting('photo', compressedBase64);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
     };
 
     // Auto-healer: se o usuário já estiver logado mas não tiver o token de segurança na sessão
@@ -1597,6 +1694,47 @@ export default function ResidentDashboard() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
         }
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 44px;
+          height: 24px;
+          flex-shrink: 0;
+        }
+        .switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #CBD5E1;
+          transition: .3s;
+          border-radius: 24px;
+        }
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 3px;
+          bottom: 3px;
+          background-color: white;
+          transition: .3s;
+          border-radius: 50%;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        input:checked + .slider {
+          background-color: #3B82F6;
+        }
+        input:checked + .slider:before {
+          transform: translateX(20px);
+        }
       `}</style>
 
       {/* OVERLAY DE BLOQUEIO POR EXPIRAÇÃO DO TRIAL */}
@@ -1793,16 +1931,182 @@ export default function ResidentDashboard() {
                 </div>
               )}
 
-              {/* Bell hero */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '16px' }}>
-                <div style={{ width: '90px', height: '90px', borderRadius: '50%', background: '#FFF', border: '2px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.06)' }}>
-                  <Bell size={36} color="#10B981" style={{ opacity: 0.8 }}/>
+              {/* Novo Card de Perfil & Hub de Controle Unificado */}
+              <div style={{ 
+                width: '100%', 
+                maxWidth: '380px', 
+                background: 'rgba(255, 255, 255, 0.75)', 
+                backdropFilter: 'blur(16px)', 
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                borderRadius: '24px', 
+                padding: '24px', 
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.04)',
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '20px' 
+              }}>
+                {/* Cabeçalho do Perfil com Avatar Interativo */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div 
+                    onClick={() => fileInputRef.current.click()} 
+                    style={{ 
+                      position: 'relative', 
+                      width: '64px', 
+                      height: '64px', 
+                      borderRadius: '50%', 
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      flexShrink: 0,
+                      overflow: 'hidden',
+                      border: '2px solid #3B82F6'
+                    }}
+                  >
+                    {userPhoto ? (
+                      <img src={userPhoto} alt="Foto de Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6', fontWeight: 800, fontSize: '20px' }}>
+                        {unitName ? unitName.slice(0, 2).toUpperCase() : 'M'}
+                      </div>
+                    )}
+                    {/* Camera Overlay */}
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0, 0, 0, 0.5)', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+                      <Camera size={10} />
+                    </div>
+                  </div>
+                  
+                  {/* File input invisível */}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handlePhotoUpload} 
+                    accept="image/*" 
+                    style={{ display: 'none' }} 
+                  />
+
+                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase', letterSpacing: '1px' }}>Morador</span>
+                    <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {localStorage.getItem('residentName') || 'Morador'}
+                    </h3>
+                    <p style={{ fontSize: '13px', color: '#64748B', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {unitName} • {propertyName || 'Campainha Digital'}
+                    </p>
+                  </div>
                 </div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 4px', color: '#0F172A' }}>Aguardando Chamadas</h3>
-                <p style={{ color: '#64748B', fontSize: '13px', margin: 0 }}>Você será notificado quando tocarem.</p>
-                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', background: 'rgba(16,185,129,0.08)', padding: '5px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }}/> Conectado
+
+                <div style={{ height: '1px', background: 'rgba(226, 232, 240, 0.8)' }} />
+
+                {/* Grid de Configurações Rápidas */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Item Campainha */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: doorbellEnabled ? '#ECFDF5' : '#F1F5F9', color: doorbellEnabled ? '#10B981' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {doorbellEnabled ? <Bell size={18} /> : <BellOff size={18} />}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Campainha Ativa</span>
+                        <span style={{ fontSize: '11px', color: '#64748B' }}>{doorbellEnabled ? 'Toca quando visitantes chamam' : 'Silenciada'}</span>
+                      </div>
+                    </div>
+                    {/* Switch CSS */}
+                    <label className="switch">
+                      <input 
+                        type="checkbox" 
+                        checked={doorbellEnabled} 
+                        onChange={(e) => toggleHomeSetting('doorbellEnabled', e.target.checked)} 
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
+
+                  {/* Item Interfone (apenas para condomínios) */}
+                  {!isHouseResident && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: intercomEnabled ? '#EFF6FF' : '#F1F5F9', color: intercomEnabled ? '#3B82F6' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Phone size={18} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Interfone Interno</span>
+                          <span style={{ fontSize: '11px', color: '#64748B' }}>{intercomEnabled ? 'Recebe chamadas de vizinhos' : 'Bloqueado'}</span>
+                        </div>
+                      </div>
+                      <label className="switch">
+                        <input 
+                          type="checkbox" 
+                          checked={intercomEnabled} 
+                          onChange={(e) => toggleHomeSetting('intercomEnabled', e.target.checked)} 
+                        />
+                        <span className="slider round"></span>
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Item Modo Silencioso */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: (quietModeStart && quietModeEnd) ? '#FEF3C7' : '#F1F5F9', color: (quietModeStart && quietModeEnd) ? '#F59E0B' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Moon size={18} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Modo Silencioso</span>
+                        <span style={{ fontSize: '11px', color: '#64748B' }}>
+                          {(quietModeStart && quietModeEnd) 
+                            ? `Ativo das ${quietModeStart} às ${quietModeEnd}` 
+                            : 'Desativado'}
+                        </span>
+                      </div>
+                    </div>
+                    <label className="switch">
+                      <input 
+                        type="checkbox" 
+                        checked={!!(quietModeStart && quietModeEnd)} 
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            toggleHomeSetting('quietModeStart', '22:00');
+                            toggleHomeSetting('quietModeEnd', '07:00');
+                          } else {
+                            toggleHomeSetting('quietModeStart', '');
+                            toggleHomeSetting('quietModeEnd', '');
+                          }
+                        }} 
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                  </div>
                 </div>
+
+                {/* Seção do Portão Sonoff (se aplicável) integrada no card */}
+                {!isHouseResident && (
+                  <>
+                    <div style={{ height: '1px', background: 'rgba(226, 232, 240, 0.8)' }} />
+                    <button
+                      onClick={openGateSonoff}
+                      disabled={openGateLoading}
+                      style={{
+                        width: '100%',
+                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                        color: '#FFF',
+                        border: 'none',
+                        padding: '14px',
+                        borderRadius: '16px',
+                        fontWeight: 800,
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 12px rgba(16,185,129,0.2)',
+                        transition: 'transform 0.1s active'
+                      }}
+                    >
+                      <LockOpen size={16} /> {openGateLoading ? 'Abrindo...' : 'Liberar Portão Principal'}
+                    </button>
+                  </>
+                )}
+              </div>
 
                 {/* Status de notificações push */}
                 {!pushEnabled && (
@@ -1909,7 +2213,6 @@ export default function ResidentDashboard() {
                     </button>
                   </div>
                 )}
-              </div>
 
               {/* QR Code de Campainha Digital */}
               {propertyId && (
@@ -1976,31 +2279,7 @@ export default function ResidentDashboard() {
                 <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
                   <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 12px' }}>⚡ DISPOSITIVOS & AÇÕES RÁPIDAS</p>
                   
-                  {/* Sonoff gate release button */}
-                  <button
-                    onClick={openGateSonoff}
-                    disabled={openGateLoading}
-                    style={{
-                      width: '100%',
-                      background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                      color: '#FFF',
-                      border: 'none',
-                      padding: '14px',
-                      borderRadius: '12px',
-                      fontWeight: 800,
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      marginBottom: '16px',
-                      boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
-                    }}
-                  >
-                    <KeyRound size={18} />
-                    {openGateLoading ? 'Acionando...' : '🔓 ABRIR PORTÃO DE PEDESTRES'}
-                  </button>
+
 
                   {/* Grid for alert dispatchers */}
                   <p style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', marginBottom: '4px' }}>Notificar Portaria na Grade Visual:</p>
