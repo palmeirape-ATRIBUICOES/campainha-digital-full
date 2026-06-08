@@ -1721,7 +1721,7 @@ app.get('/api/properties', async (req, res) => {
     res.json(propsWithUrls);
   } catch (err) {
     console.error('Fetch properties managed error:', err);
-    res.status(500).json({ error: 'Erro ao buscar propriedades.' });
+    res.status(500).json({ error: 'Erro ao buscar propriedades.', details: err.message, stack: err.stack });
   }
 });
 
