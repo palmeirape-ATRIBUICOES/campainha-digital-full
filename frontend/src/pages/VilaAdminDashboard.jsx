@@ -5,7 +5,7 @@ import html2canvas from 'html2canvas';
 import {
   Bell, Home, MessageSquare, Settings, LogOut, Users, Send, Megaphone,
   ChevronRight, RefreshCw, Hash, CheckCircle2, X, AlertCircle, Download,
-  Edit2, Trash2, UserPlus, Key, Car, Mail, MessageCircle
+  Edit2, Trash2, UserPlus, Key, Car, Mail, MessageCircle, Camera
 } from 'lucide-react';
 import { API } from '../config';
 import Logo from '../components/Logo';
