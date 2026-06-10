@@ -140,6 +140,7 @@ export default function ResidentDashboard() {
   const [openGateLoading, setOpenGateLoading] = useState(false);
   const [entryNotification, setEntryNotification] = useState(null);
   const [callDuration, setCallDuration] = useState(0);
+  const [showQrAccordion, setShowQrAccordion] = useState(false);
 
   useEffect(() => {
     let timer = null;
@@ -347,94 +348,6 @@ export default function ResidentDashboard() {
     } finally {
       setPushLoading(false);
     }
-  };
-
-  const toggleHomeSetting = async (field, value) => {
-    let updatedDoorbell = doorbellEnabled;
-    let updatedIntercom = intercomEnabled;
-    let updatedQuietStart = quietModeStart;
-    let updatedQuietEnd = quietModeEnd;
-    let updatedPhoto = userPhoto;
-
-    if (field === 'doorbellEnabled') {
-      setDoorbellEnabled(value);
-      updatedDoorbell = value;
-    } else if (field === 'intercomEnabled') {
-      setIntercomEnabled(value);
-      updatedIntercom = value;
-    } else if (field === 'quietModeStart') {
-      setQuietModeStart(value);
-      updatedQuietStart = value;
-    } else if (field === 'quietModeEnd') {
-      setQuietModeEnd(value);
-      updatedQuietEnd = value;
-    } else if (field === 'photo') {
-      setUserPhoto(value);
-      updatedPhoto = value;
-    }
-
-    try {
-      const token = localStorage.getItem('cd_token');
-      const res = await fetch(`${API}/api/user/settings`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': token },
-        body: JSON.stringify({ 
-          doorbellEnabled: updatedDoorbell, 
-          intercomEnabled: updatedIntercom,
-          quietModeStart: updatedQuietStart, 
-          quietModeEnd: updatedQuietEnd,
-          photo: updatedPhoto
-        })
-      });
-      if (res.ok) {
-        if (field === 'photo') {
-          localStorage.setItem('residentUserPhoto', value);
-        }
-      } else {
-        console.error('Erro ao salvar configuração rápida no servidor.');
-      }
-    } catch (err) {
-      console.error('Erro de rede ao salvar configuração rápida.', err);
-    }
-  };
-
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 300;
-        const MAX_HEIGHT = 300;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-        toggleHomeSetting('photo', compressedBase64);
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
   };
 
   useEffect(() => {
@@ -989,6 +902,47 @@ export default function ResidentDashboard() {
     };
   }, []);
 
+  // ─── Zoom and Gesture Prevention: Blocks pinch-to-zoom and double-tap zoom ───
+  useEffect(() => {
+    const handleTouchMove = (e) => {
+      if (e.scale !== undefined && e.scale !== 1) {
+        e.preventDefault();
+      }
+    };
+    const handleGestureStart = (e) => {
+      e.preventDefault();
+    };
+    const handleGestureChange = (e) => {
+      e.preventDefault();
+    };
+
+    // Prevent double-tap zoom (except on input/textarea fields)
+    let lastTouchEnd = 0;
+    const handleTouchEnd = (e) => {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        const target = e.target;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true')) {
+          return;
+        }
+        e.preventDefault();
+      }
+      lastTouchEnd = now;
+    };
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('gesturestart', handleGestureStart, { passive: false });
+    document.addEventListener('gesturechange', handleGestureChange, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+    return () => {
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('gesturestart', handleGestureStart);
+      document.removeEventListener('gesturechange', handleGestureChange);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, []);
+
   useEffect(() => {
     const checkActiveCallParam = async () => {
       const hashPart = window.location.hash;
@@ -1338,6 +1292,94 @@ export default function ResidentDashboard() {
 
   const saveSettings = () => { localStorage.setItem('cd_unit_name', unitName); };
 
+  const toggleHomeSetting = async (field, value) => {
+    let updatedDoorbell = doorbellEnabled;
+    let updatedIntercom = intercomEnabled;
+    let updatedQuietStart = quietModeStart;
+    let updatedQuietEnd = quietModeEnd;
+    let updatedPhoto = userPhoto;
+
+    if (field === 'doorbellEnabled') {
+      setDoorbellEnabled(value);
+      updatedDoorbell = value;
+    } else if (field === 'intercomEnabled') {
+      setIntercomEnabled(value);
+      updatedIntercom = value;
+    } else if (field === 'quietModeStart') {
+      setQuietModeStart(value);
+      updatedQuietStart = value;
+    } else if (field === 'quietModeEnd') {
+      setQuietModeEnd(value);
+      updatedQuietEnd = value;
+    } else if (field === 'photo') {
+      setUserPhoto(value);
+      updatedPhoto = value;
+    }
+
+    try {
+      const token = localStorage.getItem('cd_token');
+      const res = await fetch(`${API}/api/user/settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ 
+          doorbellEnabled: updatedDoorbell, 
+          intercomEnabled: updatedIntercom,
+          quietModeStart: updatedQuietStart, 
+          quietModeEnd: updatedQuietEnd,
+          photo: updatedPhoto
+        })
+      });
+      if (res.ok) {
+        if (field === 'photo') {
+          localStorage.setItem('residentUserPhoto', value);
+        }
+      } else {
+        console.error('Erro ao salvar configuração rápida no servidor.');
+      }
+    } catch (err) {
+      console.error('Erro de rede ao salvar configuração rápida.', err);
+    }
+  };
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 300;
+        const MAX_HEIGHT = 300;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        toggleHomeSetting('photo', compressedBase64);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleDownloadPlate = async () => {
     if (!plateRef.current) return;
     setDownloadingPlate(true);
@@ -1519,7 +1561,7 @@ export default function ResidentDashboard() {
 
   // ── Bottom Nav (Only Essentials) ──────────────────────────────────────────
   const NavBar = () => (
-    <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', borderTop: '1px solid var(--border-subtle)', display: 'flex', zIndex: 100, paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <nav style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', borderTop: '1px solid var(--border-subtle)', display: 'flex', zIndex: 100, paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {[
         { key: 'home', icon: <Home size={22} />, label: 'Início' },
         ...((!isHouseResident || residentIsVila) ? [{ key: 'messages', icon: <Mail size={22} />, label: 'Avisos', badge: unreadCount }] : []),
@@ -1541,9 +1583,9 @@ export default function ResidentDashboard() {
     <>
       <div 
         onClick={() => setShowMenu(false)}
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 1000, opacity: showMenu ? 1 : 0, visibility: showMenu ? 'visible' : 'hidden', transition: 'all 0.3s' }} 
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 1000, opacity: showMenu ? 1 : 0, visibility: showMenu ? 'visible' : 'hidden', transition: 'all 0.3s' }} 
       />
-      <div style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: '280px', background: '#FFF', zIndex: 1001, transform: showMenu ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)', padding: '32px 24px', display: 'flex', flexDirection: 'column', boxShadow: '8px 0 32px rgba(0,0,0,0.1)' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '280px', background: '#FFF', zIndex: 1001, transform: showMenu ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)', padding: '32px 24px', display: 'flex', flexDirection: 'column', boxShadow: '8px 0 32px rgba(0,0,0,0.1)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <Logo size={32} />
           <button onClick={() => setShowMenu(false)} style={{ background: '#F1F5F9', border: 'none', padding: '8px', borderRadius: '12px', cursor: 'pointer' }}><X size={20} color="#64748B" /></button>
@@ -1638,7 +1680,7 @@ export default function ResidentDashboard() {
   const daysRemaining = trialEndsDate 
     ? Math.ceil((trialEndsDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
     : 0;
-  const isTrialExpiringSoon = trialEndsDate && daysRemaining >= 0 && daysRemaining <= 15 && !isTrialExpired;
+  const isTrialExpiringSoon = trialEndsDate && daysRemaining >= 0 && daysRemaining <= 3 && !isTrialExpired;
   const formattedExpiryDate = trialEndsDate ? trialEndsDate.toLocaleDateString('pt-BR') : '';
 
   if (!savedUnitId && !token) {
@@ -1673,7 +1715,7 @@ export default function ResidentDashboard() {
 
   return (
     <div 
-      style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', paddingBottom: '72px' }} 
+      className="app-shell"
       onClick={handleUserInteraction}
       onTouchStart={handleUserInteraction}
     >
@@ -1681,6 +1723,10 @@ export default function ResidentDashboard() {
         @keyframes pulse-blue {
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
           100% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+        }
+        @keyframes pulse-green {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+          100% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
         }
         @keyframes fade-in {
           from { opacity: 0; }
@@ -1737,1385 +1783,1731 @@ export default function ResidentDashboard() {
         }
       `}</style>
 
-      {/* OVERLAY DE BLOQUEIO POR EXPIRAÇÃO DO TRIAL */}
-      {isTrialExpired && (
-        <div style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(15,23,42,0.92)',
-          backdropFilter: 'blur(12px)',
-          zIndex: 9998,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '24px', fontFamily: "'Inter', sans-serif"
-        }}>
+      <div className="app-container">
+
+        {/* OVERLAY DE BLOQUEIO POR EXPIRAÇÃO DO TRIAL */}
+        {isTrialExpired && (
           <div style={{
-            background: '#FFF', borderRadius: '24px', padding: '36px 32px',
-            width: '100%', maxWidth: '400px', textAlign: 'center',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            display: 'flex', flexDirection: 'column', gap: '24px'
+            position: 'absolute', inset: 0,
+            background: 'rgba(15,23,42,0.92)',
+            backdropFilter: 'blur(12px)',
+            zIndex: 9998,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', fontFamily: "'Inter', sans-serif"
           }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: '64px', height: '64px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)',
-                border: '2px solid #FCA5A5',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 8px 20px rgba(239, 68, 68, 0.15)'
-              }}>
-                <span style={{ fontSize: '28px' }}>⛔</span>
+            <div style={{
+              background: '#FFF', borderRadius: '24px', padding: '36px 32px',
+              width: '100%', maxWidth: '400px', textAlign: 'center',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              display: 'flex', flexDirection: 'column', gap: '24px'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '64px', height: '64px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)',
+                  border: '2px solid #FCA5A5',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 8px 20px rgba(239, 68, 68, 0.15)'
+                }}>
+                  <span style={{ fontSize: '28px' }}>⛔</span>
+                </div>
+                <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: 0 }}>Período de Testes Expirado</h3>
+                <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6, margin: 0 }}>
+                  Sua campainha digital está inativa. O período de 15 dias grátis terminou em <strong>{formattedExpiryDate}</strong>.
+                </p>
               </div>
-              <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: 0 }}>Período de Testes Expirado</h3>
-              <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6, margin: 0 }}>
-                Sua campainha digital está inativa. O período de 15 dias grátis terminou em <strong>{formattedExpiryDate}</strong>.
-              </p>
-            </div>
 
-            <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Plano Anual Premium</span>
-              <span style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>R$ {planPrice.replace('.', ',')}/ano</span>
-            </div>
+              <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Plano Anual Premium</span>
+                <span style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>R$ {planPrice.replace('.', ',')}/ano</span>
+              </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button
-                onClick={() => setShowPaymentModal(true)}
-                style={{
-                  width: '100%', padding: '14px', borderRadius: '14px',
-                  background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-                  color: '#fff', border: 'none', fontWeight: 800, fontSize: '15px',
-                  cursor: 'pointer', boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                }}
-              >
-                💳 Ativar Assinatura Pro
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: '14px',
+                    background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+                    color: '#fff', border: 'none', fontWeight: 800, fontSize: '15px',
+                    cursor: 'pointer', boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                  }}
+                >
+                  💳 Ativar Assinatura Pro
+                </button>
 
-              <button
-                onClick={() => {
-                  [
-                    'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
-                    'residentIsVila', 'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
-                    'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
-                    'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
-                    'cd_admin_name', 'cd_admin_password', 'cd_property_type'
-                  ].forEach(k => localStorage.removeItem(k));
-                  navigate('/');
-                }}
-                style={{
-                  width: '100%', padding: '12px', borderRadius: '12px',
-                  background: '#F1F5F9', color: '#475569', border: 'none',
-                  fontWeight: 700, fontSize: '13px', cursor: 'pointer'
-                }}
-              >
-                Sair da Conta
-              </button>
+                <button
+                  onClick={() => {
+                    [
+                      'residentUnitId', 'residentName', 'residentPropertyName', 'residentPropertyId', 'residentAccessCode',
+                      'residentIsVila', 'cd_unit_name', 'cd_quick_msgs', 'cd_read_msgs', 'cd_user_id', 'cd_token',
+                      'cd_doorman_email', 'cd_doorman_propertyId', 'cd_doorman_propertyName',
+                      'cd_admin_email', 'cd_admin_role', 'cd_admin_propertyId', 'cd_admin_clientCode', 'cd_admin_propertyName',
+                      'cd_admin_name', 'cd_admin_password', 'cd_property_type'
+                    ].forEach(k => localStorage.removeItem(k));
+                    navigate('/');
+                  }}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: '12px',
+                    background: '#F1F5F9', color: '#475569', border: 'none',
+                    fontWeight: 700, fontSize: '13px', cursor: 'pointer'
+                  }}
+                >
+                  Sair da Conta
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Header (Premium Sticky) */}
-      <div style={{ 
-        padding: '16px 24px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        background: 'rgba(255, 255, 255, 0.8)', 
-        backdropFilter: 'blur(12px)', 
-        position: 'sticky', 
-        top: 0, 
-        zIndex: 90,
-        borderBottom: '1px solid #F1F5F9'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={() => setShowMenu(true)} style={{ background: '#0F172A', color: '#FFF', border: 'none', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '20px' }}>
-              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
-              <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
-              <div style={{ height: '2px', width: '60%', background: '#FFF', borderRadius: '2px' }} />
-            </div>
-          </button>
-          <div>
-            <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#0F172A' }}>{unitName}</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#94A3B8' : (status === 'idle' ? '#10B981' : '#EF4444') }} />
-              <span style={{ fontSize: '11px', color: isTrialExpired ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
-                {isTrialExpired ? 'Campainha OFF' : (status === 'idle' ? 'Disponível' : 'Em Chamada')}
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {installPrompt && (
-            <button onClick={async () => { installPrompt.prompt(); const r = await installPrompt.userChoice; if (r.outcome === 'accepted') setInstallPrompt(null); }}
-              style={{ background: '#F1F5F9', color: '#1E293B', border: 'none', padding: '8px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Download size={14} /> Instalar
+        {/* Hamburger Menu Drawer */}
+        <HamburgerMenu />
+
+        {/* Header (Fixed at the top of the container) */}
+        <div style={{ 
+          padding: '16px 20px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          background: 'rgba(255, 255, 255, 0.85)', 
+          backdropFilter: 'blur(16px)', 
+          zIndex: 90,
+          borderBottom: '1px solid #E2E8F0',
+          flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button onClick={() => setShowMenu(true)} style={{ background: '#0F172A', color: '#FFF', border: 'none', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '20px' }}>
+                <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+                <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+                <div style={{ height: '2px', width: '60%', background: '#FFF', borderRadius: '2px' }} />
+              </div>
             </button>
-          )}
+            <div>
+              <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#0F172A' }}>{unitName}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#94A3B8' : (status === 'idle' ? '#10B981' : '#EF4444') }} />
+                <span style={{ fontSize: '11px', color: isTrialExpired ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
+                  {isTrialExpired ? 'Campainha OFF' : (status === 'idle' ? 'Disponível' : 'Em Chamada')}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {installPrompt && (
+              <button onClick={async () => { installPrompt.prompt(); const r = await installPrompt.userChoice; if (r.outcome === 'accepted') setInstallPrompt(null); }}
+                style={{ background: '#F1F5F9', color: '#1E293B', border: 'none', padding: '8px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Download size={14} /> Instalar
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {audioError && <div style={{ margin: '12px 24px 0', background: '#EF4444', color: '#fff', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, display: 'flex', gap: '8px', alignItems: 'center' }}><AlertCircle size={16} />Toque na tela para ativar o som!</div>}
+        {/* Content Area (Scrollable internally) */}
+        <div className="app-content-area">
+          {audioError && (
+            <div style={{ margin: '12px 20px 0', background: '#EF4444', color: '#fff', padding: '10px 14px', borderRadius: '12px', fontSize: '13px', fontWeight: 600, display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <AlertCircle size={16} /> Toque na tela para ativar o som!
+            </div>
+          )}
 
+          {/* ── HOME TAB ── */}
+          {tab === 'home' && (
+            <>
+              {/* IDLE */}
+              {status === 'idle' && (
+                <div style={{ display: 'flex', flexDirection: 'column', padding: '20px 0 32px', gap: '20px', width: '100%' }}>
 
-
-      {/* ── HOME TAB ── */}
-      {tab === 'home' && (
-        <>
-          {/* IDLE */}
-          {status === 'idle' && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 20px 32px', gap: '20px', width: '100%' }}>
-
-              {/* Banners de Assinatura Premium / Trial */}
-              {isTrialExpired && (
-                <div style={{ width: '100%', maxWidth: '380px', background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', border: '1px solid #FCA5A5', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(239, 68, 68, 0.08)' }}>
-                  {/* Badge OFF */}
-                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <span style={{ background: '#EF4444', color: '#fff', fontWeight: 900, fontSize: '13px', letterSpacing: '2px', padding: '4px 16px', borderRadius: '100px', boxShadow: '0 4px 12px rgba(239,68,68,0.3)' }}>⛔ CAMPAINHA OFF</span>
+                  {/* Welcome Greet Header */}
+                  <div style={{ width: '100%', padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Olá, seja bem-vindo!</span>
+                    <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.5px' }}>{unitName}</h1>
                   </div>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                    <div style={{ background: '#EF4444', color: '#FFF', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 10px rgba(239, 68, 68, 0.2)' }}>
-                      <AlertCircle size={22} />
-                    </div>
-                    <div>
-                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#991B1B', margin: '0 0 4px' }}>Campainha Inativa!</h4>
-                      <p style={{ fontSize: '12px', color: '#B91C1C', margin: 0, lineHeight: 1.4 }}>
-                        Seu período de teste grátis expirou em <strong>{formattedExpiryDate}</strong>. Ative o plano anual para continuar recebendo chamadas.
-                      </p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => setShowPaymentModal(true)}
-                    style={{ width: '100%', padding: '14px', borderRadius: '16px', background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 6px 15px rgba(239, 68, 68, 0.25)', transition: 'all 0.2s' }}
-                  >
-                    🔔 Renovar Agora — R$ {planPrice.replace('.', ',')}/ano
-                  </button>
-                </div>
-              )}
 
-              {isTrialExpiringSoon && (
-                <div style={{ width: '100%', maxWidth: '380px', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', border: '1px solid #FCD34D', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(245, 158, 11, 0.08)' }}>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                    <div style={{ background: '#F59E0B', color: '#FFF', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 10px rgba(245, 158, 11, 0.2)' }}>
-                      <AlertCircle size={22} />
-                    </div>
-                    <div>
-                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#92400E', margin: '0 0 4px' }}>Renovação Pendente</h4>
-                      <p style={{ fontSize: '12px', color: '#B45309', margin: 0, lineHeight: 1.4 }}>
-                        Falta{daysRemaining !== 1 ? 'm' : ''} apenas <strong>{daysRemaining} dia{daysRemaining !== 1 ? 's' : ''}</strong> de testes grátis (expira em {formattedExpiryDate}). Assine o plano anual premium.
-                      </p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={handleUpgrade}
-                    disabled={upgradeLoading}
-                    style={{ width: '100%', padding: '14px', borderRadius: '16px', background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 6px 15px rgba(245, 158, 11, 0.2)', transition: 'all 0.2s' }}
-                  >
-                    {upgradeLoading ? 'Gerando Pagamento...' : `Garantir Acesso Premium — R$ ${planPrice.replace('.', ',')}/ano`}
-                  </button>
-                </div>
-              )}
-
-
-              {/* Novo Card de Perfil & Hub de Controle Unificado */}
-              <div style={{ 
-                width: '100%', 
-                maxWidth: '380px', 
-                background: 'rgba(255, 255, 255, 0.75)', 
-                backdropFilter: 'blur(16px)', 
-                border: '1px solid rgba(255, 255, 255, 0.4)',
-                borderRadius: '24px', 
-                padding: '24px', 
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.04)',
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '20px' 
-              }}>
-                {/* Cabeçalho do Perfil com Avatar Interativo */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div 
-                    onClick={() => fileInputRef.current.click()} 
-                    style={{ 
-                      position: 'relative', 
-                      width: '64px', 
-                      height: '64px', 
-                      borderRadius: '50%', 
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      flexShrink: 0,
-                      overflow: 'hidden',
-                      border: '2px solid #3B82F6'
-                    }}
-                  >
-                    {userPhoto ? (
-                      <img src={userPhoto} alt="Foto de Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6', fontWeight: 800, fontSize: '20px' }}>
-                        {unitName ? unitName.slice(0, 2).toUpperCase() : 'M'}
+                  {/* Banners de Assinatura Premium / Trial */}
+                  {isTrialExpired && (
+                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', border: '1px solid #FCA5A5', borderRadius: '24px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(239, 68, 68, 0.04)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <span style={{ background: '#EF4444', color: '#fff', fontWeight: 900, fontSize: '11px', letterSpacing: '1px', padding: '4px 12px', borderRadius: '100px' }}>⛔ CAMPAINHA OFF</span>
                       </div>
-                    )}
-                    {/* Camera Overlay */}
-                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0, 0, 0, 0.5)', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
-                      <Camera size={10} />
-                    </div>
-                  </div>
-                  
-                  {/* File input invisível */}
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handlePhotoUpload} 
-                    accept="image/*" 
-                    style={{ display: 'none' }} 
-                  />
-
-                  <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase', letterSpacing: '1px' }}>Morador</span>
-                    <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {localStorage.getItem('residentName') || 'Morador'}
-                    </h3>
-                    <p style={{ fontSize: '13px', color: '#64748B', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {unitName} • {propertyName || 'Campainha Digital'}
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ height: '1px', background: 'rgba(226, 232, 240, 0.8)' }} />
-
-                {/* Grid de Configurações Rápidas */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {/* Item Campainha */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: doorbellEnabled ? '#ECFDF5' : '#F1F5F9', color: doorbellEnabled ? '#10B981' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {doorbellEnabled ? <Bell size={18} /> : <BellOff size={18} />}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Campainha Ativa</span>
-                        <span style={{ fontSize: '11px', color: '#64748B' }}>{doorbellEnabled ? 'Toca quando visitantes chamam' : 'Silenciada'}</span>
-                      </div>
-                    </div>
-                    {/* Switch CSS */}
-                    <label className="switch">
-                      <input 
-                        type="checkbox" 
-                        checked={doorbellEnabled} 
-                        onChange={(e) => toggleHomeSetting('doorbellEnabled', e.target.checked)} 
-                      />
-                      <span className="slider round"></span>
-                    </label>
-                  </div>
-
-                  {/* Item Interfone (apenas para condomínios) */}
-                  {!isHouseResident && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: intercomEnabled ? '#EFF6FF' : '#F1F5F9', color: intercomEnabled ? '#3B82F6' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Phone size={18} />
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                        <div style={{ background: '#EF4444', color: '#FFF', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <AlertCircle size={20} />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Interfone Interno</span>
-                          <span style={{ fontSize: '11px', color: '#64748B' }}>{intercomEnabled ? 'Recebe chamadas de vizinhos' : 'Bloqueado'}</span>
+                        <div>
+                          <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#991B1B', margin: '0 0 2px' }}>Campainha Inativa!</h4>
+                          <p style={{ fontSize: '11px', color: '#B91C1C', margin: 0, lineHeight: 1.4 }}>
+                            O teste expirou em <strong>{formattedExpiryDate}</strong>. Assine para receber chamadas.
+                          </p>
                         </div>
                       </div>
-                      <label className="switch">
-                        <input 
-                          type="checkbox" 
-                          checked={intercomEnabled} 
-                          onChange={(e) => toggleHomeSetting('intercomEnabled', e.target.checked)} 
-                        />
-                        <span className="slider round"></span>
-                      </label>
+                      <button 
+                        onClick={() => setShowPaymentModal(true)}
+                        style={{ width: '100%', padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}
+                      >
+                        💳 Assinar Agora — R$ {planPrice.replace('.', ',')}/ano
+                      </button>
                     </div>
                   )}
 
-                  {/* Item Modo Silencioso */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: (quietModeStart && quietModeEnd) ? '#FEF3C7' : '#F1F5F9', color: (quietModeStart && quietModeEnd) ? '#F59E0B' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Moon size={18} />
+                  {isTrialExpiringSoon && (
+                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', border: '1px solid #FCD34D', borderRadius: '24px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(245, 158, 11, 0.04)' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                        <div style={{ background: '#F59E0B', color: '#FFF', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <AlertCircle size={20} />
+                        </div>
+                        <div>
+                          <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#92400E', margin: '0 0 2px' }}>Renovação Pendente</h4>
+                          <p style={{ fontSize: '11px', color: '#B45309', margin: 0, lineHeight: 1.4 }}>
+                            Faltam <strong>{daysRemaining} dias</strong> de testes grátis (expira em {formattedExpiryDate}). Assine o plano premium.
+                          </p>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Modo Silencioso</span>
-                        <span style={{ fontSize: '11px', color: '#64748B' }}>
-                          {(quietModeStart && quietModeEnd) 
-                            ? `Ativo das ${quietModeStart} às ${quietModeEnd}` 
-                            : 'Desativado'}
-                        </span>
-                      </div>
+                      <button 
+                        onClick={handleUpgrade}
+                        disabled={upgradeLoading}
+                        style={{ width: '100%', padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.15)' }}
+                      >
+                        {upgradeLoading ? 'Gerando...' : `Garantir Acesso Premium — R$ ${planPrice.replace('.', ',')}/ano`}
+                      </button>
                     </div>
-                    <label className="switch">
-                      <input 
-                        type="checkbox" 
-                        checked={!!(quietModeStart && quietModeEnd)} 
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            toggleHomeSetting('quietModeStart', '22:00');
-                            toggleHomeSetting('quietModeEnd', '07:00');
-                          } else {
-                            toggleHomeSetting('quietModeStart', '');
-                            toggleHomeSetting('quietModeEnd', '');
-                          }
-                        }} 
-                      />
-                      <span className="slider round"></span>
-                    </label>
+                  )}
+
+                  {trialEndsDate && !isTrialExpired && !isTrialExpiringSoon && (
+                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', border: '1px solid #A7F3D0', borderRadius: '20px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.02)' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div style={{ background: '#10B981', color: '#FFF', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <ShieldCheck size={16} />
+                        </div>
+                        <div>
+                          <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#065F46', margin: 0 }}>Premium Ativo</h4>
+                          <p style={{ fontSize: '11px', color: '#047857', margin: 0 }}>Válido até {formattedExpiryDate}</p>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '3px 8px', borderRadius: '100px' }}>ANUAL</span>
+                    </div>
+                  )}
+
+                  {/* Status Header Hero */}
+                  <div style={{ margin: '0 20px', display: 'flex', alignItems: 'center', gap: '16px', background: '#FFF', padding: '20px', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                    <div style={{
+                      width: '56px', height: '56px', borderRadius: '50%',
+                      background: 'rgba(16, 185, 129, 0.08)', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <Bell size={24} color="#10B981" />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 2px', color: '#0F172A' }}>Aguardando Chamadas</h3>
+                      <p style={{ color: '#64748B', fontSize: '12px', margin: 0 }}>Você será notificado em tempo real.</p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Seção do Portão Sonoff (se aplicável) integrada no card */}
-                {!isHouseResident && (
-                  <>
-                    <div style={{ height: '1px', background: 'rgba(226, 232, 240, 0.8)' }} />
-                    <button
-                      onClick={openGateSonoff}
-                      disabled={openGateLoading}
-                      style={{
-                        width: '100%',
-                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                        color: '#FFF',
-                        border: 'none',
-                        padding: '14px',
-                        borderRadius: '16px',
-                        fontWeight: 800,
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        boxShadow: '0 4px 12px rgba(16,185,129,0.2)',
-                        transition: 'transform 0.1s active'
-                      }}
-                    >
-                      <LockOpen size={16} /> {openGateLoading ? 'Abrindo...' : 'Liberar Portão Principal'}
-                    </button>
-                  </>
-                )}
-              </div>
+                  {/* Widgets Row/Grid */}
+                  <div style={{ margin: '0 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    
+                    {/* Sonoff gate (pedestrian) */}
+                    {!isHouseResident && (
+                      <button
+                        onClick={openGateSonoff}
+                        disabled={openGateLoading}
+                        style={{
+                          background: 'linear-gradient(135deg, #FFF 0%, #F8FAFC 100%)',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '20px',
+                          padding: '18px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.01)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          outline: 'none'
+                        }}
+                      >
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '12px',
+                          background: 'rgba(16, 185, 129, 0.08)', color: '#10B981',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '20px'
+                        }}>
+                          🔓
+                        </div>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', textAlign: 'center' }}>
+                          {openGateLoading ? 'Abrindo...' : 'Abrir Portão'}
+                        </span>
+                      </button>
+                    )}
 
-                {/* Status de notificações push */}
-                {!pushEnabled && (
+                    {/* Interfonar para Portaria */}
+                    {!isHouseResident && (
+                      <button
+                        onClick={handleCallDoorman}
+                        style={{
+                          background: 'linear-gradient(135deg, #FFF 0%, #F8FAFC 100%)',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '20px',
+                          padding: '18px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.01)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          outline: 'none'
+                        }}
+                      >
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '12px',
+                          background: 'rgba(59, 130, 246, 0.08)', color: '#3B82F6',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '20px'
+                        }}>
+                          📞
+                        </div>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', textAlign: 'center' }}>
+                          Chamar Portaria
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Fale com o Síndico (mailbox shortcut) */}
+                    {!isHouseResident && (
+                      <button
+                        onClick={() => {
+                          setTab('messages');
+                          setMessagesSubTab('chat');
+                        }}
+                        style={{
+                          background: 'linear-gradient(135deg, #FFF 0%, #F8FAFC 100%)',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '20px',
+                          padding: '18px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.01)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          outline: 'none',
+                          gridColumn: isHouseResident ? 'span 2' : 'auto'
+                        }}
+                      >
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '12px',
+                          background: 'rgba(79, 70, 229, 0.08)', color: '#4F46E5',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '20px'
+                        }}>
+                          📬
+                        </div>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', textAlign: 'center' }}>
+                          Falar com Síndico
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Novo Código de Visitante */}
+                    {!isDependent && !isHouseResident && (
+                      <button
+                        onClick={() => setTab('visitor-codes')}
+                        style={{
+                          background: 'linear-gradient(135deg, #FFF 0%, #F8FAFC 100%)',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '20px',
+                          padding: '18px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.01)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          outline: 'none'
+                        }}
+                      >
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '12px',
+                          background: 'rgba(245, 158, 11, 0.08)', color: '#F59E0B',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '20px'
+                        }}>
+                          🔑
+                        </div>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', textAlign: 'center' }}>
+                          Novo Código
+                        </span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Novo Card de Perfil & Hub de Controle Unificado */}
                   <div style={{ 
-                    marginTop: '16px',
-                    width: '100%', 
-                    maxWidth: '340px', 
-                    background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', 
-                    border: '1px solid #BFDBFE', 
-                    borderRadius: '20px', 
-                    padding: '16px 20px', 
+                    margin: '0 20px', 
+                    background: '#FFF', 
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '24px', 
+                    padding: '24px', 
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)',
                     display: 'flex', 
                     flexDirection: 'column', 
-                    gap: '12px', 
-                    boxShadow: '0 8px 20px rgba(59, 130, 246, 0.05)',
-                    textAlign: 'left'
+                    gap: '20px' 
                   }}>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                      <div style={{ 
-                        background: '#3B82F6', 
-                        color: '#FFF', 
-                        borderRadius: '50%', 
-                        width: '32px', 
-                        height: '32px', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        flexShrink: 0, 
-                        boxShadow: '0 4px 10px rgba(59, 130, 246, 0.15)' 
-                      }}>
-                        <BellOff size={16} />
+                    {/* Cabeçalho do Perfil com Avatar Interativo */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div 
+                        onClick={() => fileInputRef.current.click()} 
+                        style={{ 
+                          position: 'relative', 
+                          width: '64px', 
+                          height: '64px', 
+                          borderRadius: '50%', 
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                          flexShrink: 0,
+                          overflow: 'hidden',
+                          border: '2px solid #3B82F6'
+                        }}
+                      >
+                        {userPhoto ? (
+                          <img src={userPhoto} alt="Foto de Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6', fontWeight: 800, fontSize: '20px' }}>
+                            {unitName ? unitName.slice(0, 2).toUpperCase() : 'M'}
+                          </div>
+                        )}
+                        {/* Camera Overlay */}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0, 0, 0, 0.5)', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+                          <Camera size={10} />
+                        </div>
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#1E40AF', margin: '0 0 2px' }}>Notificações Inativas</h4>
-                        <p style={{ fontSize: '11px', color: '#1E3A8A', margin: 0, lineHeight: 1.4 }}>
-                          Ative as notificações para receber chamadas de visitantes mesmo quando o celular estiver bloqueado ou com a tela desligada!
+                      
+                      {/* File input invisível */}
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handlePhotoUpload} 
+                        accept="image/*" 
+                        style={{ display: 'none' }} 
+                      />
+
+                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase', letterSpacing: '1px' }}>Morador</span>
+                        <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {localStorage.getItem('residentName') || 'Morador'}
+                        </h3>
+                        <p style={{ fontSize: '13px', color: '#64748B', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {unitName} • {propertyName || 'Campainha Digital'}
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={enablePushNotifications}
-                      disabled={pushLoading}
-                      style={{ 
-                        width: '100%', 
-                        padding: '10px', 
-                        borderRadius: '12px', 
-                        background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', 
-                        color: '#FFF', 
-                        border: 'none', 
-                        fontWeight: 800, 
-                        fontSize: '12px', 
-                        cursor: 'pointer', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        gap: '6px', 
-                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)' 
-                      }}
-                    >
-                      {pushLoading ? 'Ativando...' : '🔔 Ativar Notificações Agora'}
-                    </button>
-                  </div>
-                )}
 
-                 {pushEnabled && (
-                  <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', background: 'rgba(16,185,129,0.08)', padding: '5px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>
-                      <BellRing size={12} /> Push Ativo
+                    <div style={{ height: '1px', background: 'rgba(226, 232, 240, 0.8)' }} />
+
+                    {/* Grid de Configurações Rápidas */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {/* Item Campainha */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: doorbellEnabled ? '#ECFDF5' : '#F1F5F9', color: doorbellEnabled ? '#10B981' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {doorbellEnabled ? <Bell size={18} /> : <BellOff size={18} />}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Campainha Ativa</span>
+                            <span style={{ fontSize: '11px', color: '#64748B' }}>{doorbellEnabled ? 'Toca quando visitantes chamam' : 'Silenciada'}</span>
+                          </div>
+                        </div>
+                        {/* Switch CSS */}
+                        <label className="switch">
+                          <input 
+                            type="checkbox" 
+                            checked={doorbellEnabled} 
+                            onChange={(e) => toggleHomeSetting('doorbellEnabled', e.target.checked)} 
+                          />
+                          <span className="slider round"></span>
+                        </label>
+                      </div>
+
+                      {/* Item Interfone (apenas para condomínios) */}
+                      {!isHouseResident && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: intercomEnabled ? '#EFF6FF' : '#F1F5F9', color: intercomEnabled ? '#3B82F6' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Phone size={18} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Interfone Interno</span>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>{intercomEnabled ? 'Recebe chamadas de vizinhos' : 'Bloqueado'}</span>
+                            </div>
+                          </div>
+                          <label className="switch">
+                            <input 
+                              type="checkbox" 
+                              checked={intercomEnabled} 
+                              onChange={(e) => toggleHomeSetting('intercomEnabled', e.target.checked)} 
+                            />
+                            <span className="slider round"></span>
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Item Modo Silencioso */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: (quietModeStart && quietModeEnd) ? '#FEF3C7' : '#F1F5F9', color: (quietModeStart && quietModeEnd) ? '#F59E0B' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Moon size={18} />
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Modo Silencioso</span>
+                            <span style={{ fontSize: '11px', color: '#64748B' }}>
+                              {(quietModeStart && quietModeEnd) 
+                                ? `Ativo das ${quietModeStart} às ${quietModeEnd}` 
+                                : 'Desativado'}
+                            </span>
+                          </div>
+                        </div>
+                        <label className="switch">
+                          <input 
+                            type="checkbox" 
+                            checked={!!(quietModeStart && quietModeEnd)} 
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                toggleHomeSetting('quietModeStart', '22:00');
+                                toggleHomeSetting('quietModeEnd', '07:00');
+                              } else {
+                                toggleHomeSetting('quietModeStart', '');
+                                toggleHomeSetting('quietModeEnd', '');
+                              }
+                            }} 
+                          />
+                          <span className="slider round"></span>
+                        </label>
+                      </div>
                     </div>
-                    <button
-                      onClick={async () => {
-                        setPushLoading(true);
-                        try {
-                          const token = localStorage.getItem('cd_token');
-                          if (!token) {
-                            alert('Erro: Token de login não encontrado localmente. Refaça o login no app.');
-                            return;
-                          }
-                          const res = await fetch(`${API}/api/push/test`, { 
-                            method: 'POST', 
-                            headers: { 'Authorization': token } 
-                          });
-                          if (res.ok) {
-                            const resData = await res.json().catch(() => ({}));
-                            if (resData.success === false) {
-                              alert(`⚠️ Alerta: ${resData.message}`);
-                            } else {
-                              alert(`Sinal enviado com sucesso!\n\n📋 Detalhes:\n${resData.message}\n\nSe a notificação ainda não aparecer na tela bloqueada, verifique:\n1. Se o PWA está instalado e aberto pela Tela Inicial (Home Screen).\n2. Se o modo "Não Perturbe" ou "Foco" está ativo no seu celular.\n3. Se você permitiu as notificações nas configurações do sistema.`);
+                  </div>
+
+                  {/* QR Code de Campainha Digital (Accordion style) */}
+                  {propertyId && (
+                    <div style={{ margin: '0 20px' }}>
+                      <div style={{
+                        background: '#FFF',
+                        borderRadius: '24px',
+                        border: '1px solid #E2E8F0',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
+                        overflow: 'hidden',
+                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                      }}>
+                        <button
+                          onClick={() => setShowQrAccordion(!showQrAccordion)}
+                          style={{
+                            width: '100%',
+                            padding: '16px 20px',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            outline: 'none'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ fontSize: '20px' }}>📱</span>
+                            <div style={{ textAlign: 'left' }}>
+                              <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Código QR da Campainha</h4>
+                              <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>Toque para visualizar ou compartilhar</p>
+                            </div>
+                          </div>
+                          <span style={{
+                            fontSize: '12px',
+                            color: '#94A3B8',
+                            transform: showQrAccordion ? 'rotate(180deg)' : 'none',
+                            transition: 'transform 0.2s'
+                          }}>
+                            ▼
+                          </span>
+                        </button>
+
+                        {showQrAccordion && (
+                          <div style={{
+                            padding: '0 20px 20px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '16px',
+                            animation: 'fade-in 0.3s ease-out'
+                          }}>
+                            <div style={{ height: '1px', background: '#F1F5F9', width: '100%' }} />
+                            <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '20px', display: 'flex', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
+                              <img 
+                                src={`${API}/api/qrcode?text=${encodeURIComponent(qrCodeUrl)}`} 
+                                alt="QR Code Campainha Digital" 
+                                style={{ width: '180px', height: '180px', display: 'block', borderRadius: '12px' }} 
+                              />
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                              <button 
+                                onClick={() => {
+                                  const shareText = `Toque a minha Campainha Digital online quando chegar:\n👉 ${qrCodeUrl}`;
+                                  if (navigator.share) {
+                                    navigator.share({
+                                      title: 'Minha Campainha Digital',
+                                      text: shareText,
+                                      url: qrCodeUrl
+                                    }).catch(() => {});
+                                  } else {
+                                    window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+                                  }
+                                }}
+                                style={{ flex: 1, padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)', border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)' }}
+                              >
+                                <MessageCircle size={16} /> Compartilhar
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  const url = `${API}/api/qrcode?text=${encodeURIComponent(qrCodeUrl)}`;
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `Campainha_Digital_${unitName}.png`;
+                                  a.click();
+                                }}
+                                style={{ padding: '12px 16px', borderRadius: '14px', background: '#F1F5F9', border: 'none', color: '#475569', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                              >
+                                <Download size={16} /> Baixar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status de notificações push se não ativado */}
+                  {!pushEnabled && (
+                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', border: '1px solid #BFDBFE', borderRadius: '24px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.02)' }}>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                        <div style={{ background: '#3B82F6', color: '#FFF', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <BellOff size={16} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#1E40AF', margin: '0 0 2px' }}>Notificações Inativas</h4>
+                          <p style={{ fontSize: '11px', color: '#1E3A8A', margin: 0, lineHeight: 1.4 }}>
+                            Ative as notificações para receber chamadas mesmo com a tela do celular apagada!
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={enablePushNotifications}
+                        disabled={pushLoading}
+                        style={{ width: '100%', padding: '10px', borderRadius: '12px', background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)' }}
+                      >
+                        {pushLoading ? 'Ativando...' : '🔔 Ativar Notificações'}
+                      </button>
+                    </div>
+                  )}
+
+                  {pushEnabled && (
+                    <div style={{ margin: '0 20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', background: 'rgba(16,185,129,0.08)', padding: '5px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>
+                        <BellRing size={12} /> Push Ativo
+                      </div>
+                      <button
+                        onClick={async () => {
+                          setPushLoading(true);
+                          try {
+                            const token = localStorage.getItem('cd_token');
+                            if (!token) {
+                              alert('Erro: Token não encontrado.');
+                              return;
                             }
-                          } else {
-                            const errData = await res.json().catch(() => ({}));
-                            alert(`Erro no servidor (${res.status}): ${errData.error || 'Falha na requisição'}`);
-                          }
-                        } catch (e) {
-                          alert(`Erro de conexão com o servidor: ${e.message}`);
-                        } finally { 
-                          setPushLoading(false); 
-                        }
-                      }}
-                      disabled={pushLoading}
-                      style={{ padding: '5px 12px', borderRadius: '99px', background: 'rgba(59,130,246,0.1)', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      {pushLoading ? '...' : '🔔 Testar'}
-                    </button>
-                  </div>
-                )}
+                            const res = await fetch(`${API}/api/push/test`, { method: 'POST', headers: { 'Authorization': token } });
+                            if (res.ok) {
+                              const resData = await res.json().catch(() => ({}));
+                              if (resData.success === false) {
+                                alert(`⚠️ Alerta: ${resData.message}`);
+                              } else {
+                                alert(`Sinal enviado com sucesso!\n\nSe a notificação não aparecer, certifique-se de que o PWA está instalado e você autorizou as notificações.`);
+                              }
+                            } else {
+                              alert('Falha ao enviar sinal de teste.');
+                            }
+                          } catch (e) {
+                            alert(`Erro: ${e.message}`);
+                          } finally { setPushLoading(false); }
+                        }}
+                        disabled={pushLoading}
+                        style={{ padding: '5px 12px', borderRadius: '99px', background: 'rgba(59,130,246,0.1)', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        {pushLoading ? '...' : '🔔 Testar Notificação'}
+                      </button>
+                    </div>
+                  )}
 
-              {/* QR Code de Campainha Digital */}
-              {propertyId && (
-                <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '24px', padding: '24px', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textAlign: 'center' }}>
-                    <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: 0 }}>SUA CAMPAINHA DIGITAL</p>
-                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 500 }}>Compartilhe com visitantes ou imprima para colar no portão!</span>
-                  </div>
-                  
-                  <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '20px', display: 'flex', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
-                    <img 
-                      src={`${API}/api/qrcode?text=${encodeURIComponent(qrCodeUrl)}`} 
-                      alt="QR Code Campainha Digital" 
-                      style={{ width: '180px', height: '180px', display: 'block', borderRadius: '12px' }} 
-                    />
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                  {/* Código de Acesso */}
+                  <div style={{ margin: '0 20px', background: '#FFF', borderRadius: '24px', padding: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', textTransform: 'uppercase' }}>Código de Acesso</span>
+                      <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#3B82F6', letterSpacing: '4px', margin: '4px 0 0', fontFamily: 'monospace' }}>{accessCode || '...'}</h3>
+                    </div>
                     <button 
                       onClick={() => {
-                        const url = qrCodeUrl;
-                        const shareText = `Toque a minha Campainha Digital online quando chegar:\n👉 ${url}`;
-                        if (navigator.share) {
-                          navigator.share({
-                            title: 'Minha Campainha Digital',
-                            text: shareText,
-                            url: url
-                          }).catch(() => {});
-                        } else {
-                          window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-                        }
+                        const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin + window.location.pathname}#/auth`;
+                        window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank');
                       }}
-                      style={{ flex: 1, padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)', border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}
+                      style={{ padding: '10px 14px', borderRadius: '12px', background: '#25D366', border: 'none', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                     >
-                      <MessageCircle size={16} /> Compartilhar
-                    </button>
-                    <button 
-                      onClick={handleDownloadPlate}
-                      disabled={downloadingPlate}
-                      style={{ padding: '12px 16px', borderRadius: '14px', background: '#F1F5F9', border: 'none', color: '#475569', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: downloadingPlate ? 0.7 : 1 }}
-                      title="Baixar Placa Completa"
-                    >
-                      <Download size={16} /> {downloadingPlate ? 'Gerando...' : 'Baixar'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Código de Acesso */}
-              <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '16px 18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                <p style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 8px' }}>SEU CÓDIGO DE ACESSO</p>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                  <span style={{ fontSize: '24px', fontWeight: 900, color: '#3B82F6', letterSpacing: '4px', fontFamily: 'monospace' }}>{accessCode || '...'}</span>
-                  <button onClick={() => { const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin + window.location.pathname}#/auth`; window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank'); }}
-
-                    style={{ padding: '8px 14px', borderRadius: '10px', background: '#25D366', border: 'none', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <MessageCircle size={14}/> Compartilhar
-                  </button>
-                </div>
-              </div>
-
-              {/* Botões Rápidos e Dispositivos Sonoff */}
-              {!isHouseResident && (
-                <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                  <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 12px' }}>⚡ DISPOSITIVOS & AÇÕES RÁPIDAS</p>
-                  
-
-
-                  {/* Grid for alert dispatchers */}
-                  <p style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', marginBottom: '4px' }}>Notificar Portaria na Grade Visual:</p>
-                  
-                  <input
-                    type="text"
-                    placeholder="Nome do Visitante / Entregador (Opcional)"
-                    value={visitorOrPackageName}
-                    onChange={e => setVisitorOrPackageName(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '10px',
-                      fontSize: '12px',
-                      outline: 'none',
-                      marginBottom: '8px',
-                      background: '#F8FAFC'
-                    }}
-                  />
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                    <button
-                      onClick={() => dispatchAlert('release', '🔑 Solicitação de Liberação', 'Morador solicita liberação de visitante na portaria.')}
-                      disabled={dispatchAlertLoading}
-                      style={{
-                        background: '#F0FDF4',
-                        border: '1px solid #DCFCE7',
-                        color: '#15803D',
-                        padding: '10px 8px',
-                        borderRadius: '10px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <span>🔑</span>
-                      <span>Liberação</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => dispatchAlert('package', '📦 Retirar Encomenda', 'Morador avisa que irá retirar encomenda na portaria.')}
-                      disabled={dispatchAlertLoading}
-                      style={{
-                        background: '#FEF3C7',
-                        border: '1px solid #FDE68A',
-                        color: '#B45309',
-                        padding: '10px 8px',
-                        borderRadius: '10px',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <span>📦</span>
-                      <span>Encomenda</span>
+                      <MessageCircle size={14}/> Enviar
                     </button>
                   </div>
 
-                  <button
-                    onClick={() => dispatchAlert('alert', '⚠️ Pedido de Ajuda / Suporte', 'Morador solicita assistência urgente da portaria ou administração.')}
-                    disabled={dispatchAlertLoading}
-                    style={{
-                      width: '100%',
-                      background: '#FEF2F2',
-                      border: '1px solid #FEE2E2',
-                      color: '#991B1B',
-                      padding: '10px',
-                      borderRadius: '10px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>⚠️</span>
-                    <span>Solicitar Assistência / Suporte Urgente</span>
-                  </button>
-
-                  <button
-                    onClick={handleCallDoorman}
-                    disabled={dispatchAlertLoading}
-                    style={{
-                      width: '100%',
-                      background: '#EFF6FF',
-                      border: '1px solid #DBEAFE',
-                      color: '#1D4ED8',
-                      padding: '10px',
-                      borderRadius: '10px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      marginTop: '8px'
-                    }}
-                  >
-                    <span>📞</span>
-                    <span>Interfonar para Portaria</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Caixa Postal (Fale com o Síndico) — só para não-dependentes */}
-              {!isHouseResident && !isDependent && (
-                <>
-                  <div style={{ width: '100%', maxWidth: '380px', background: '#FFF', borderRadius: '16px', padding: '18px', border: '1px solid #E2E8F0', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                    <p style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', margin: '0 0 12px' }}>📬 FALAR COM A ADMINISTRAÇÃO (CAIXA POSTAL)</p>
-                    <form onSubmit={sendSupportMessage} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* Pré-autorização e Alertas (Condomínio) */}
+                  {!isHouseResident && (
+                    <div style={{ margin: '0 20px', background: '#FFF', borderRadius: '24px', padding: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px' }}>Aviso Prévio para Portaria</h4>
                       <input
                         type="text"
-                        placeholder="Assunto (ex: Vazamento, Sugestão...)"
-                        value={supportSubject}
-                        onChange={e => setSupportSubject(e.target.value)}
+                        placeholder="Nome do Visitante / Entregador (Opcional)"
+                        value={visitorOrPackageName}
+                        onChange={e => setVisitorOrPackageName(e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '10px 12px',
+                          padding: '12px 14px',
                           border: '1px solid #E2E8F0',
-                          borderRadius: '10px',
-                          fontSize: '13px',
-                          outline: 'none'
-                        }}
-                      />
-                      <textarea
-                        placeholder="Descreva detalhadamente sua solicitação..."
-                        value={supportBody}
-                        onChange={e => setSupportBody(e.target.value)}
-                        rows={3}
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          border: '1px solid #E2E8F0',
-                          borderRadius: '10px',
+                          borderRadius: '12px',
                           fontSize: '13px',
                           outline: 'none',
-                          resize: 'none'
+                          marginBottom: '12px',
+                          background: '#F8FAFC',
+                          fontFamily: 'inherit'
                         }}
+                      />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                        <button
+                          onClick={() => dispatchAlert('release', '🔑 Solicitação de Liberação', 'Morador solicita liberação de visitante na portaria.')}
+                          disabled={dispatchAlertLoading}
+                          style={{
+                            background: '#F0FDF4',
+                            border: '1px solid #DCFCE7',
+                            color: '#15803D',
+                            padding: '12px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <span>🔑</span>
+                          <span>Solicitar Liberação</span>
+                        </button>
+                        <button
+                          onClick={() => dispatchAlert('package', '📦 Retirar Encomenda', 'Morador avisa que irá retirar encomenda na portaria.')}
+                          disabled={dispatchAlertLoading}
+                          style={{
+                            background: '#FEF3C7',
+                            border: '1px solid #FDE68A',
+                            color: '#B45309',
+                            padding: '12px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <span>📦</span>
+                          <span>Retirar Encomenda</span>
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => dispatchAlert('alert', '⚠️ Pedido de Ajuda / Suporte', 'Morador solicita assistência urgente da portaria ou administração.')}
+                        disabled={dispatchAlertLoading}
+                        style={{
+                          width: '100%',
+                          background: '#FEF2F2',
+                          border: '1px solid #FEE2E2',
+                          color: '#991B1B',
+                          padding: '12px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>⚠️</span>
+                        <span>Solicitar Assistência Urgente</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Caixa Postal & Quadro de Comunicados */}
+                  {!isHouseResident && !isDependent && (
+                    <div style={{ margin: '0 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      <div style={{
+                        background: '#FFF',
+                        borderRadius: '24px',
+                        padding: '20px',
+                        border: '1px solid #E2E8F0',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.02)'
+                      }}>
+                        <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px' }}>📬 Falar com a Administração</h4>
+                        <form onSubmit={sendSupportMessage} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <input
+                            type="text"
+                            placeholder="Assunto (ex: Vazamento, Dúvida...)"
+                            value={supportSubject}
+                            onChange={e => setSupportSubject(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '12px 14px',
+                              border: '1px solid #E2E8F0',
+                              borderRadius: '12px',
+                              fontSize: '13px',
+                              outline: 'none',
+                              background: '#F8FAFC'
+                            }}
+                          />
+                          <textarea
+                            placeholder="Descreva detalhadamente sua solicitação..."
+                            value={supportBody}
+                            onChange={e => setSupportBody(e.target.value)}
+                            rows={3}
+                            style={{
+                              width: '100%',
+                              padding: '12px 14px',
+                              border: '1px solid #E2E8F0',
+                              borderRadius: '12px',
+                              fontSize: '13px',
+                              outline: 'none',
+                              resize: 'none',
+                              background: '#F8FAFC'
+                            }}
+                          />
+                          <button
+                            type="submit"
+                            disabled={supportSending}
+                            style={{
+                              width: '100%',
+                              background: 'var(--primary)',
+                              color: '#fff',
+                              border: 'none',
+                              padding: '12px',
+                              borderRadius: '12px',
+                              fontSize: '13px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              boxShadow: '0 4px 12px rgba(59,130,246,0.2)'
+                            }}
+                          >
+                            {supportSending ? 'Enviando...' : 'Enviar Mensagem'}
+                          </button>
+                        </form>
+                      </div>
+
+                      <MessagesPanel messages={broadcastMessages} unreadCount={unreadCount} onClear={markMessagesRead}/>
+                    </div>
+                  )}
+
+                </div>
+              )}
+            </>
+          )}
+
+          {tab === 'messages' && (
+            residentIsVila ? (
+              <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                {/* Sub-tab Selector */}
+                <div style={{ display: 'flex', background: '#E2E8F0', padding: '4px', borderRadius: '14px', marginBottom: '16px', flexShrink: 0 }}>
+                  <button 
+                    onClick={() => setMessagesSubTab('board')} 
+                    style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: messagesSubTab === 'board' ? '#FFF' : 'transparent', color: messagesSubTab === 'board' ? '#0F172A' : '#64748B', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  >
+                    📢 Quadro de Avisos
+                  </button>
+                  <button 
+                    onClick={() => setMessagesSubTab('chat')} 
+                    style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: messagesSubTab === 'chat' ? '#FFF' : 'transparent', color: messagesSubTab === 'chat' ? '#0F172A' : '#64748B', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  >
+                    💬 Chat com o Admin
+                  </button>
+                </div>
+
+                {messagesSubTab === 'board' ? (
+                  <div style={{ flex: 1, overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <div>
+                        <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>Quadro de Avisos</h2>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>
+                          {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id) && m.priority === 'urgent').length} aviso(s) ativo(s)
+                        </p>
+                      </div>
+                      {broadcastMessages.some(m => !JSON.parse(localStorage.getItem('cd_read_msgs') || '[]').includes(m.id) && m.priority === 'urgent') && (
+                        <button 
+                          onClick={markMessagesRead} 
+                          style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#EFF6FF', color: '#1D4ED8', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Ler todos
+                        </button>
+                      )}
+                    </div>
+
+                    {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id) && m.priority === 'urgent').length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
+                        <Mail size={40} style={{ opacity: 0.2, marginBottom: '12px' }}/>
+                        <p style={{ fontWeight: 600 }}>Nenhum aviso recebido</p>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {broadcastMessages
+                          .filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id) && m.priority === 'urgent')
+                          .map(m => {
+                            const isRead = JSON.parse(localStorage.getItem('cd_read_msgs') || '[]').includes(m.id);
+                            return (
+                              <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239, 68, 68, 0.3)' : '#E2E8F0'}`, borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', position: 'relative' }}>
+                                {!isRead && (
+                                  <div style={{ position: 'absolute', top: '22px', left: '8px', width: '6px', height: '6px', borderRadius: '50%', background: '#3B82F6' }} />
+                                )}
+                                
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', paddingLeft: isRead ? '0' : '8px' }}>
+                                  <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>
+                                    {m.title}
+                                  </span>
+                                  <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
+                                    {new Date(m.createdAt).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                                
+                                <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 12px 0', lineHeight: 1.6, paddingLeft: isRead ? '0' : '8px' }}>{m.body}</p>
+                                
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
+                                  {!isRead && (
+                                    <button 
+                                      onClick={() => {
+                                        const readIds = JSON.parse(localStorage.getItem('cd_read_msgs') || '[]');
+                                        localStorage.setItem('cd_read_msgs', JSON.stringify([...readIds, m.id]));
+                                        setUnreadCount(prev => Math.max(0, prev - 1));
+                                      }}
+                                      style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#F1F5F9', color: '#475569', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                                    >
+                                      ✓ Lida
+                                    </button>
+                                  )}
+                                  <button 
+                                    onClick={() => {
+                                      const deletedIds = JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]');
+                                      localStorage.setItem('cd_deleted_msgs', JSON.stringify([...deletedIds, m.id]));
+                                      if (!isRead) {
+                                        setUnreadCount(prev => Math.max(0, prev - 1));
+                                      }
+                                      setBroadcastMessages(prev => prev.filter(item => item.id !== m.id));
+                                    }}
+                                    style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#FFF1F2', color: '#E11D48', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                                  >
+                                    🗑️ Apagar
+                                  </button>
+                                  {m.priority !== 'urgent' && (
+                                    <button 
+                                      onClick={() => setMessagesSubTab('chat')}
+                                      style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#E0F2FE', color: '#0369A1', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                                    >
+                                      💬 Responder
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+                    <div style={{ padding: '14px 16px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981' }} />
+                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B' }}>Chat Direto com Admin da Vila</span>
+                    </div>
+                    
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {rawVilaMessages.filter(m => m.unitId !== null).length === 0 ? (
+                        <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', paddingTop: '40px' }}>
+                          Nenhuma mensagem individual com o admin ainda.
+                        </div>
+                      ) : (
+                        rawVilaMessages
+                          .filter(m => m.unitId !== null)
+                          .map(m => {
+                            const isMine = !m.isFromAdmin;
+                            return (
+                              <div key={m.id} style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start' }}>
+                                <div style={{
+                                  maxWidth: '75%',
+                                  padding: '10px 14px',
+                                  borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                                  background: isMine ? 'linear-gradient(135deg,#3B82F6,#1D4ED8)' : '#F1F5F9',
+                                  color: isMine ? '#FFF' : '#1E293B',
+                                  fontSize: '13px',
+                                  fontWeight: 500,
+                                  boxShadow: isMine ? '0 4px 12px rgba(59,130,246,0.1)' : 'none',
+                                  border: isMine ? 'none' : '1px solid #E2E8F0',
+                                  opacity: m.sending ? 0.6 : 1
+                                }}>
+                                  <p style={{ margin: '0 0 4px 0', lineHeight: 1.4 }}>{m.content}</p>
+                                  <span style={{ fontSize: '9px', opacity: 0.6, display: 'block', textAlign: 'right' }}>
+                                    {m.sending ? 'Enviando...' : m.error ? '⚠️ Falha' : new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })
+                      )}
+                      <div ref={chatEndRef} />
+                    </div>
+
+                    <form 
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        const textContent = newReplyMsg.trim();
+                        if (!textContent) return;
+
+                        const currentPropId = savedPropId || localStorage.getItem('residentPropertyId');
+                        const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
+                        const currentUserId = localStorage.getItem('cd_user_id');
+
+                        setNewReplyMsg('');
+
+                        const tempId = 'temp-' + Date.now();
+                        const optimisticMsg = {
+                          id: tempId,
+                          senderId: currentUserId,
+                          senderName: unitName || 'Morador',
+                          content: textContent,
+                          unitId: currentUnitId,
+                          isFromAdmin: false,
+                          createdAt: new Date().toISOString(),
+                          sending: true
+                        };
+
+                        setRawVilaMessages(prev => [...prev, optimisticMsg]);
+                        
+                        setTimeout(() => {
+                          chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                        }, 50);
+
+                        try {
+                          const res = await fetch(`${API}/api/vila/${currentPropId}/messages`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              senderId: currentUserId,
+                              senderName: unitName || 'Morador',
+                              content: textContent,
+                              unitId: currentUnitId,
+                              isFromAdmin: false
+                            })
+                          });
+                          if (res.ok) {
+                            const msg = await res.json();
+                            setRawVilaMessages(prev => prev.map(m => m.id === tempId ? msg : m));
+                          } else {
+                            setRawVilaMessages(prev => prev.map(m => m.id === tempId ? { ...m, error: true, sending: false } : m));
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          setRawVilaMessages(prev => prev.map(m => m.id === tempId ? { ...m, error: true, sending: false } : m));
+                        }
+                      }} 
+                      style={{ display: 'flex', gap: '8px', padding: '12px 16px', background: '#FFF', borderTop: '1px solid #E2E8F0', flexShrink: 0 }}
+                    >
+                      <input
+                        value={newReplyMsg}
+                        onChange={e => setNewReplyMsg(e.target.value)}
+                        placeholder="Escreva uma resposta..."
+                        style={{ flex: 1, padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0', fontSize: '13px', outline: 'none', background: '#F8FAFC', fontFamily: 'inherit' }}
                       />
                       <button
                         type="submit"
-                        disabled={supportSending}
-                        style={{
-                          width: '100%',
-                          background: 'var(--primary)',
-                          color: '#000',
-                          border: 'none',
-                          padding: '10px',
-                          borderRadius: '10px',
-                          fontSize: '13px',
-                          fontWeight: 800,
-                          cursor: 'pointer'
-                        }}
+                        disabled={!newReplyMsg.trim() || sendingReply}
+                        style={{ padding: '10px 16px', borderRadius: '12px', border: 'none', background: newReplyMsg.trim() ? '#3B82F6' : '#E2E8F0', color: newReplyMsg.trim() ? '#FFF' : '#94A3B8', cursor: newReplyMsg.trim() ? 'pointer' : 'default', fontWeight: 700, fontSize: '13px' }}
                       >
-                        {supportSending ? 'Enviando...' : 'Enviar Mensagem ao Síndico'}
+                        Enviar
                       </button>
                     </form>
                   </div>
-
-                  {/* Mensagens do condomínio - colapssável */}
-                  <MessagesPanel messages={broadcastMessages} unreadCount={unreadCount} onClear={markMessagesRead}/>
-                </>
-              )}
-
-            </div>
-          )}
-
-          {/* OUTGOING CALL (INTERCOM CALLING) */}
-          {status === 'calling' && call && (
-            <div style={{ padding: '16px 24px', textAlign: 'center' }}>
-              <div style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '16px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', justifyContent: 'center' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3B82F6', animation: 'pulse 1s infinite' }} />
-                <span style={{ color: '#3B82F6', fontWeight: 800, fontSize: '13px', letterSpacing: '1px' }}>CHAMANDO VIZINHO</span>
-              </div>
-
-              {/* Animação / Ícone de telefone pulsando */}
-              <div style={{ display: 'flex', justifyContent: 'center', margin: '40px 0' }}>
-                <div style={{
-                  width: '96px', height: '96px', borderRadius: '50%',
-                  background: 'rgba(59, 130, 246, 0.1)', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center',
-                  animation: 'pulse-blue 1.5s infinite', border: '2px solid rgba(59, 130, 246, 0.3)'
-                }}>
-                  <Phone size={40} color="#3B82F6" />
-                </div>
-              </div>
-
-              {/* Título e Status */}
-              <div style={{ marginBottom: '40px' }}>
-                <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: '0 0 8px' }}>
-                  {call.callerName}
-                </h3>
-                <p style={{ fontSize: '14px', color: '#64748B', fontWeight: 600 }}>Aguardando o morador atender...</p>
-              </div>
-
-              {/* Botão de desligar */}
-              <button onClick={handleEnd} style={{ width: '100%', padding: '16px', borderRadius: '14px', border: 'none', background: '#EF4444', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 8px 24px rgba(239,68,68,0.35)' }}>
-                <PhoneOff size={22} /> Cancelar Chamada
-              </button>
-            </div>
-          )}
-
-          {/* RINGING */}
-          {status === 'ringing' && call && (
-            <div style={{ padding: '16px 24px' }}>
-              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '16px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1s infinite' }} />
-                <span style={{ color: '#EF4444', fontWeight: 800, fontSize: '13px', letterSpacing: '1px' }}>CHAMADA RECEBIDA</span>
-              </div>
-
-              {/* Foto visitante */}
-              <div style={{ borderRadius: '24px', overflow: 'hidden', background: '#000', aspectRatio: '4/3', position: 'relative', marginBottom: '24px', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
-                {call.photo ? <img src={call.photo} alt="Visitante" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}><Bell size={48} color="#FFF" style={{ opacity: 0.2 }} /></div>}
-                <div style={{ position: 'absolute', top: '16px', left: '16px', background: 'rgba(15,23,42,0.8)', color: '#FFF', padding: '6px 14px', borderRadius: '100px', fontSize: '12px', fontWeight: 700, backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1s infinite' }} />
-                  Visitante no local
-                </div>
-              </div>
-
-              {/* Título e Status */}
-              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: '0 0 4px' }}>{call.callerName === 'Visitante' ? 'Chamada do Portão' : call.callerName}</h3>
-                <p style={{ fontSize: '14px', color: '#64748B', fontWeight: 600 }}>Câmera e áudio capturados para sua segurança.</p>
-              </div>
-
-              {/* Mensagens rápidas */}
-              <div style={{ background: '#FFF', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '16px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '10px' }}>📨 ENVIAR MENSAGEM RÁPIDA</p>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                  {quickMsgs.map(c => (
-                    <button key={c.id} onClick={() => setActiveMsgCat(c.id)}
-                      style={{ padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 600, border: 'none', cursor: 'pointer', background: activeMsgCat === c.id ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: activeMsgCat === c.id ? '#000' : 'var(--text-muted)' }}>
-                      {c.label}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {activeC?.messages.map((msg, i) => (
-                    <button key={i} onClick={() => sendQuickMsg(msg)}
-                      style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '12px', border: '1px solid var(--border-subtle)', background: sentMsg === msg ? '#10B981' : 'rgba(255,255,255,0.05)', color: sentMsg === msg ? '#000' : 'var(--text-main)', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}>
-                      {sentMsg === msg ? '✓ Enviado' : `"${msg}"`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Botões de atender */}
-              {call.callerName === 'Portaria' ? (
-                <button onClick={(e) => { e.stopPropagation(); handleAnswer(false); }} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '15px', background: '#10B981', boxShadow: '0 8px 24px rgba(16,185,129,0.35)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontWeight: 700 }}>
-                  <Phone size={22} /> Atender Portaria (Áudio)
-                </button>
-              ) : (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                    <button onClick={(e) => { e.stopPropagation(); handleMonitor(); }} style={{ padding: '16px', borderRadius: '14px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px' }}>
-                      <EyeOff size={22} color="var(--primary)" />Modo Oculto
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleAnswer(false); }} style={{ padding: '16px', borderRadius: '14px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13px' }}>
-                      <Phone size={22} color="#10B981" />Só Áudio
-                    </button>
-                  </div>
-                  <button onClick={(e) => { e.stopPropagation(); handleAnswer(true); }} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '15px', background: '#10B981', boxShadow: '0 8px 24px rgba(16,185,129,0.35)', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                    <Video size={22} /> Atender com Câmera e Áudio
-                  </button>
-                </>
-              )}
-              <button onClick={(e) => { e.stopPropagation(); handleEnd(); }} style={{ width: '100%', marginTop: '10px', padding: '12px', borderRadius: '14px', border: 'none', background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <PhoneOff size={18} /> Recusar
-              </button>
-            </div>
-          )}
-
-          {/* MONITORING */}
-          {status === 'monitoring' && call && (
-            <div style={{ padding: '16px 24px' }}>
-              <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '14px', padding: '10px 16px', display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
-                <EyeOff size={16} color="#F59E0B" /><span style={{ color: '#F59E0B', fontWeight: 700, fontSize: '13px' }}>Modo Oculto Ativo — visitante não sabe que você está vendo</span>
-              </div>
-              <div style={{ borderRadius: '20px', overflow: 'hidden', background: '#000', position: 'relative', marginBottom: '16px', minHeight: '220px' }}>
-                <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', objectFit: 'cover' }} />
-                <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(245,158,11,0.9)', padding: '4px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 800, color: '#000' }}>👁 OCULTO</div>
-              </div>
-
-              {/* Mensagens rápidas */}
-              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', borderRadius: '14px', padding: '14px', marginBottom: '14px' }}>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '8px' }}>ENVIAR MENSAGEM SEM REVELAR CÂMERA</p>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {quickMsgs.find(c => c.id === 'general')?.messages.map((msg, i) => (
-                    <button key={i} onClick={() => sendQuickMsg(msg)}
-                      style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '12px', border: '1px solid var(--border-subtle)', background: sentMsg === msg ? '#10B981' : 'rgba(255,255,255,0.05)', color: sentMsg === msg ? '#000' : 'var(--text-main)', cursor: 'pointer', fontWeight: 600 }}>
-                      {sentMsg === msg ? '✓' : `"${msg}"`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => handleAnswer(false)} className="btn-primary" style={{ flex: 1, padding: '14px', background: '#10B981', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <Phone size={18} /> Falar
-                </button>
-                {!isHouseResident && (
-                  <button onClick={authorizeEntry} style={{ flex: 1, padding: '14px', background: 'rgba(16,185,129,0.1)', color: '#10B981', border: '1px solid #10B981', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 700 }}>
-                    <KeyRound size={18} /> Abrir
-                  </button>
                 )}
-                <button onClick={handleEnd} style={{ width: '56px', height: '52px', borderRadius: '14px', border: 'none', background: 'rgba(239,68,68,0.15)', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <PhoneOff size={20} />
-                </button>
               </div>
-            </div>
-          )}
-
-          {/* ACTIVE CALL */}
-          {status === 'active' && call && (
-            <div style={{ padding: '16px 24px' }}>
-              <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '14px', padding: '10px 16px', display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', animation: 'pulse 1s infinite' }} />
-                <span style={{ color: '#10B981', fontWeight: 700, fontSize: '13px' }}>Chamada em andamento — {fmtDuration(callDuration)}</span>
-              </div>
-
-              {/* Mídia / Vídeos / Voz */}
-              <div style={{ display: call.callerName === 'Portaria' ? 'none' : 'block', position: 'relative', borderRadius: '20px', overflow: 'hidden', background: '#000', minHeight: '220px', marginBottom: '16px' }}>
-                <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', objectFit: 'cover' }} />
-                {camOn && <video ref={localVideoRef} autoPlay playsInline muted style={{ position: 'absolute', bottom: '12px', right: '12px', width: '100px', borderRadius: '12px', border: '2px solid var(--primary)' }} />}
-              </div>
-
-              {call.callerName === 'Portaria' && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', background: '#0F172A', borderRadius: '20px', border: '1px solid #1E293B', marginBottom: '16px', minHeight: '220px' }}>
-                  <div style={{
-                    width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(0,229,255,0.1)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px',
-                    animation: 'pulse 2s infinite', border: '2px solid rgba(0,229,255,0.2)'
-                  }}>
-                    <Building2 size={40} color="#00E5FF" />
-                  </div>
-                  <h4 style={{ fontSize: '18px', fontWeight: 800, color: '#FFF', margin: '0 0 4px' }}>Portaria</h4>
-                  <p style={{ fontSize: '12px', color: '#94A3B8', margin: 0 }}>Comunicação por voz...</p>
-                </div>
-              )}
-
-              {/* Mensagens */}
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                {quickMsgs.find(c => c.id === 'general')?.messages.slice(0, 3).map((msg, i) => (
-                  <button key={i} onClick={() => sendQuickMsg(msg)}
-                    style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '12px', border: '1px solid var(--border-subtle)', background: sentMsg === msg ? '#10B981' : 'rgba(255,255,255,0.05)', color: sentMsg === msg ? '#000' : 'var(--text-main)', cursor: 'pointer', fontWeight: 600 }}>
-                    {sentMsg === msg ? '✓' : `"${msg}"`}
-                  </button>
-                ))}
-              </div>
-
-              {/* Controles */}
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '16px' }}>
-                <button onClick={toggleMute} style={{ width: '56px', height: '56px', borderRadius: '50%', border: 'none', background: isMuted ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)', color: isMuted ? '#EF4444' : 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MicOff size={22} />
-                </button>
-                {call.callerName !== 'Portaria' && (
-                  <button onClick={toggleCam} style={{ width: '56px', height: '56px', borderRadius: '50%', border: 'none', background: camOn ? 'rgba(0,229,255,0.15)' : 'rgba(255,255,255,0.08)', color: camOn ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {camOn ? <Video size={22} /> : <VideoOff size={22} />}
-                  </button>
-                )}
-                <button onClick={handleEnd} style={{ width: '56px', height: '56px', borderRadius: '50%', border: 'none', background: '#EF4444', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(239,68,68,0.4)' }}>
-                  <PhoneOff size={22} />
-                </button>
-              </div>
-
-              {!isHouseResident && (
-                <button onClick={handleOpenGate} className="btn-primary" style={{ width: '100%', padding: '16px', fontSize: '16px', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 8px 32px rgba(16, 185, 129, 0.4)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                  <KeyRound size={24} /> LIBERAR ENTRADA
-                </button>
-              )}
-            </div>
-          )}
-        </>
-      )}
-
-      {tab === 'messages' && (
-        residentIsVila ? (
-          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
-            {/* Sub-tab Selector */}
-            <div style={{ display: 'flex', background: '#F1F5F9', padding: '4px', borderRadius: '14px', marginBottom: '16px', flexShrink: 0 }}>
-              <button 
-                onClick={() => setMessagesSubTab('board')} 
-                style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: messagesSubTab === 'board' ? '#FFF' : 'transparent', color: messagesSubTab === 'board' ? '#0F172A' : '#64748B', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              >
-                📢 Quadro de Avisos
-              </button>
-              <button 
-                onClick={() => setMessagesSubTab('chat')} 
-                style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: messagesSubTab === 'chat' ? '#FFF' : 'transparent', color: messagesSubTab === 'chat' ? '#0F172A' : '#64748B', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              >
-                💬 Chat com o Admin
-              </button>
-            </div>
-
-            {messagesSubTab === 'board' ? (
-              <div style={{ flex: 1, overflowY: 'auto' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div>
-                    <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>Quadro de Avisos</h2>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>
-                      {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id) && m.priority === 'urgent').length} mensagem(ns) ativa(s)
-                    </p>
-                  </div>
-                  {broadcastMessages.some(m => !JSON.parse(localStorage.getItem('cd_read_msgs') || '[]').includes(m.id) && m.priority === 'urgent') && (
-                    <button 
-                      onClick={markMessagesRead} 
-                      style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#EFF6FF', color: '#1D4ED8', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      Ler todas
-                    </button>
-                  )}
-                </div>
-
-                {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id) && m.priority === 'urgent').length === 0 ? (
+            ) : (
+              <div style={{ padding: '20px 24px' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>📢 Avisos do Condomínio</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '16px' }}>{broadcastMessages.length} mensagem(ns)</p>
+                {broadcastMessages.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
                     <Mail size={40} style={{ opacity: 0.2, marginBottom: '12px' }}/>
                     <p style={{ fontWeight: 600 }}>Nenhum aviso recebido</p>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {broadcastMessages
-                      .filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id) && m.priority === 'urgent')
-                      .map(m => {
-                        const isRead = JSON.parse(localStorage.getItem('cd_read_msgs') || '[]').includes(m.id);
-                        return (
-                          <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239, 68, 68, 0.3)' : '#E2E8F0'}`, borderRadius: '16px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', position: 'relative' }}>
-                            {!isRead && (
-                              <div style={{ position: 'absolute', top: '22px', left: '8px', width: '6px', height: '6px', borderRadius: '50%', background: '#3B82F6' }} />
-                            )}
-                            
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', paddingLeft: isRead ? '0' : '8px' }}>
-                              <span style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>
-                                {m.title}
-                              </span>
-                              <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 500 }}>
-                                {new Date(m.createdAt).toLocaleDateString('pt-BR')} {new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                            
-                            <p style={{ fontSize: '13px', color: '#475569', margin: '0 0 12px 0', lineHeight: 1.6, paddingLeft: isRead ? '0' : '8px' }}>{m.body}</p>
-                            
-                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', borderTop: '1px solid #F1F5F9', paddingTop: '10px' }}>
-                              {!isRead && (
-                                <button 
-                                  onClick={() => {
-                                    const readIds = JSON.parse(localStorage.getItem('cd_read_msgs') || '[]');
-                                    localStorage.setItem('cd_read_msgs', JSON.stringify([...readIds, m.id]));
-                                    setUnreadCount(prev => Math.max(0, prev - 1));
-                                  }}
-                                  style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#F1F5F9', color: '#475569', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                >
-                                  ✓ Lida
-                                </button>
-                              )}
-                              <button 
-                                onClick={() => {
-                                  const deletedIds = JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]');
-                                  localStorage.setItem('cd_deleted_msgs', JSON.stringify([...deletedIds, m.id]));
-                                  if (!isRead) {
-                                    setUnreadCount(prev => Math.max(0, prev - 1));
-                                  }
-                                  setBroadcastMessages(prev => prev.filter(item => item.id !== m.id));
-                                }}
-                                style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#FFF1F2', color: '#E11D48', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                              >
-                                🗑️ Apagar
-                              </button>
-                              {m.priority !== 'urgent' && (
-                                <button 
-                                  onClick={() => setMessagesSubTab('chat')}
-                                  style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#E0F2FE', color: '#0369A1', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                >
-                                  💬 Responder
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                    {broadcastMessages.map(m => (
+                      <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239,68,68,0.3)' : '#E2E8F0'}`, borderRadius: '16px', padding: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {m.priority === 'urgent' && <span style={{ color: '#EF4444' }}>🚨</span>}
+                            {m.title}
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#94A3B8' }}>{new Date(m.createdAt).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                        <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.6 }}>{m.body}</p>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-            ) : (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-                <div style={{ padding: '12px 16px', background: '#FFF', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981' }} />
-                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B' }}>Conversa Direta com Admin da Vila</span>
-                </div>
-                
-                <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {rawVilaMessages.filter(m => m.unitId !== null).length === 0 ? (
-                    <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', paddingTop: '40px' }}>
-                      Nenhuma mensagem individual trocada com o admin ainda.
-                    </div>
-                  ) : (
-                    rawVilaMessages
-                      .filter(m => m.unitId !== null)
-                      .map(m => {
-                        const isMine = !m.isFromAdmin;
-                        return (
-                          <div key={m.id} style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start' }}>
-                            <div style={{
-                              maxWidth: '75%',
-                              padding: '10px 14px',
-                              borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                              background: isMine ? 'linear-gradient(135deg,#3B82F6,#1D4ED8)' : '#FFF',
-                              color: isMine ? '#FFF' : '#1E293B',
-                              fontSize: '13px',
-                              fontWeight: 500,
-                              boxShadow: isMine ? '0 4px 12px rgba(59,130,246,0.15)' : '0 2px 8px rgba(0,0,0,0.04)',
-                              border: isMine ? 'none' : '1px solid #E2E8F0',
-                              opacity: m.sending ? 0.6 : 1
-                            }}>
-                              <p style={{ margin: '0 0 4px 0', lineHeight: 1.4 }}>{m.content}</p>
-                              <span style={{ fontSize: '9px', opacity: 0.6, display: 'block', textAlign: 'right' }}>
-                                {m.sending ? 'Enviando...' : m.error ? '⚠️ Falha ao enviar' : new Date(m.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })
-                  )}
-                  <div ref={chatEndRef} />
-                </div>
+            )
+          )}
+          
+          {tab === 'intercom' && (
+            <div style={{ padding: '20px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px' }}>Interfone Digital</h2>
+              {propertyId && <IntercomPanel propertyId={propertyId} unitId={id} socketRef={socketRef} unitName={unitName} onCall={handleIntercomCall}/>}
+            </div>
+          )}
 
-                <form 
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    const textContent = newReplyMsg.trim();
-                    if (!textContent) return;
+          {tab === 'services' && (
+            <div style={{ padding: '20px' }}>
+              <ServicesPanel/>
+            </div>
+          )}
 
-                    const currentPropId = savedPropId || localStorage.getItem('residentPropertyId');
-                    const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
-                    const currentUserId = localStorage.getItem('cd_user_id');
+          {tab === 'visitor-codes' && isEmailResident && (
+            <div style={{ padding: '20px' }}>
+              <VisitorCodesPanel unitId={id} propertyName={propertyName} />
+            </div>
+          )}
 
-                    // 1. Limpa o input imediatamente
-                    setNewReplyMsg('');
-
-                    // 2. Insere mensagem otimista temporária
-                    const tempId = 'temp-' + Date.now();
-                    const optimisticMsg = {
-                      id: tempId,
-                      senderId: currentUserId,
-                      senderName: unitName || 'Morador',
-                      content: textContent,
-                      unitId: currentUnitId,
-                      isFromAdmin: false,
-                      createdAt: new Date().toISOString(),
-                      sending: true
-                    };
-
-                    setRawVilaMessages(prev => [...prev, optimisticMsg]);
-                    
-                    // Auto scroll rápido
-                    setTimeout(() => {
-                      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                    }, 50);
-
-                    // 3. POST em segundo plano
-                    try {
-                      const res = await fetch(`${API}/api/vila/${currentPropId}/messages`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          senderId: currentUserId,
-                          senderName: unitName || 'Morador',
-                          content: textContent,
-                          unitId: currentUnitId,
-                          isFromAdmin: false
-                        })
-                      });
-                      if (res.ok) {
-                        const msg = await res.json();
-                        setRawVilaMessages(prev => prev.map(m => m.id === tempId ? msg : m));
-                      } else {
-                        setRawVilaMessages(prev => prev.map(m => m.id === tempId ? { ...m, error: true, sending: false } : m));
-                      }
-                    } catch (err) {
-                      console.error(err);
-                      setRawVilaMessages(prev => prev.map(m => m.id === tempId ? { ...m, error: true, sending: false } : m));
-                    }
-                  }} 
-                  style={{ display: 'flex', gap: '8px', padding: '12px 16px', background: '#FFF', borderTop: '1px solid #E2E8F0', flexShrink: 0 }}
-                >
-                  <input
-                    value={newReplyMsg}
-                    onChange={e => setNewReplyMsg(e.target.value)}
-                    placeholder="Escreva uma resposta para o administrador..."
-                    style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '13px', outline: 'none', background: '#F8FAFC' }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newReplyMsg.trim() || sendingReply}
-                    style={{ padding: '10px 14px', borderRadius: '10px', border: 'none', background: newReplyMsg.trim() ? '#3B82F6' : '#E2E8F0', color: newReplyMsg.trim() ? '#FFF' : '#94A3B8', cursor: newReplyMsg.trim() ? 'pointer' : 'default', fontWeight: 700, fontSize: '13px' }}
-                  >
-                    Enviar
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div style={{ padding: '20px 24px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>📢 Avisos do Condomínio</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '16px' }}>{broadcastMessages.length} mensagen{broadcastMessages.length !== 1 ? 's' : ''}</p>
-            {broadcastMessages.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
-                <Mail size={40} style={{ opacity: 0.2, marginBottom: '12px' }}/>
-                <p style={{ fontWeight: 600 }}>Nenhum aviso recebido</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {broadcastMessages.map(m => (
-                  <div key={m.id} style={{ background: '#FFF', border: `1px solid ${m.priority === 'urgent' ? 'rgba(239,68,68,0.3)' : '#E2E8F0'}`, borderRadius: '14px', padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {m.priority === 'urgent' && <span style={{ color: '#EF4444' }}>🚨</span>}
-                        {m.title}
-                      </span>
-                      <span style={{ fontSize: '11px', color: '#94A3B8' }}>{new Date(m.createdAt).toLocaleDateString('pt-BR')}</span>
-                    </div>
-                    <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.6 }}>{m.body}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      )}
-      
-      {tab === 'intercom' && (
-        <div style={{ padding: '20px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px' }}>Interfone Digital</h2>
-          {propertyId && <IntercomPanel propertyId={propertyId} unitId={id} socketRef={socketRef} unitName={unitName} onCall={handleIntercomCall}/>}
-        </div>
-      )}
-
-      {tab === 'services' && (
-        <div style={{ padding: '20px' }}>
-          <ServicesPanel/>
-        </div>
-      )}
-
-      {tab === 'visitor-codes' && (
-        <div style={{ padding: '20px' }}>
-          <VisitorCodesPanel unitId={id} propertyName={propertyName} />
-        </div>
-      )}
-
-      {tab === 'plate' && (
-        <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-          <div style={{ textAlign: 'center' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>Sua Placa da Campainha</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '4px 0 0' }}>Salve e imprima a placa de identificação oficial da sua unidade.</p>
-          </div>
-
-          <div style={{ width: '100%', maxWidth: '320px', display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: '100%' }}>
-              <PrintablePlate 
-                propertyId={propertyId || localStorage.getItem('residentPropertyId')} 
-                propertyName={localStorage.getItem('residentPropertyName') || 'Minha Casa'} 
-                unitName={unitName !== 'Principal' && unitName !== 'Minha Casa' ? unitName : ''}
-                animateLogo={false} 
+          {tab === 'history' && <HistoryPanel unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
+          
+          {tab === 'residents' && (
+            <div style={{ padding: '20px' }}>
+              <ResidentsPanel unitId={savedUnitId || id} propertyId={propertyId} />
+            </div>
+          )}
+          
+          {tab === 'family' && (
+            <div style={{ padding: '20px' }}>
+              <FamilyChat
+                userId={localStorage.getItem('cd_user_id')}
+                userName={localStorage.getItem('residentName') || 'Morador'}
+                socket={socketRef?.current}
               />
             </div>
-          </div>
+          )}
 
-          <button 
-            onClick={handleDownloadPlate} 
-            disabled={downloadingPlate}
-            className="btn-primary" 
-            style={{ width: '100%', maxWidth: '320px', padding: '14px', background: '#10B981', boxShadow: '0 8px 24px rgba(16,185,129,0.2)', opacity: downloadingPlate ? 0.7 : 1 }}
-          >
-            <Download size={18} /> {downloadingPlate ? 'Gerando PNG...' : 'Baixar Imagem da Placa'}
-          </button>
+          {tab === 'settings' && <SettingsPanel unitName={unitName} setUnitName={setUnitName} onSave={saveSettings} unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
+
+          {tab === 'plate' && (
+            <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: '#0F172A' }}>Sua Placa da Campainha</h2>
+                <p style={{ color: '#64748B', fontSize: '13px', margin: '4px 0 0' }}>Salve e imprima a placa de identificação oficial da sua unidade.</p>
+              </div>
+
+              <div style={{ width: '100%', maxWidth: '320px', display: 'flex', justifyContent: 'center' }}>
+                <div style={{ width: '100%' }}>
+                  <PrintablePlate 
+                    propertyId={propertyId || localStorage.getItem('residentPropertyId')} 
+                    propertyName={localStorage.getItem('residentPropertyName') || 'Minha Casa'} 
+                    unitName={unitName !== 'Principal' && unitName !== 'Minha Casa' ? unitName : ''}
+                    animateLogo={false} 
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={handleDownloadPlate} 
+                disabled={downloadingPlate}
+                style={{ width: '100%', maxWidth: '320px', padding: '14px', borderRadius: '12px', border: 'none', background: '#10B981', color: '#FFF', fontWeight: 800, fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 8px 24px rgba(16,185,129,0.2)', opacity: downloadingPlate ? 0.7 : 1 }}
+              >
+                <Download size={18} /> {downloadingPlate ? 'Gerando PNG...' : 'Baixar Imagem da Placa'}
+              </button>
+            </div>
+          )}
         </div>
-      )}
 
-      {tab === 'history' && <HistoryPanel unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
-      {tab === 'residents' && (
-        <div style={{ padding: '20px' }}>
-          <ResidentsPanel unitId={savedUnitId || id} propertyId={propertyId} />
-        </div>
-      )}
-      {tab === 'family' && (
-        <div style={{ padding: '20px' }}>
-          <FamilyChat
-            userId={localStorage.getItem('cd_user_id')}
-            userName={localStorage.getItem('residentName') || 'Morador'}
-            socket={socketRef?.current}
-          />
-        </div>
-      )}
+        {/* Fixed Navigation Bar at the bottom */}
+        <NavBar />
 
-      {tab === 'settings' && <SettingsPanel unitName={unitName} setUnitName={setUnitName} onSave={saveSettings} unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
-
-      <HamburgerMenu />
-      <NavBar />
-      
-      {showPaymentModal && (
-        <PaymentModal 
-          userId={localStorage.getItem('cd_user_id')}
-          userEmail={localStorage.getItem('cd_user_contact') || ''}
-          onClose={() => setShowPaymentModal(false)}
-          onSuccess={() => {
-            setShowPaymentModal(false);
-            // Recarrega para refletir o novo status ativo
-            window.location.reload();
-          }}
-          onPaymentFailed={() => {
-            // No dashboard, apenas fecha o modal — usuário vê o status OFF e pode tentar de novo
-            setShowPaymentModal(false);
-          }}
-        />
-      )}
-
-      {entryNotification && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 9999,
-          background: 'rgba(15, 23, 42, 0.4)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px',
-          animation: 'fade-in 0.3s ease-out'
-        }}>
+        {/* FaceTime / WhatsApp Style Calling Overlays */}
+        {status !== 'idle' && call && (
           <div style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(243, 244, 246, 0.9) 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.4)',
-            borderRadius: '24px',
-            padding: '32px 24px',
-            maxWidth: '420px',
-            width: '100%',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
-            textAlign: 'center',
-            backdropFilter: 'blur(16px)',
-            transform: 'scale(1)',
-            animation: 'scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            color: '#1E293B'
+            position: 'absolute',
+            inset: 0,
+            zIndex: 500,
+            background: '#0F172A',
+            color: '#FFF',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: '24px 20px',
+            animation: 'fade-in 0.3s ease-out',
+            fontFamily: "'Inter', sans-serif"
           }}>
+            {/* Header Info */}
+            <div style={{ textAlign: 'center', marginTop: '20px', zIndex: 10 }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                padding: '6px 16px',
+                borderRadius: '100px',
+                fontSize: '12px',
+                fontWeight: 800,
+                letterSpacing: '1.2px',
+                marginBottom: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: status === 'ringing' ? '#EF4444' : (status === 'active' ? '#10B981' : '#3B82F6'),
+                  animation: 'pulse 1s infinite'
+                }} />
+                {status === 'ringing' ? 'INTERFONE RECEBIDO' :
+                 status === 'calling' ? 'CHAMANDO...' :
+                 status === 'monitoring' ? 'MODO OCULTO' :
+                 `CONVERSA ─ ${fmtDuration(callDuration)}`}
+              </div>
+              
+              <h2 style={{ fontSize: '26px', fontWeight: 900, margin: '0 0 6px', letterSpacing: '-0.5px' }}>
+                {call.callerName === 'Visitante' ? 'Chamada do Portão' : call.callerName}
+              </h2>
+              <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', margin: 0, fontWeight: 500 }}>
+                {status === 'ringing' ? 'Alguém está na sua porta' :
+                 status === 'calling' ? 'Aguardando resposta...' :
+                 status === 'monitoring' ? 'Você está vendo o visitante' :
+                 'Comunicação de áudio segura'}
+              </p>
+            </div>
+
+            {/* Video / Avatar Area */}
             <div style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '20px',
-              background: entryNotification.type === 'package' ? '#FEF3C7' : '#DCFCE7',
-              color: entryNotification.type === 'package' ? '#D97706' : '#16A34A',
+              flex: 1,
+              margin: '24px 0',
+              borderRadius: '28px',
+              overflow: 'hidden',
+              background: '#1E293B',
+              position: 'relative',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 20px',
-              boxShadow: '0 8px 16px rgba(0,0,0,0.06)',
-              animation: 'bounce 2s infinite'
+              justifyContent: 'center'
             }}>
-              {entryNotification.type === 'package' ? (
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
-              ) : (
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
+              {/* Visitor Photo (Ringing State) */}
+              {status === 'ringing' && (
+                call.photo ? (
+                  <img src={call.photo} alt="Visitante" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ textAlign: 'center', opacity: 0.3 }}>
+                    <Bell size={64} style={{ animation: 'bounce 2s infinite', margin: '0 auto 16px' }} />
+                    <span style={{ fontSize: '14px', fontWeight: 600 }}>Sem imagem da câmera</span>
+                  </div>
+                )
+              )}
+
+              {/* WebRTC Video Stream (Monitoring / Active Call) */}
+              {(status === 'monitoring' || status === 'active') && call.callerName !== 'Portaria' && (
+                <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              )}
+
+              {/* Calling Icon & Animation */}
+              {status === 'calling' && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    width: '88px', height: '88px', borderRadius: '50%',
+                    background: 'rgba(59, 130, 246, 0.15)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    animation: 'pulse-blue 1.5s infinite', border: '2px solid rgba(59, 130, 246, 0.3)',
+                    margin: '0 auto 20px'
+                  }}>
+                    <Phone size={36} color="#3B82F6" />
+                  </div>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.6)' }}>Conectando intercâmbio...</span>
+                </div>
+              )}
+
+              {/* Voice Call Avatar (Portaria Active) */}
+              {status === 'active' && call.callerName === 'Portaria' && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    width: '88px', height: '88px', borderRadius: '50%',
+                    background: 'rgba(16, 185, 129, 0.15)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    animation: 'pulse-green 1.5s infinite', border: '2px solid rgba(16, 185, 129, 0.3)',
+                    margin: '0 auto 20px'
+                  }}>
+                    <Building2 size={36} color="#10B981" />
+                  </div>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.6)' }}>Ligação de Voz Conectada</span>
+                </div>
+              )}
+
+              {/* Local Video PIP (Corner Video Screen) */}
+              {status === 'active' && camOn && (
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    position: 'absolute',
+                    bottom: '16px',
+                    right: '16px',
+                    width: '90px',
+                    aspectRatio: '3/4',
+                    objectFit: 'cover',
+                    borderRadius: '16px',
+                    border: '2px solid #FFF',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
+                    zIndex: 20
+                  }}
+                />
+              )}
+
+              {/* Indicator (Modo Oculto) */}
+              {status === 'monitoring' && (
+                <div style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  background: '#F59E0B',
+                  color: '#000',
+                  padding: '4px 12px',
+                  borderRadius: '100px',
+                  fontSize: '11px',
+                  fontWeight: 900,
+                  boxShadow: '0 4px 10px rgba(245,158,11,0.3)'
+                }}>
+                  👁 OCULTO
+                </div>
               )}
             </div>
 
-            <h3 style={{
-              fontSize: '20px',
-              fontWeight: 900,
-              color: '#0F172A',
-              margin: '0 0 8px',
-              letterSpacing: '-0.5px'
-            }}>
-              {entryNotification.title}
-            </h3>
+            {/* Controls and Quick Messages */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', zIndex: 10 }}>
+              
+              {/* Quick Messages Pill List */}
+              {visitorSocketId && (status === 'ringing' || status === 'active' || status === 'monitoring') && (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '20px',
+                  padding: '12px 14px',
+                  backdropFilter: 'blur(8px)'
+                }}>
+                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
+                    {quickMsgs.find(c => c.id === 'general')?.messages.map((msg, i) => (
+                      <button
+                        key={i}
+                        onClick={() => sendQuickMsg(msg)}
+                        style={{
+                          whiteSpace: 'nowrap',
+                          padding: '8px 14px',
+                          borderRadius: '100px',
+                          fontSize: '12px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          background: sentMsg === msg ? '#10B981' : 'rgba(255, 255, 255, 0.08)',
+                          color: sentMsg === msg ? '#000' : '#FFF',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          transition: 'all 0.2s',
+                          outline: 'none'
+                        }}
+                      >
+                        {sentMsg === msg ? '✓ Enviado' : msg}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            <p style={{
-              fontSize: '14px',
-              color: '#475569',
-              lineHeight: 1.6,
-              margin: '0 0 24px',
-              fontWeight: 500
-            }}>
-              {entryNotification.message}
-            </p>
+              {/* Call Controls Box */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                
+                {/* Ringing Controls */}
+                {status === 'ringing' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleMonitor(); }}
+                        style={{
+                          flex: 1,
+                          padding: '16px 12px',
+                          borderRadius: '16px',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'rgba(255,255,255,0.06)',
+                          color: '#FFF',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          fontWeight: 700,
+                          fontSize: '13px'
+                        }}
+                      >
+                        <EyeOff size={18} color="#3B82F6" /> Modo Oculto
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleAnswer(false); }}
+                        style={{
+                          flex: 1,
+                          padding: '16px 12px',
+                          borderRadius: '16px',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          background: 'rgba(255,255,255,0.06)',
+                          color: '#FFF',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          fontWeight: 700,
+                          fontSize: '13px'
+                        }}
+                      >
+                        <Phone size={18} color="#10B981" /> Só Áudio
+                      </button>
+                    </div>
 
-            <button
-              onClick={() => setEntryNotification(null)}
-              style={{
-                width: '100%',
-                padding: '14px',
-                borderRadius: '14px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
-                color: '#fff',
-                fontWeight: 800,
-                fontSize: '15px',
-                cursor: 'pointer',
-                boxShadow: '0 8px 16px rgba(79, 70, 229, 0.25)',
-                transition: 'all 0.2s',
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAnswer(true); }}
+                      style={{
+                        width: '100%',
+                        padding: '18px',
+                        borderRadius: '16px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                        color: '#FFF',
+                        fontWeight: 800,
+                        fontSize: '15px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)'
+                      }}
+                    >
+                      <Video size={20} /> Atender com Câmera & Áudio
+                    </button>
+
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleEnd(); }}
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        borderRadius: '16px',
+                        border: 'none',
+                        background: 'rgba(239, 68, 68, 0.12)',
+                        color: '#EF4444',
+                        fontWeight: 800,
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <PhoneOff size={16} /> Recusar
+                    </button>
+                  </div>
+                )}
+
+                {/* Active or Outgoing Call Controls */}
+                {(status === 'active' || status === 'monitoring' || status === 'calling') && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    
+                    {/* Media buttons */}
+                    <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', alignItems: 'center' }}>
+                      {status === 'active' && (
+                        <button
+                          onClick={toggleMute}
+                          style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '50%',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            background: isMuted ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)',
+                            color: isMuted ? '#EF4444' : '#FFF',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            outline: 'none'
+                          }}
+                        >
+                          <MicOff size={22} />
+                        </button>
+                      )}
+
+                      {status === 'active' && call.callerName !== 'Portaria' && (
+                        <button
+                          onClick={toggleCam}
+                          style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '50%',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            background: camOn ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.08)',
+                            color: camOn ? '#3B82F6' : '#FFF',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            outline: 'none'
+                          }}
+                        >
+                          {camOn ? <Video size={22} /> : <VideoOff size={22} />}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={handleEnd}
+                        style={{
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: '#EF4444',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 8px 24px rgba(239,68,68,0.4)',
+                          transition: 'all 0.2s',
+                          outline: 'none'
+                        }}
+                      >
+                        <PhoneOff size={26} />
+                      </button>
+                    </div>
+
+                    {/* Enable speech from Monitor mode */}
+                    {status === 'monitoring' && (
+                      <button
+                        onClick={() => handleAnswer(false)}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          borderRadius: '16px',
+                          border: 'none',
+                          background: '#10B981',
+                          color: '#FFF',
+                          fontWeight: 800,
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <Phone size={18} /> Ativar Voz (Falar)
+                      </button>
+                    )}
+
+                    {/* Gate Release Button */}
+                    {!isHouseResident && (status === 'active' || status === 'monitoring') && (
+                      <button
+                        onClick={handleOpenGate}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          borderRadius: '16px',
+                          border: 'none',
+                          background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                          color: '#FFF',
+                          fontWeight: 800,
+                          fontSize: '15px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          boxShadow: '0 8px 32px rgba(16, 185, 129, 0.25)',
+                          marginTop: '8px'
+                        }}
+                      >
+                        <KeyRound size={20} /> LIBERAR ENTRADA
+                      </button>
+                    )}
+
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* Payment Modal & Entry Notifications */}
+        {showPaymentModal && (
+          <PaymentModal 
+            userId={localStorage.getItem('cd_user_id')}
+            userEmail={localStorage.getItem('cd_user_contact') || ''}
+            onClose={() => setShowPaymentModal(false)}
+            onSuccess={() => {
+              setShowPaymentModal(false);
+              window.location.reload();
+            }}
+            onPaymentFailed={() => {
+              setShowPaymentModal(false);
+            }}
+          />
+        )}
+
+        {entryNotification && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            animation: 'fade-in 0.3s ease-out'
+          }}>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(243, 244, 246, 0.9) 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '24px',
+              padding: '32px 24px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+              textAlign: 'center',
+              backdropFilter: 'blur(16px)',
+              transform: 'scale(1)',
+              animation: 'scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              color: '#1E293B'
+            }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '20px',
+                background: entryNotification.type === 'package' ? '#FEF3C7' : '#DCFCE7',
+                color: entryNotification.type === 'package' ? '#D97706' : '#16A34A',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 12px 20px rgba(79, 70, 229, 0.35)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '0 8px 16px rgba(79, 70, 229, 0.25)';
-              }}
-            >
-              Entendido
-            </button>
+                margin: '0 auto 20px',
+                boxShadow: '0 8px 16px rgba(0,0,0,0.06)',
+                animation: 'bounce 2s infinite'
+              }}>
+                {entryNotification.type === 'package' ? (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  </svg>
+                ) : (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                )}
+              </div>
+
+              <h3 style={{
+                fontSize: '20px',
+                fontWeight: 900,
+                color: '#0F172A',
+                margin: '0 0 8px',
+                letterSpacing: '-0.5px'
+              }}>
+                {entryNotification.title}
+              </h3>
+
+              <p style={{
+                fontSize: '14px',
+                color: '#475569',
+                lineHeight: 1.6,
+                margin: '0 0 24px',
+                fontWeight: 500
+              }}>
+                {entryNotification.message}
+              </p>
+
+              <button
+                onClick={() => setEntryNotification(null)}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 16px rgba(79, 70, 229, 0.25)',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        )}
+        {/* Container invisivel para garantir download da placa completa em qualquer aba */}
+        <div style={{ 
+          position: 'absolute', 
+          width: '0px', 
+          height: '0px', 
+          overflow: 'hidden', 
+          opacity: 0,
+          pointerEvents: 'none' 
+        }}>
+          <div ref={plateRef} style={{ width: '320px' }}>
+            <PrintablePlate 
+              propertyId={propertyId || localStorage.getItem('residentPropertyId')} 
+              propertyName={localStorage.getItem('residentPropertyName') || 'Minha Casa'} 
+              unitName={unitName !== 'Principal' && unitName !== 'Minha Casa' ? unitName : ''}
+              animateLogo={false} 
+            />
           </div>
         </div>
-      )}
-      
-      {/* Container invisivel para garantir download da placa completa em qualquer aba */}
-      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '320px' }}>
-        <div ref={plateRef}>
-          <PrintablePlate 
-            propertyId={propertyId || localStorage.getItem('residentPropertyId')} 
-            propertyName={localStorage.getItem('residentPropertyName') || 'Minha Casa'} 
-            unitName={unitName !== 'Principal' && unitName !== 'Minha Casa' ? unitName : ''}
-            animateLogo={false} 
-          />
-        </div>
+
       </div>
     </div>
   );

@@ -311,18 +311,46 @@ export default function VilaAdminDashboard() {
 
   // ── Download Plate ───────────────────────────────────────────────────
   const handleDownloadPlate = async () => {
-    if (!printRef.current) return;
+    if (!printRef.current) {
+      alert('Erro: Painel de impressão não inicializado.');
+      return;
+    }
     setDownloadingPlate(true);
     try {
       const canvas = await html2canvas(printRef.current, { scale: 3, useCORS: true });
       const imgData = canvas.toDataURL('image/png');
-      const a = document.createElement('a');
-      a.href = imgData;
-      a.download = `Placa_Vila_${property?.name || 'Digital'}.png`;
-      a.click();
+
+      // Convert data URL to File for mobile sharing support
+      const arr = imgData.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const file = new File([u8arr], `Placa_Vila_${property?.name || 'Digital'}.png`, { type: mime });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Placa Campainha Digital',
+          text: `Placa da Vila ${property?.name || 'Digital'}`
+        });
+      } else {
+        const a = document.createElement('a');
+        a.href = imgData;
+        a.download = `Placa_Vila_${property?.name || 'Digital'}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
     } catch (e) {
+      if (e.name === 'AbortError' || e.message?.includes('share dismissed') || e.message?.includes('AbortError')) {
+        return;
+      }
       console.error('Erro ao baixar placa:', e);
-      alert('Erro ao gerar imagem da placa física.');
+      alert('Erro ao gerar imagem da placa física: ' + (e.message || e));
     } finally {
       setDownloadingPlate(false);
     }
@@ -1684,7 +1712,14 @@ export default function VilaAdminDashboard() {
       )}
 
       {/* Printable Plate invisível para download do QR Code */}
-      <div style={{ display: 'none' }}>
+      <div style={{ 
+        position: 'absolute', 
+        width: '0px', 
+        height: '0px', 
+        overflow: 'hidden', 
+        opacity: 0,
+        pointerEvents: 'none'
+      }}>
         <PrintablePlate ref={printRef} qrImage={qrImage} />
       </div>
 

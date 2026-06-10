@@ -315,17 +315,47 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
   };
 
   const handleDownloadPlate = async () => {
-    if (!printRef.current) return;
+    if (!printRef.current) {
+      alert('Erro: Painel de impressão não inicializado.');
+      return;
+    }
     setLoading(true);
     try {
       const canvas = await html2canvas(printRef.current, { scale: 3, useCORS: true });
       const imgData = canvas.toDataURL('image/png');
-      const a = document.createElement('a');
-      a.href = imgData;
-      a.download = `Placa_Campainha_${unitName}.png`;
-      a.click();
+
+      // Convert data URL to File for mobile sharing support
+      const arr = imgData.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const file = new File([u8arr], `Placa_Campainha_${unitName}.png`, { type: mime });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Placa Campainha Digital',
+          text: `Placa da unidade ${unitName}`
+        });
+      } else {
+        // Fallback para desktop
+        const a = document.createElement('a');
+        a.href = imgData;
+        a.download = `Placa_Campainha_${unitName}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
     } catch (e) {
-      alert('Erro ao gerar a imagem da placa.');
+      if (e.name === 'AbortError' || e.message?.includes('share dismissed') || e.message?.includes('AbortError')) {
+        return;
+      }
+      console.error('[Download Error]', e);
+      alert('Erro ao gerar a imagem da placa: ' + (e.message || e));
     } finally {
       setLoading(false);
     }
@@ -472,7 +502,14 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
               </div>
 
               {/* COMPONENTE INVISÍVEL PARA DOWNLOAD */}
-              <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, pointerEvents: 'none' }}>
+              <div style={{ 
+                position: 'absolute', 
+                width: '0px', 
+                height: '0px', 
+                overflow: 'hidden', 
+                opacity: 0,
+                pointerEvents: 'none'
+              }}>
                 <PrintablePlate ref={printRef} qrImage={qrImage} />
               </div>
 

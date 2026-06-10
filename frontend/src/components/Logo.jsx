@@ -93,7 +93,7 @@ export default function Logo({
             letterSpacing: '-0.3px',
             background: textColor ? 'none' : (light ? '#FFF' : 'linear-gradient(135deg, #4F46E5, #8B5CF6)'),
             WebkitBackgroundClip: textColor ? 'none' : (light ? 'none' : 'text'),
-            WebkitTextFillColor: textColor ? 'none' : (light ? 'none' : 'transparent'),
+            WebkitTextFillColor: textColor ? 'initial' : (light ? 'none' : 'transparent'),
             color: textColor || (light ? '#FFF' : 'transparent'),
             textTransform: 'uppercase'
           }}>
