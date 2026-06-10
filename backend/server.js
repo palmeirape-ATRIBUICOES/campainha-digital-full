@@ -3297,7 +3297,7 @@ app.get('/api/settings', async (req, res) => {
     const settings = await prisma.systemSetting.findMany();
     const result = { plan_price: '39.90', plate_style: defaultPlateStyle };
     settings.forEach(s => {
-      if (s.key === 'plate_style') {
+      if (s.key === 'plate_style' || s.key === 'layout_style') {
         try {
           result[s.key] = JSON.parse(s.value);
         } catch (e) {

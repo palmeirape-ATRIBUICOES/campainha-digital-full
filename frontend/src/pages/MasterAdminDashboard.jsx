@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Building2, Gift, History, Settings2, LogOut, ChevronRight, RefreshCw, Search, ToggleRight, ToggleLeft, QrCode, Copy, Check, Download, X, Hash, Layers, Sparkles, Bell, Eye, EyeOff, Home, Zap, Sun, Moon, Plus, Trash2, Phone, Star, Save, Settings, Printer } from 'lucide-react';
+import { Users, Building2, Gift, History, Settings2, LogOut, ChevronRight, RefreshCw, Search, ToggleRight, ToggleLeft, QrCode, Copy, Check, Download, X, Hash, Layers, Sparkles, Bell, Eye, EyeOff, Home, Zap, Sun, Moon, Plus, Trash2, Phone, Star, Save, Settings, Printer, Palette } from 'lucide-react';
 import Logo from '../components/Logo';
 import PlateProductionPanel from '../components/PlateProductionPanel';
 import PrintablePlate from '../components/PrintablePlate';
@@ -12,8 +12,37 @@ const PRESETS = {
 import { useNavigate } from 'react-router-dom';
 import { API } from '../config';
 
+const DEFAULT_LAYOUT = {
+  headerStyle: 'clean-white', // 'blue-gradient' | 'clean-white' | 'dark-slate'
+  primaryColor: '#004ac6',
+  buttonGradientStart: '#004ac6',
+  buttonGradientEnd: '#1d4ed8',
+  backgroundColor: '#f8f9ff',
+  cardBgColor: '#ffffff',
+  borderColor: '#E2E8F0',
+  borderRadius: '16px', // '0px' | '8px' | '16px' | '24px'
+  shadowStyle: 'soft', // 'none' | 'soft' | 'medium' | 'glow'
+  mainButtonType: 'circular', // 'circular' | 'rectangular' | 'classic'
+  quickAccessType: 'row', // 'row' | 'carousel' | 'hidden'
+  qrCodeType: 'modal', // 'modal' | 'embedded'
+  preAuthType: 'modal', // 'modal' | 'embedded'
+  mailboxType: 'modal', // 'modal' | 'embedded'
+  showUpdates: true,
+  showSwitches: true
+};
+
+const resolveShadowStyle = (shadowStyle, primaryColor = '#004ac6') => {
+  if (shadowStyle === 'none') return 'none';
+  if (shadowStyle === 'medium') return '0 4px 12px rgba(15, 23, 42, 0.08)';
+  if (shadowStyle === 'glow') {
+    return `0 8px 24px -4px ${primaryColor}40, 0 4px 12px -2px ${primaryColor}20`;
+  }
+  return '0 1px 3px rgba(0,0,0,0.05)'; // soft default
+};
+
 export default function MasterAdminDashboard() {
   const [activeTab, setActiveTab] = useState('users');
+  const [layoutStyle, setLayoutStyle] = useState(DEFAULT_LAYOUT);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -419,6 +448,9 @@ export default function MasterAdminDashboard() {
           const data = await res.json();
           if (data.plate_style) {
             setPlateStyle(prev => ({ ...prev, ...data.plate_style }));
+          }
+          if (data.layout_style) {
+            setLayoutStyle(prev => ({ ...prev, ...data.layout_style }));
           }
           if (data.plate_presets) {
             try {
@@ -885,6 +917,590 @@ export default function MasterAdminDashboard() {
            addressMatch;
   });
 
+  const LayoutBuilderPanel = () => {
+    const [draft, setDraft] = useState(layoutStyle);
+    const [saving, setSaving] = useState(false);
+
+    const handleSave = async () => {
+      setSaving(true);
+      try {
+        const token = localStorage.getItem('cd_token');
+        const res = await fetch(`${API}/api/settings`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': token || ''
+          },
+          body: JSON.stringify({ 
+            key: 'layout_style', 
+            value: JSON.stringify(draft) 
+          })
+        });
+        if (res.ok) {
+          setLayoutStyle(draft);
+          alert('Layout padrão do morador atualizado com sucesso para todos os usuários!');
+        } else {
+          alert('Erro ao salvar layout padrão.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Erro de conexão ao salvar.');
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    const handleReset = () => {
+      if (window.confirm('Deseja realmente restaurar o layout padrão?')) {
+        setDraft(DEFAULT_LAYOUT);
+      }
+    };
+
+    const applyThemePreset = (presetName) => {
+      if (presetName === 'clean-light') {
+        setDraft({
+          ...draft,
+          headerStyle: 'clean-white',
+          primaryColor: '#004ac6',
+          buttonGradientStart: '#004ac6',
+          buttonGradientEnd: '#1d4ed8',
+          backgroundColor: '#f8f9ff',
+          cardBgColor: '#ffffff',
+          borderColor: '#E2E8F0',
+          borderRadius: '16px',
+          shadowStyle: 'soft',
+          mainButtonType: 'circular',
+          quickAccessType: 'row',
+          qrCodeType: 'modal',
+          preAuthType: 'modal',
+          mailboxType: 'modal',
+          showUpdates: true,
+          showSwitches: true
+        });
+      } else if (presetName === 'modern-dark') {
+        setDraft({
+          ...draft,
+          headerStyle: 'dark-slate',
+          primaryColor: '#F59E0B',
+          buttonGradientStart: '#1E293B',
+          buttonGradientEnd: '#0F172A',
+          backgroundColor: '#0F172A',
+          cardBgColor: '#1E293B',
+          borderColor: '#334155',
+          borderRadius: '16px',
+          shadowStyle: 'glow',
+          mainButtonType: 'rectangular',
+          quickAccessType: 'row',
+          qrCodeType: 'modal',
+          preAuthType: 'modal',
+          mailboxType: 'modal',
+          showUpdates: true,
+          showSwitches: true
+        });
+      } else if (presetName === 'premium-blue') {
+        setDraft({
+          ...draft,
+          headerStyle: 'blue-gradient',
+          primaryColor: '#0f82ff',
+          buttonGradientStart: '#004ac6',
+          buttonGradientEnd: '#1e3a8a',
+          backgroundColor: '#f0f5ff',
+          cardBgColor: '#ffffff',
+          borderColor: '#dbeafe',
+          borderRadius: '24px',
+          shadowStyle: 'glow',
+          mainButtonType: 'circular',
+          quickAccessType: 'carousel',
+          qrCodeType: 'modal',
+          preAuthType: 'modal',
+          mailboxType: 'modal',
+          showUpdates: true,
+          showSwitches: true
+        });
+      }
+    };
+
+    return (
+      <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>Personalização Visual</h2>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0' }}>Configure as cores, botões, raios de borda e visualização dos módulos.</p>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={handleReset} style={{ padding: '10px 16px', borderRadius: '12px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>Restaurar Padrão</button>
+            <button onClick={handleSave} disabled={saving} style={{ padding: '10px 18px', borderRadius: '12px', border: 'none', background: '#3B82F6', color: '#FFF', fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 12px rgba(59,130,246,0.3)', opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Salvando...' : 'Salvar e Propagar Layout'}
+            </button>
+          </div>
+        </div>
+
+        {/* Layout Grid */}
+        <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap-reverse', justifyContent: 'center', alignItems: 'flex-start' }}>
+          {/* Controls Panel */}
+          <div style={{ flex: '1 1 450px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            
+            {/* Presets Card */}
+            <div style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '20px', border: '1px solid var(--border-subtle)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Temas Prontos</h3>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => applyThemePreset('clean-light')} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', fontSize: '12px', fontWeight: 700, color: 'var(--text-main)', cursor: 'pointer' }}>☀️ Clean Light</button>
+                <button type="button" onClick={() => applyThemePreset('premium-blue')} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #DBEAFE', background: '#EFF6FF', fontSize: '12px', fontWeight: 700, color: '#1D4ED8', cursor: 'pointer' }}>🔷 Premium Blue</button>
+                <button type="button" onClick={() => applyThemePreset('modern-dark')} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #334155', background: '#1E293B', fontSize: '12px', fontWeight: 700, color: '#F1F5F9', cursor: 'pointer' }}>🌙 Modern Dark</button>
+              </div>
+            </div>
+
+            {/* General Styling Fields */}
+            <div style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '20px', border: '1px solid var(--border-subtle)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cabeçalho & Fundo</h3>
+              
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Estilo do Cabeçalho</label>
+                <select value={draft.headerStyle} onChange={e => setDraft({ ...draft, headerStyle: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '13px' }}>
+                  <option value="clean-white">Clean White (Minimalista Branco)</option>
+                  <option value="blue-gradient">Blue Gradient (Gradiente Azul)</option>
+                  <option value="dark-slate">Dark Slate (Dark Mode com Ouro)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Cor Primária</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input type="color" value={draft.primaryColor} onChange={e => setDraft({ ...draft, primaryColor: e.target.value })} style={{ width: '36px', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', padding: 0 }} />
+                    <input type="text" value={draft.primaryColor} onChange={e => setDraft({ ...draft, primaryColor: e.target.value })} style={{ flex: 1, width: '10px', padding: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', borderRadius: '8px', fontSize: '12px', textTransform: 'uppercase' }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Cor de Fundo da Tela</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input type="color" value={draft.backgroundColor} onChange={e => setDraft({ ...draft, backgroundColor: e.target.value })} style={{ width: '36px', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', padding: 0 }} />
+                    <input type="text" value={draft.backgroundColor} onChange={e => setDraft({ ...draft, backgroundColor: e.target.value })} style={{ flex: 1, width: '10px', padding: '8px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', borderRadius: '8px', fontSize: '12px', textTransform: 'uppercase' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Button Gradient Styling */}
+            <div style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '20px', border: '1px solid var(--border-subtle)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Botões & Geometria</h3>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Gradiente Início</label>
+                  <input type="color" value={draft.buttonGradientStart} onChange={e => setDraft({ ...draft, buttonGradientStart: e.target.value })} style={{ width: '100%', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', padding: 0 }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Gradiente Fim</label>
+                  <input type="color" value={draft.buttonGradientEnd} onChange={e => setDraft({ ...draft, buttonGradientEnd: e.target.value })} style={{ width: '100%', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', padding: 0 }} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Botão de Liberação de Portão</label>
+                <select value={draft.mainButtonType} onChange={e => setDraft({ ...draft, mainButtonType: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '13px' }}>
+                  <option value="circular">Circular Pulsante</option>
+                  <option value="rectangular">Retangular Largo</option>
+                  <option value="classic">Classic Card (Estilo Card)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Cantos Arredondados</label>
+                  <select value={draft.borderRadius} onChange={e => setDraft({ ...draft, borderRadius: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '13px' }}>
+                    <option value="0px">Reto (0px)</option>
+                    <option value="8px">Suave (8px)</option>
+                    <option value="16px">Arredondado (16px)</option>
+                    <option value="24px">Curvado (24px)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Estilo de Sombra</label>
+                  <select value={draft.shadowStyle} onChange={e => setDraft({ ...draft, shadowStyle: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '13px' }}>
+                    <option value="none">Sem Sombra</option>
+                    <option value="soft">Sombra Suave</option>
+                    <option value="medium">Sombra Média</option>
+                    <option value="glow">Brilho Colorido</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Layout modules layout configs */}
+            <div style={{ background: 'var(--bg-surface)', padding: '20px', borderRadius: '20px', border: '1px solid var(--border-subtle)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Módulos & Comportamento</h3>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Disposição de Ações Rápidas</label>
+                <select value={draft.quickAccessType} onChange={e => setDraft({ ...draft, quickAccessType: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '13px' }}>
+                  <option value="row">Grade Horizontal (Botões Fixos)</option>
+                  <option value="carousel">Carrossel Scrollable</option>
+                  <option value="hidden">Ocultar Ações</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>QR Code / Senhas</label>
+                  <select value={draft.qrCodeType} onChange={e => setDraft({ ...draft, qrCodeType: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '13px' }}>
+                    <option value="modal">Acionar Modal (Clean)</option>
+                    <option value="embedded">Fixo na Tela (Embedded)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Aviso Portaria</label>
+                  <select value={draft.preAuthType} onChange={e => setDraft({ ...draft, preAuthType: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '13px' }}>
+                    <option value="modal">Acionar Modal (Clean)</option>
+                    <option value="embedded">Fixo na Tela (Embedded)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Caixa Postal Admin</label>
+                  <select value={draft.mailboxType} onChange={e => setDraft({ ...draft, mailboxType: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '13px' }}>
+                    <option value="modal">Acionar Modal (Clean)</option>
+                    <option value="embedded">Fixo na Tela (Embedded)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Tira de Comunicados</label>
+                  <select value={draft.showUpdates ? 'yes' : 'no'} onChange={e => setDraft({ ...draft, showUpdates: e.target.value === 'yes' })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '13px' }}>
+                    <option value="yes">Exibir no Feed</option>
+                    <option value="no">Ocultar</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Controles & Switches</label>
+                <select value={draft.showSwitches ? 'yes' : 'no'} onChange={e => setDraft({ ...draft, showSwitches: e.target.value === 'yes' })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '13px' }}>
+                  <option value="yes">Exibir no Feed</option>
+                  <option value="no">Ocultar</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Real-time Simulator View */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>📱 Simulador em Tempo Real</span>
+            
+            <div style={{
+              width: '320px',
+              height: '560px',
+              border: '10px solid #0F172A',
+              borderRadius: '40px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              overflowY: 'auto',
+              background: draft.backgroundColor || '#f8f9ff',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}>
+              
+              {/* Simulated Header */}
+              {(() => {
+                const hStyle = draft.headerStyle || 'clean-white';
+                if (hStyle === 'blue-gradient') {
+                  return (
+                    <div style={{
+                      background: `linear-gradient(135deg, ${draft.buttonGradientStart} 0%, ${draft.buttonGradientEnd} 100%)`,
+                      color: '#ffffff',
+                      padding: '24px 16px 16px',
+                      borderRadius: '0 0 1.5rem 1.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>shield</span>
+                          <span style={{ fontSize: '14px', fontWeight: 700 }}>Campainha Digital</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.2)', padding: '2px 6px', borderRadius: '99px', fontSize: '9px' }}>
+                          <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#10B981' }} />
+                          <span>Online</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>JD</div>
+                        <div>
+                          <h4 style={{ fontSize: '12px', fontWeight: 700, margin: 0 }}>Olá, Morador</h4>
+                          <span style={{ fontSize: '10px', opacity: 0.8 }}>Apt 101 • Condomínio</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else if (hStyle === 'dark-slate') {
+                  return (
+                    <div style={{
+                      background: '#1E293B',
+                      color: '#ffffff',
+                      padding: '24px 16px 16px',
+                      borderBottom: `2px solid ${draft.primaryColor}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: draft.primaryColor }}>shield</span>
+                          <span style={{ fontSize: '14px', fontWeight: 700 }}>Campainha Digital</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '99px', fontSize: '9px' }}>
+                          <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: draft.primaryColor }} />
+                          <span>Online</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#334155', border: `1px solid ${draft.primaryColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>JD</div>
+                        <div>
+                          <h4 style={{ fontSize: '12px', fontWeight: 700, margin: 0 }}>Olá, Morador</h4>
+                          <span style={{ fontSize: '10px', opacity: 0.8 }}>Apt 101 • Condomínio</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  // clean-white default
+                  return (
+                    <div style={{
+                      background: '#ffffff',
+                      color: '#1E293B',
+                      padding: '24px 16px 16px',
+                      borderBottom: '1px solid #E2E8F0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: draft.primaryColor }}>shield</span>
+                          <span style={{ fontSize: '14px', fontWeight: 700 }}>Campainha Digital</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#ECFDF5', padding: '2px 6px', borderRadius: '99px', fontSize: '9px', color: '#047857' }}>
+                          <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#10B981' }} />
+                          <span>Online</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: draft.primaryColor, fontWeight: 'bold', fontSize: '12px' }}>JD</div>
+                        <div>
+                          <h4 style={{ fontSize: '12px', fontWeight: 700, margin: 0 }}>Olá, Morador</h4>
+                          <span style={{ fontSize: '10px', color: '#64748B' }}>Apt 101 • Condomínio</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+              })()}
+
+              {/* Simulated Content Feed */}
+              <div style={{ display: 'flex', flexDirection: 'column', padding: '16px 12px 24px', gap: '16px', width: '100%', flex: 1 }}>
+                
+                {/* Main Action Release Button */}
+                {(() => {
+                  const btnType = draft.mainButtonType || 'circular';
+                  
+                  if (btnType === 'circular') {
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0' }}>
+                        <button type="button" style={{
+                          width: '90px',
+                          height: '90px',
+                          borderRadius: '50%',
+                          background: `linear-gradient(135deg, ${draft.buttonGradientStart} 0%, ${draft.buttonGradientEnd} 100%)`,
+                          border: `1px solid ${draft.borderColor}`,
+                          color: '#ffffff',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor),
+                          cursor: 'pointer'
+                        }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>lock_open</span>
+                          <span style={{ fontSize: '8px', fontWeight: 800, marginTop: '2px', textTransform: 'uppercase' }}>Portão</span>
+                        </button>
+                      </div>
+                    );
+                  } else if (btnType === 'rectangular') {
+                    return (
+                      <button type="button" style={{
+                        width: '100%',
+                        padding: '12px',
+                        background: `linear-gradient(135deg, ${draft.buttonGradientStart} 0%, ${draft.buttonGradientEnd} 100%)`,
+                        border: `1px solid ${draft.borderColor}`,
+                        borderRadius: draft.borderRadius || '12px',
+                        color: '#ffffff',
+                        fontWeight: 800,
+                        fontSize: '11px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor),
+                        cursor: 'pointer'
+                      }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>lock_open</span>
+                        <span>LIBERAR ENTRADA</span>
+                      </button>
+                    );
+                  } else {
+                    // classic card style
+                    return (
+                      <div style={{
+                        background: draft.cardBgColor || '#ffffff',
+                        border: `1px solid ${draft.borderColor}`,
+                        borderRadius: draft.borderRadius || '12px',
+                        padding: '12px',
+                        boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer'
+                      }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(16,185,129,0.08)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>lock_open</span>
+                          </div>
+                          <div>
+                            <h4 style={{ fontSize: '11px', fontWeight: 700, margin: 0 }}>Liberar Portão</h4>
+                            <p style={{ fontSize: '8px', color: '#64748B', margin: '1px 0 0' }}>Abrir fechadura</p>
+                          </div>
+                        </div>
+                        <button type="button" style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          background: `linear-gradient(135deg, ${draft.buttonGradientStart} 0%, ${draft.buttonGradientEnd} 100%)`,
+                          color: '#fff',
+                          border: 'none',
+                          fontSize: '9px',
+                          fontWeight: 700
+                        }}>
+                          ABRIR
+                        </button>
+                      </div>
+                    );
+                  }
+                })()}
+
+                {/* Quick Actions layout preview */}
+                {(() => {
+                  const accessType = draft.quickAccessType || 'row';
+                  if (accessType === 'hidden') return null;
+
+                  const acts = [
+                    { label: 'Portaria', icon: 'call' },
+                    { label: 'Autorizar', icon: 'person_add' },
+                    { label: 'QR Code', icon: 'qr_code_2' }
+                  ];
+
+                  if (accessType === 'carousel') {
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '8px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Acesso Rápido</span>
+                        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                          {acts.map((a, i) => (
+                            <div key={i} style={{ flexShrink: 0, width: '110px', background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '8px', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor) }}>
+                              <div style={{ background: 'rgba(0, 74, 198, 0.05)', color: draft.primaryColor, padding: '4px', borderRadius: '6px', display: 'flex' }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>{a.icon}</span>
+                              </div>
+                              <span style={{ fontSize: '9px', fontWeight: 700 }}>{a.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                      {acts.map((a, i) => (
+                        <div key={i} style={{ flex: 1, background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor) }}>
+                          <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.05)', color: draft.primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>{a.icon}</span>
+                          </div>
+                          <span style={{ fontSize: '8px', fontWeight: 700, color: '#475569' }}>{a.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* Embedded QR Code preview */}
+                {draft.qrCodeType === 'embedded' && (
+                  <div style={{ background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '10px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor), display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#0F172A', alignSelf: 'flex-start' }}>🔑 QR Code</span>
+                    <div style={{ width: '70px', height: '70px', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', fontSize: '18px' }}>🔳</div>
+                    <span style={{ fontSize: '9px', fontWeight: 700, color: draft.primaryColor, fontFamily: 'monospace' }}>ABCD-1234</span>
+                  </div>
+                )}
+
+                {/* Embedded PreAuth preview */}
+                {draft.preAuthType === 'embedded' && (
+                  <div style={{ background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '10px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor), display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#0F172A' }}>🚗 Autorizar Entrada</span>
+                    <input type="text" placeholder="Nome do visitante..." disabled style={{ width: '100%', padding: '6px', fontSize: '9px', border: '1px solid #E2E8F0', borderRadius: '6px', background: '#F8FAFC' }} />
+                    <button type="button" style={{ width: '100%', padding: '6px', background: draft.primaryColor, color: '#fff', border: 'none', borderRadius: '6px', fontSize: '9px', fontWeight: 700 }}>Gerar Código</button>
+                  </div>
+                )}
+
+                {/* Embedded Mailbox preview */}
+                {draft.mailboxType === 'embedded' && (
+                  <div style={{ background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '10px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor), display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#0F172A' }}>📬 Falar com Administração</span>
+                    <input type="text" placeholder="Assunto..." disabled style={{ width: '100%', padding: '6px', fontSize: '9px', border: '1px solid #E2E8F0', borderRadius: '6px', background: '#F8FAFC' }} />
+                    <button type="button" style={{ width: '100%', padding: '6px', background: `linear-gradient(135deg, ${draft.buttonGradientStart} 0%, ${draft.buttonGradientEnd} 100%)`, color: '#fff', border: 'none', borderRadius: '6px', fontSize: '9px', fontWeight: 700 }}>Enviar</button>
+                  </div>
+                )}
+
+                {/* Simulated Control Switches */}
+                {draft.showSwitches && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '8px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Controles</span>
+                    <div style={{ background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '8px 12px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor), display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '9px' }}>
+                        <span style={{ fontWeight: 600 }}>Campainha Ativa</span>
+                        <div style={{ width: '24px', height: '14px', borderRadius: '10px', background: '#10B981', position: 'relative' }}>
+                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FFF', position: 'absolute', top: '2px', right: '2px' }} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '9px' }}>
+                        <span style={{ fontWeight: 600 }}>Interfone Vizinhos</span>
+                        <div style={{ width: '24px', height: '14px', borderRadius: '10px', background: '#10B981', position: 'relative' }}>
+                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FFF', position: 'absolute', top: '2px', right: '2px' }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Updates strip preview */}
+                {draft.showUpdates && (
+                  <div style={{ background: draft.cardBgColor || '#ffffff', borderRadius: draft.borderRadius || '8px', padding: '6px 10px', border: `1px solid ${draft.borderColor}`, boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor), display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '12px', color: draft.primaryColor }}>campaign</span>
+                      <span style={{ fontSize: '9px', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Aviso importante do condomínio...</span>
+                    </div>
+                    <span className="material-symbols-outlined" style={{ fontSize: '10px', color: '#94A3B8' }}>chevron_right</span>
+                  </div>
+                )}
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', color: 'var(--text-main)', display: 'flex', fontFamily: 'Inter, sans-serif', transition: 'background-color 0.3s, color 0.3s' }}>
 
@@ -898,6 +1514,7 @@ export default function MasterAdminDashboard() {
           <SidebarLink icon={Sparkles} label="Demonstração" active={activeTab === 'demo'} onClick={() => setActiveTab('demo')} />
           <SidebarLink icon={Gift} label="Promoções" active={activeTab === 'promos'} onClick={() => setActiveTab('promos')} />
           <SidebarLink icon={History} label="Logs" active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} />
+          <SidebarLink icon={Palette} label="Layout do Morador" active={activeTab === 'layout-builder'} onClick={() => setActiveTab('layout-builder')} />
           <SidebarLink icon={Settings2} label="Configurações" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
         </nav>
         <div style={{ padding: '20px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -947,23 +1564,28 @@ export default function MasterAdminDashboard() {
           <div>
             <h2 style={{ fontSize: '28px', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-1px', margin: 0 }}>
               {activeTab === 'users' ? 'Usuários & QR Codes' : 
-               activeTab === 'production' ? 'Produção de Placas' : 'Controle Master'}
+               activeTab === 'production' ? 'Produção de Placas' : 
+               activeTab === 'layout-builder' ? 'Layout do Morador' : 'Controle Master'}
             </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: '4px' }}>Gerencie permissões, QR Codes e placas dos clientes.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '15px', marginTop: '4px' }}>
+              {activeTab === 'layout-builder' ? 'Configure a aparência padrão e o comportamento do feed do aplicativo do morador.' : 'Gerencie permissões, QR Codes e placas dos clientes.'}
+            </p>
           </div>
           <button onClick={fetchUsers} style={{ padding: '12px', borderRadius: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', cursor: 'pointer' }}>
             <RefreshCw size={20} />
           </button>
         </header>
 
-        {/* SEARCH */}
-        <div style={{ marginBottom: '24px', background: 'var(--bg-surface)', padding: '14px 16px', borderRadius: '16px', border: '1px solid var(--border-subtle)', display: 'flex', gap: '12px' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
-            <input type="text" placeholder="Buscar por nome, email ou celular..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px 10px 42px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '14px' }} />
+        {activeTab !== 'layout-builder' && activeTab !== 'settings' && activeTab !== 'promos' && activeTab !== 'logs' && (
+          /* SEARCH */
+          <div style={{ marginBottom: '24px', background: 'var(--bg-surface)', padding: '14px 16px', borderRadius: '16px', border: '1px solid var(--border-subtle)', display: 'flex', gap: '12px' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+              <input type="text" placeholder="Buscar por nome, email ou celular..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                style={{ width: '100%', padding: '10px 14px 10px 42px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'var(--bg-deep)', color: 'var(--text-main)', outline: 'none', fontSize: '14px' }} />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* USERS TABLE */}
         {activeTab === 'users' && (
@@ -2683,6 +3305,10 @@ export default function MasterAdminDashboard() {
           <div style={{ background: '#FFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '60px', textAlign: 'center' }}>
             <p style={{ color: '#94A3B8', fontSize: '16px' }}>Logs de atividades do sistema em construção.</p>
           </div>
+        )}
+
+        {activeTab === 'layout-builder' && (
+          <LayoutBuilderPanel />
         )}
 
       </main>

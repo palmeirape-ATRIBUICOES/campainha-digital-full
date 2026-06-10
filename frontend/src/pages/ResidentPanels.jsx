@@ -160,7 +160,7 @@ export function HistoryPanel({ unitId, propertyId }) {
   );
 }
 
-export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyId, onOpenLayoutBuilder }) {
+export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyId }) {
   const isHouseResident = localStorage.getItem('cd_is_house_resident') === 'true';
   const [enabled, setEnabled] = useState(true);
   const [intercomEnabled, setIntercomEnabled] = useState(true);
@@ -425,33 +425,6 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
         </div>
       </section>
 
-      {/* Construtor de Layout */}
-      {onOpenLayoutBuilder && (
-        <section 
-          onClick={onOpenLayoutBuilder} 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '16px', 
-            background: '#FFF', 
-            borderRadius: '20px', 
-            padding: '20px 24px', 
-            border: '1px solid #E2E8F0', 
-            cursor: 'pointer', 
-            boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
-            transition: 'transform 0.2s, box-shadow 0.2s'
-          }}
-        >
-          <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Palette size={22} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <span style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', display: 'block' }}>Personalizar Layout</span>
-            <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0' }}>Mude cores, botões, bordas e oculte ou exiba módulos do aplicativo.</p>
-          </div>
-          <span className="material-symbols-outlined" style={{ color: '#94A3B8' }}>chevron_right</span>
-        </section>
-      )}
 
       {/* Horário de Funcionamento */}
       <section>
