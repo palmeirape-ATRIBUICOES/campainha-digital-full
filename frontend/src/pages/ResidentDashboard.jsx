@@ -78,6 +78,9 @@ export default function ResidentDashboard() {
   const token = localStorage.getItem('cd_token');
 
   const [tab, setTab] = useState('home'); // home | history | messages
+  const [showQuietHoursModal, setShowQuietHoursModal] = useState(false);
+  const [tempQuietStart, setTempQuietStart] = useState('22:00');
+  const [tempQuietEnd, setTempQuietEnd] = useState('07:00');
   const [messagesSubTab, setMessagesSubTab] = useState('board'); // 'board' | 'chat'
   const [rawVilaMessages, setRawVilaMessages] = useState([]);
   const [newReplyMsg, setNewReplyMsg] = useState('');
@@ -514,7 +517,10 @@ export default function ResidentDashboard() {
           }
           if (data.clientCode) setAccessCode(data.clientCode);
           else if (data.plateCode) setAccessCode(data.plateCode);
-          const uName = data.unitName || data.propertyName || data.name || '';
+          let uName = data.unitName || data.propertyName || data.name || '';
+          if (!data.isHouseResident && data.unitName && data.name) {
+            uName = `${data.unitName} / ${data.name}`;
+          }
           if (uName) {
             setUnitName(uName);
             localStorage.setItem('cd_unit_name', uName);
@@ -1351,6 +1357,11 @@ export default function ResidentDashboard() {
     } else if (field === 'quietModeEnd') {
       setQuietModeEnd(value);
       updatedQuietEnd = value;
+    } else if (field === 'quietHours') {
+      setQuietModeStart(value.start);
+      setQuietModeEnd(value.end);
+      updatedQuietStart = value.start;
+      updatedQuietEnd = value.end;
     } else if (field === 'photo') {
       setUserPhoto(value);
       updatedPhoto = value;
@@ -1945,10 +1956,7 @@ export default function ResidentDashboard() {
                 }}>
                   {/* Title & Top Icons */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>shield</span>
-                      <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' }}>Campainha Digital</span>
-                    </div>
+                    <Logo size={32} light={true} />
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                       {/* Indicador de Status */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isTrialExpired ? '#ba1a1a' : 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '99px' }}>
@@ -2023,10 +2031,7 @@ export default function ResidentDashboard() {
                 }}>
                   {/* Title & Top Icons */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#D97706', fontVariationSettings: "'FILL' 1" }}>shield</span>
-                      <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: '#ffffff' }}>Campainha Digital</span>
-                    </div>
+                    <Logo size={32} light={true} />
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                       {/* Status */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(217, 119, 6, 0.15)', padding: '4px 10px', borderRadius: '99px', border: '1px solid rgba(217, 119, 6, 0.3)' }}>
@@ -2101,10 +2106,7 @@ export default function ResidentDashboard() {
               }}>
                 {/* Title & Top Icons */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '24px', color: layoutStyle.primaryColor || '#004ac6', fontVariationSettings: "'FILL' 1" }}>shield</span>
-                    <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: '#0F172A' }}>Campainha Digital</span>
-                  </div>
+                  <Logo size={32} light={false} />
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     {/* Status badge */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isTrialExpired ? '#FEE2E2' : '#ECFDF5', padding: '4px 10px', borderRadius: '99px' }}>
@@ -2729,14 +2731,21 @@ export default function ResidentDashboard() {
 
                         {/* Item Modo Silencioso */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0' }}>
-                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                          <div 
+                            onClick={() => {
+                              setTempQuietStart(quietModeStart || '22:00');
+                              setTempQuietEnd(quietModeEnd || '07:00');
+                              setShowQuietHoursModal(true);
+                            }}
+                            style={{ display: 'flex', gap: '12px', alignItems: 'center', cursor: 'pointer', flex: 1 }}
+                          >
                             <span className="material-symbols-outlined" style={{ fontSize: '20px', color: (quietModeStart && quietModeEnd) ? '#F59E0B' : '#94A3B8' }}>dark_mode</span>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                               <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>Modo Silencioso</span>
-                              <span style={{ fontSize: '11px', color: '#64748B' }}>
+                              <span style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 {(quietModeStart && quietModeEnd) 
-                                  ? `Ativo das ${quietModeStart} às ${quietModeEnd}` 
-                                  : 'Desativado'}
+                                  ? `Ativo das ${quietModeStart} às ${quietModeEnd} ✎` 
+                                  : 'Desativado ✎'}
                               </span>
                             </div>
                           </div>
@@ -2746,11 +2755,9 @@ export default function ResidentDashboard() {
                               checked={!!(quietModeStart && quietModeEnd)} 
                               onChange={(e) => {
                                 if (e.target.checked) {
-                                  toggleHomeSetting('quietModeStart', '22:00');
-                                  toggleHomeSetting('quietModeEnd', '07:00');
+                                  toggleHomeSetting('quietHours', { start: '22:00', end: '07:00' });
                                 } else {
-                                  toggleHomeSetting('quietModeStart', '');
-                                  toggleHomeSetting('quietModeEnd', '');
+                                  toggleHomeSetting('quietHours', { start: '', end: '' });
                                 }
                               }} 
                             />
@@ -3223,16 +3230,7 @@ export default function ResidentDashboard() {
               zIndex: 40
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span className="material-symbols-outlined" style={{ color: '#004ac6', fontSize: '28px', fontVariationSettings: "'FILL' 1" }}>shield</span>
-                <h1 style={{ 
-                  fontSize: '24px', 
-                  fontWeight: 700, 
-                  color: '#004ac6', 
-                  margin: 0,
-                  fontFamily: "'Inter', sans-serif"
-                }}>
-                  Campainha Digital
-                </h1>
+                <Logo size={32} light={false} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <button 
@@ -4336,6 +4334,144 @@ export default function ResidentDashboard() {
               >
                 Entendido
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Quiet Hours Modal */}
+        {showQuietHoursModal && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            animation: 'fade-in 0.3s ease-out'
+          }}>
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '24px',
+              padding: '24px',
+              maxWidth: '340px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+              animation: 'scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              position: 'relative'
+            }}>
+              {/* Fechar Button */}
+              <button 
+                onClick={() => setShowQuietHoursModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '16px', right: '16px',
+                  background: '#F1F5F9',
+                  border: 'none',
+                  width: '32px', height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748B'
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '28px', color: '#F59E0B' }}>dark_mode</span>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Modo Silencioso</h3>
+                  <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0' }}>Configure o horário de silêncio</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>Horário de Início</label>
+                  <input 
+                    type="time" 
+                    value={tempQuietStart}
+                    onChange={(e) => setTempQuietStart(e.target.value)}
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      fontSize: '16px',
+                      fontWeight: 600,
+                      color: '#0F172A',
+                      outline: 'none',
+                      background: '#F8FAFC',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>Horário de Término</label>
+                  <input 
+                    type="time" 
+                    value={tempQuietEnd}
+                    onChange={(e) => setTempQuietEnd(e.target.value)}
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      border: '1px solid #E2E8F0',
+                      fontSize: '16px',
+                      fontWeight: 600,
+                      color: '#0F172A',
+                      outline: 'none',
+                      background: '#F8FAFC',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <button
+                  onClick={() => setShowQuietHoursModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '14px',
+                    border: '1px solid #E2E8F0',
+                    background: '#ffffff',
+                    color: '#64748B',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    toggleHomeSetting('quietHours', { start: tempQuietStart, end: tempQuietEnd });
+                    setShowQuietHoursModal(false);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: '14px',
+                    border: 'none',
+                    background: layoutStyle.primaryColor || '#004ac6',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Salvar
+                </button>
+              </div>
             </div>
           </div>
         )}

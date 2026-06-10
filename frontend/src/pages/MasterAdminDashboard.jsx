@@ -1219,10 +1219,7 @@ export default function MasterAdminDashboard() {
                       gap: '16px'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>shield</span>
-                          <span style={{ fontSize: '14px', fontWeight: 700 }}>Campainha Digital</span>
-                        </div>
+                        <Logo size={28} light={true} />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.2)', padding: '2px 6px', borderRadius: '99px', fontSize: '9px' }}>
                           <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#10B981' }} />
                           <span>Online</span>
@@ -1249,10 +1246,7 @@ export default function MasterAdminDashboard() {
                       gap: '16px'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: draft.primaryColor }}>shield</span>
-                          <span style={{ fontSize: '14px', fontWeight: 700 }}>Campainha Digital</span>
-                        </div>
+                        <Logo size={28} light={true} />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '99px', fontSize: '9px' }}>
                           <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: draft.primaryColor }} />
                           <span>Online</span>
@@ -1280,10 +1274,7 @@ export default function MasterAdminDashboard() {
                       gap: '16px'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: draft.primaryColor }}>shield</span>
-                          <span style={{ fontSize: '14px', fontWeight: 700 }}>Campainha Digital</span>
-                        </div>
+                        <Logo size={28} light={false} />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#ECFDF5', padding: '2px 6px', borderRadius: '99px', fontSize: '9px', color: '#047857' }}>
                           <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#10B981' }} />
                           <span>Online</span>

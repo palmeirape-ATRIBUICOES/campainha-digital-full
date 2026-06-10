@@ -414,13 +414,12 @@ export default function VisitorCall() {
       )}
 
       {/* Header */}
-      <header style={{ textAlign: 'center', marginBottom: '40px' }}>
-        <div style={{ marginBottom: '16px' }}>
-          <Logo size={42} showText={false} />
+      <header style={{ textAlign: 'center', marginBottom: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ marginBottom: '8px' }}>
+          <Logo size={48} vertical={true} />
         </div>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.5px', marginBottom: '8px' }}>Campainha Digital</h1>
         {property && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', justifyContent: 'center', fontSize: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', justifyContent: 'center', fontSize: '14px', marginTop: '4px' }}>
             <MapPin size={14} /> {property.name}
           </div>
         )}

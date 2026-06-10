@@ -1358,6 +1358,7 @@ app.get('/api/user/settings', authenticate, async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
       select: {
+        name: true,
         email: true,
         phone: true,
         isVilaAdmin: true,

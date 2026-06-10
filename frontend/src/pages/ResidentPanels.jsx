@@ -592,8 +592,19 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
 
       {/* Nome e Salvar */}
       <section>
-        <label style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', display: 'block', marginBottom: '8px' }}>NOME DA UNIDADE / CASA</label>
-        <input type="text" value={unitName} onChange={e => setUnitName(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1px solid #E2E8F0', marginBottom: '16px' }} />
+        <label style={{ fontSize: '12px', fontWeight: 800, color: '#94A3B8', display: 'block', marginBottom: '4px' }}>NOME DA UNIDADE / CASA</label>
+        {!isHouseResident && (
+          <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '8px', lineHeight: '1.4' }}>
+            Insira o nome da unidade criada pelo admin da vila ex: liber / nome do morador
+          </span>
+        )}
+        <input 
+          type="text" 
+          value={unitName} 
+          onChange={e => setUnitName(e.target.value)} 
+          placeholder={!isHouseResident ? "Ex: liber / Nome do Morador" : ""}
+          style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1px solid #E2E8F0', marginBottom: '16px' }} 
+        />
         
         <button className="btn-primary" onClick={handleSave} disabled={loading} style={{ width: '100%', padding: '16px', fontSize: '16px' }}>
           {loading ? 'Salvando...' : 'Salvar Alterações'}
