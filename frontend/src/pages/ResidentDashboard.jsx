@@ -79,6 +79,7 @@ export default function ResidentDashboard() {
     () => localStorage.getItem('cd_login_type') === 'email'
   );
   const [downloadingPlate, setDownloadingPlate] = useState(false);
+  const [showQuickMsgs, setShowQuickMsgs] = useState(false);
   const plateRef = useRef(null);
   const fileInputRef = useRef(null);
   const HOUSE_QUICK_MSGS = [
@@ -1720,6 +1721,15 @@ export default function ResidentDashboard() {
       onTouchStart={handleUserInteraction}
     >
       <style>{`
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; line-height: 1; }
+        .active-ring { animation: ring 2s infinite; }
+        @keyframes ring {
+            0% { box-shadow: 0 0 0 0 rgba(0, 74, 198, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(0, 74, 198, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 74, 198, 0); }
+        }
+        .glass { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .video-container { aspect-ratio: 16/10; }
         @keyframes pulse-blue {
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
           100% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
@@ -2960,171 +2970,475 @@ export default function ResidentDashboard() {
             position: 'absolute',
             inset: 0,
             zIndex: 500,
-            background: '#0F172A',
-            color: '#FFF',
+            background: '#f8f9ff',
+            color: '#0b1c30',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-between',
-            padding: '24px 20px',
             animation: 'fade-in 0.3s ease-out',
-            fontFamily: "'Inter', sans-serif"
+            fontFamily: "'Inter', sans-serif",
+            overflow: 'hidden'
           }}>
-            {/* Header Info */}
-            <div style={{ textAlign: 'center', marginTop: '20px', zIndex: 10 }}>
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: 'rgba(255, 255, 255, 0.08)',
-                padding: '6px 16px',
-                borderRadius: '100px',
-                fontSize: '12px',
-                fontWeight: 800,
-                letterSpacing: '1.2px',
-                marginBottom: '12px',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
-              }}>
-                <div style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: status === 'ringing' ? '#EF4444' : (status === 'active' ? '#10B981' : '#3B82F6'),
-                  animation: 'pulse 1s infinite'
-                }} />
-                {status === 'ringing' ? 'INTERFONE RECEBIDO' :
-                 status === 'calling' ? 'CHAMANDO...' :
-                 status === 'monitoring' ? 'MODO OCULTO' :
-                 `CONVERSA ─ ${fmtDuration(callDuration)}`}
-              </div>
-              
-              <h2 style={{ fontSize: '26px', fontWeight: 900, margin: '0 0 6px', letterSpacing: '-0.5px' }}>
-                {call.callerName === 'Visitante' ? 'Chamada do Portão' : call.callerName}
-              </h2>
-              <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', margin: 0, fontWeight: 500 }}>
-                {status === 'ringing' ? 'Alguém está na sua porta' :
-                 status === 'calling' ? 'Aguardando resposta...' :
-                 status === 'monitoring' ? 'Você está vendo o visitante' :
-                 'Comunicação de áudio segura'}
-              </p>
-            </div>
-
-            {/* Video / Avatar Area */}
-            <div style={{
-              flex: 1,
-              margin: '24px 0',
-              borderRadius: '28px',
-              overflow: 'hidden',
-              background: '#1E293B',
-              position: 'relative',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+            {/* TopAppBar */}
+            <header style={{
               display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
-              justifyContent: 'center'
+              width: '100%',
+              padding: '12px 20px',
+              background: '#f8f9ff',
+              zIndex: 40
             }}>
-              {/* Visitor Photo (Ringing State) */}
-              {status === 'ringing' && (
-                call.photo ? (
-                  <img src={call.photo} alt="Visitante" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ textAlign: 'center', opacity: 0.3 }}>
-                    <Bell size={64} style={{ animation: 'bounce 2s infinite', margin: '0 auto 16px' }} />
-                    <span style={{ fontSize: '14px', fontWeight: 600 }}>Sem imagem da câmera</span>
-                  </div>
-                )
-              )}
-
-              {/* WebRTC Video Stream (Monitoring / Active Call) */}
-              {(status === 'monitoring' || status === 'active') && call.callerName !== 'Portaria' && (
-                <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              )}
-
-              {/* Calling Icon & Animation */}
-              {status === 'calling' && (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: '88px', height: '88px', borderRadius: '50%',
-                    background: 'rgba(59, 130, 246, 0.15)', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center',
-                    animation: 'pulse-blue 1.5s infinite', border: '2px solid rgba(59, 130, 246, 0.3)',
-                    margin: '0 auto 20px'
-                  }}>
-                    <Phone size={36} color="#3B82F6" />
-                  </div>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.6)' }}>Conectando intercâmbio...</span>
-                </div>
-              )}
-
-              {/* Voice Call Avatar (Portaria Active) */}
-              {status === 'active' && call.callerName === 'Portaria' && (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: '88px', height: '88px', borderRadius: '50%',
-                    background: 'rgba(16, 185, 129, 0.15)', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center',
-                    animation: 'pulse-green 1.5s infinite', border: '2px solid rgba(16, 185, 129, 0.3)',
-                    margin: '0 auto 20px'
-                  }}>
-                    <Building2 size={36} color="#10B981" />
-                  </div>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'rgba(255, 255, 255, 0.6)' }}>Ligação de Voz Conectada</span>
-                </div>
-              )}
-
-              {/* Local Video PIP (Corner Video Screen) */}
-              {status === 'active' && camOn && (
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{
-                    position: 'absolute',
-                    bottom: '16px',
-                    right: '16px',
-                    width: '90px',
-                    aspectRatio: '3/4',
-                    objectFit: 'cover',
-                    borderRadius: '16px',
-                    border: '2px solid #FFF',
-                    boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
-                    zIndex: 20
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span className="material-symbols-outlined" style={{ color: '#004ac6', fontSize: '28px', fontVariationSettings: "'FILL' 1" }}>shield</span>
+                <h1 style={{ 
+                  fontSize: '24px', 
+                  fontWeight: 700, 
+                  color: '#004ac6', 
+                  margin: 0,
+                  fontFamily: "'Inter', sans-serif"
+                }}>
+                  Campainha Digital
+                </h1>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <button 
+                  onClick={() => setShowMenu(true)}
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    cursor: 'pointer', 
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    transition: 'opacity 0.2s'
                   }}
-                />
-              )}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                >
+                  <span className="material-symbols-outlined" style={{ color: '#434655', fontSize: '28px' }}>settings</span>
+                </button>
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  overflow: 'hidden', 
+                  border: '2px solid #2563eb' 
+                }}>
+                  {userPhoto ? (
+                    <img src={userPhoto} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      background: '#eff4ff', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      color: '#004ac6',
+                      fontWeight: 'bold',
+                      fontSize: '14px'
+                    }}>
+                      {unitName ? unitName.slice(0, 2).toUpperCase() : 'M'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </header>
 
-              {/* Indicator (Modo Oculto) */}
-              {status === 'monitoring' && (
-                <div style={{
+            {/* Main Content Area */}
+            <div style={{ 
+              flex: 1, 
+              padding: '0 20px 24px', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '24px', 
+              overflowY: 'auto',
+              paddingBottom: '96px'
+            }}>
+              {/* Main Video Feed Section */}
+              <section className="video-container" style={{
+                position: 'relative',
+                width: '100%',
+                borderRadius: '24px',
+                overflow: 'hidden',
+                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
+                background: '#cbdbf5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {status === 'ringing' && (
+                  call.photo ? (
+                    <img src={call.photo} alt="Visitante" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ textAlign: 'center', color: '#0b1c30', opacity: 0.5 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '48px', animation: 'bounce 2s infinite', display: 'block', margin: '0 auto 12px' }}>doorbell</span>
+                      <span style={{ fontSize: '13px', fontWeight: 600 }}>Câmera sem imagem</span>
+                    </div>
+                  )
+                )}
+
+                {(status === 'active' || status === 'monitoring') && call.callerName !== 'Portaria' && (
+                  <video 
+                    ref={remoteVideoRef} 
+                    autoPlay 
+                    playsInline 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  />
+                )}
+
+                {status === 'calling' && (
+                  <div style={{ textAlign: 'center', color: '#0b1c30' }}>
+                    <div className="active-ring" style={{
+                      width: '64px', height: '64px', borderRadius: '50%',
+                      background: 'rgba(0, 74, 198, 0.1)', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
+                      border: '2px solid rgba(0, 74, 198, 0.3)',
+                      margin: '0 auto 16px'
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '28px', color: '#004ac6' }}>call</span>
+                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: 600, opacity: 0.7 }}>Chamando...</span>
+                  </div>
+                )}
+
+                {status === 'active' && call.callerName === 'Portaria' && (
+                  <div style={{ textAlign: 'center', color: '#0b1c30' }}>
+                    <div style={{
+                      width: '64px', height: '64px', borderRadius: '50%',
+                      background: 'rgba(16, 185, 129, 0.1)', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center',
+                      margin: '0 auto 16px',
+                      border: '2px solid rgba(16, 185, 129, 0.3)'
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '28px', color: '#006242' }}>location_city</span>
+                    </div>
+                    <span style={{ fontSize: '13px', fontWeight: 600, opacity: 0.7 }}>Ligação Conectada</span>
+                  </div>
+                )}
+
+                {status === 'active' && camOn && (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{
+                      position: 'absolute',
+                      bottom: '12px',
+                      right: '12px',
+                      width: '70px',
+                      aspectRatio: '3/4',
+                      objectFit: 'cover',
+                      borderRadius: '12px',
+                      border: '2px solid #FFF',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      zIndex: 20
+                    }}
+                  />
+                )}
+
+                {/* Live Badge */}
+                <div className="glass" style={{
+                  position: 'absolute',
+                  top: '16px',
+                  left: '16px',
+                  padding: '4px 12px',
+                  borderRadius: '99px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  zIndex: 10
+                }}>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: '#ba1a1a',
+                    animation: 'pulse 1s infinite'
+                  }} />
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#0b1c30' }}>
+                    {status === 'ringing' ? 'Chamada Recebida' : 
+                     status === 'active' ? 'Ao Vivo: Portão Principal' : 
+                     status === 'monitoring' ? 'Monitoramento Oculto' : 
+                     'Conectando'}
+                  </span>
+                </div>
+
+                {/* Clock / Timer Badge */}
+                <div className="glass" style={{
                   position: 'absolute',
                   top: '16px',
                   right: '16px',
-                  background: '#F59E0B',
-                  color: '#000',
                   padding: '4px 12px',
-                  borderRadius: '100px',
-                  fontSize: '11px',
-                  fontWeight: 900,
-                  boxShadow: '0 4px 10px rgba(245,158,11,0.3)'
+                  borderRadius: '99px',
+                  zIndex: 10
                 }}>
-                  👁 OCULTO
+                  <span style={{ fontSize: '12px', fontWeight: 500, color: '#0b1c30' }}>
+                    {status === 'active' ? fmtDuration(callDuration) : new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
-              )}
-            </div>
 
-            {/* Controls and Quick Messages */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', zIndex: 10 }}>
-              
-              {/* Quick Messages Pill List */}
-              {visitorSocketId && (status === 'ringing' || status === 'active' || status === 'monitoring') && (
+                {/* Interaction Hint (Fullscreen overlay icon) */}
+                {(status === 'active' || status === 'monitoring') && call.callerName !== 'Portaria' && (
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: 'none',
+                    zIndex: 5
+                  }}>
+                    <div className="glass" style={{
+                      width: '64px',
+                      height: '64px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0.6
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '32px', color: '#0b1c30' }}>fullscreen</span>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* Visitor Profile Card */}
+              <section style={{
+                background: '#ffffff',
+                padding: '16px',
+                borderRadius: '12px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                border: '1px solid #c3c6d7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ 
+                      width: '56px', 
+                      height: '56px', 
+                      borderRadius: '50%', 
+                      overflow: 'hidden', 
+                      border: '2px solid #006242' 
+                    }}>
+                      {call.photo ? (
+                        <img src={call.photo} alt="Visitante" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{
+                          width: '100%', height: '100%', background: '#eff4ff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#004ac6'
+                        }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>person</span>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ 
+                      position: 'absolute', 
+                      bottom: '-4px', 
+                      right: '-4px', 
+                      background: '#006242', 
+                      color: '#ffffff', 
+                      borderRadius: '50%', 
+                      padding: '2px', 
+                      border: '2px solid #FFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '14px', fontVariationSettings: "'FILL' 1" }}>verified</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p style={{ 
+                      fontSize: '12px', 
+                      fontWeight: 600, 
+                      color: '#434655', 
+                      textTransform: 'uppercase', 
+                      letterSpacing: '0.05em',
+                      margin: '0 0 4px' 
+                    }}>
+                      Visitante Identificado
+                    </p>
+                    <h2 style={{ 
+                      fontSize: '20px', 
+                      fontWeight: 600, 
+                      color: '#0b1c30', 
+                      margin: 0 
+                    }}>
+                      {call.callerName === 'Visitante' ? 'Portão Principal' : call.callerName} <span style={{ color: '#434655', fontWeight: 'normal', fontSize: '14px' }}>
+                        {call.callerName === 'Portaria' ? '(Segurança)' : '(Entregador)'}
+                      </span>
+                    </h2>
+                  </div>
+                </div>
+                <button style={{ background: 'none', border: 'none', color: '#004ac6', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>info</span>
+                </button>
+              </section>
+
+              {/* Actions Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '16px',
+                width: '100%',
+                marginBottom: '10px'
+              }}>
+                {/* Button 1: Atender / Conversar / Mutar */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (status === 'ringing' || status === 'monitoring') {
+                      handleAnswer(true);
+                    } else if (status === 'active') {
+                      toggleMute();
+                    }
+                  }}
+                  disabled={status === 'calling'}
+                  className={(status === 'ringing' || status === 'monitoring') ? 'active-ring shadow-lg' : 'shadow-lg'}
+                  style={{
+                    background: status === 'active' && isMuted ? '#ba1a1a' : '#006242',
+                    color: '#ffffff',
+                    borderRadius: '16px',
+                    padding: '24px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    cursor: status === 'calling' ? 'default' : 'pointer',
+                    border: 'none',
+                    minHeight: '120px',
+                    transition: 'all 0.1s',
+                    outline: 'none'
+                  }}
+                  onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                  onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: (status === 'active' && isMuted) ? "'FILL' 0" : "'FILL' 1" }}>
+                    {(status === 'active' && isMuted) ? 'mic_off' : 'call'}
+                  </span>
+                  <span style={{ fontSize: '20px', fontWeight: 600 }}>
+                    {status === 'ringing' || status === 'monitoring' ? 'Atender' :
+                     status === 'active' ? (isMuted ? 'Mutado' : 'Mutar') :
+                     'Chamando'}
+                  </span>
+                </button>
+
+                {/* Button 2: Recusar / Desligar */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleEnd(); }}
+                  className="shadow-lg"
+                  style={{
+                    background: '#ba1a1a',
+                    color: '#ffffff',
+                    borderRadius: '16px',
+                    padding: '24px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    border: 'none',
+                    minHeight: '120px',
+                    transition: 'all 0.1s',
+                    outline: 'none'
+                  }}
+                  onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                  onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>call_end</span>
+                  <span style={{ fontSize: '20px', fontWeight: 600 }}>
+                    {status === 'ringing' ? 'Recusar' : 'Desligar'}
+                  </span>
+                </button>
+
+                {/* Button 3: Abrir Portão */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleOpenGate(); }}
+                  disabled={isHouseResident}
+                  className="shadow-lg"
+                  style={{
+                    background: '#004ac6',
+                    color: '#ffffff',
+                    borderRadius: '16px',
+                    padding: '24px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    cursor: isHouseResident ? 'not-allowed' : 'pointer',
+                    border: 'none',
+                    minHeight: '120px',
+                    opacity: isHouseResident ? 0.5 : 1,
+                    transition: 'all 0.1s',
+                    outline: 'none'
+                  }}
+                  onMouseDown={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(0.95)' }}
+                  onMouseUp={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(1)' }}
+                  onMouseLeave={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(1)' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>key</span>
+                  <span style={{ fontSize: '20px', fontWeight: 600 }}>
+                    {openGateLoading ? 'Abrindo...' : 'Abrir Portão'}
+                  </span>
+                </button>
+
+                {/* Button 4: Mensagem Rápida */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowQuickMsgs(!showQuickMsgs); }}
+                  disabled={!visitorSocketId}
+                  className="shadow-lg"
+                  style={{
+                    background: '#fea619',
+                    color: '#684000',
+                    borderRadius: '16px',
+                    padding: '24px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    cursor: !visitorSocketId ? 'not-allowed' : 'pointer',
+                    border: 'none',
+                    minHeight: '120px',
+                    opacity: !visitorSocketId ? 0.5 : 1,
+                    transition: 'all 0.1s',
+                    outline: 'none'
+                  }}
+                  onMouseDown={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(0.95)' }}
+                  onMouseUp={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(1)' }}
+                  onMouseLeave={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(1)' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
+                  <span style={{ fontSize: '20px', fontWeight: 600, textAlign: 'center', lineHeight: 1.1 }}>
+                    Mensagem Rápida
+                  </span>
+                </button>
+              </div>
+
+              {/* Quick Messages Drawer */}
+              {showQuickMsgs && visitorSocketId && (status === 'ringing' || status === 'active' || status === 'monitoring') && (
                 <div style={{
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  border: '1px solid #c3c6d7',
                   borderRadius: '20px',
-                  padding: '12px 14px',
-                  backdropFilter: 'blur(8px)'
+                  padding: '16px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                  width: '100%',
+                  animation: 'fade-in 0.2s ease-out'
                 }}>
-                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px', scrollbarWidth: 'none' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 800, color: '#434655', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Selecione uma resposta rápida:</p>
+                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
                     {quickMsgs.find(c => c.id === 'general')?.messages.map((msg, i) => (
                       <button
                         key={i}
@@ -3134,9 +3448,9 @@ export default function ResidentDashboard() {
                           padding: '8px 14px',
                           borderRadius: '100px',
                           fontSize: '12px',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          background: sentMsg === msg ? '#10B981' : 'rgba(255, 255, 255, 0.08)',
-                          color: sentMsg === msg ? '#000' : '#FFF',
+                          border: '1px solid #c3c6d7',
+                          background: sentMsg === msg ? '#006242' : '#eff4ff',
+                          color: sentMsg === msg ? '#FFF' : '#0b1c30',
                           cursor: 'pointer',
                           fontWeight: 700,
                           transition: 'all 0.2s',
@@ -3149,228 +3463,104 @@ export default function ResidentDashboard() {
                   </div>
                 </div>
               )}
-
-              {/* Call Controls Box */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                
-                {/* Ringing Controls */}
-                {status === 'ringing' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleMonitor(); }}
-                        style={{
-                          flex: 1,
-                          padding: '16px 12px',
-                          borderRadius: '16px',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          background: 'rgba(255,255,255,0.06)',
-                          color: '#FFF',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          fontWeight: 700,
-                          fontSize: '13px'
-                        }}
-                      >
-                        <EyeOff size={18} color="#3B82F6" /> Modo Oculto
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleAnswer(false); }}
-                        style={{
-                          flex: 1,
-                          padding: '16px 12px',
-                          borderRadius: '16px',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          background: 'rgba(255,255,255,0.06)',
-                          color: '#FFF',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          fontWeight: 700,
-                          fontSize: '13px'
-                        }}
-                      >
-                        <Phone size={18} color="#10B981" /> Só Áudio
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleAnswer(true); }}
-                      style={{
-                        width: '100%',
-                        padding: '18px',
-                        borderRadius: '16px',
-                        border: 'none',
-                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                        color: '#FFF',
-                        fontWeight: 800,
-                        fontSize: '15px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        boxShadow: '0 8px 24px rgba(16, 185, 129, 0.25)'
-                      }}
-                    >
-                      <Video size={20} /> Atender com Câmera & Áudio
-                    </button>
-
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleEnd(); }}
-                      style={{
-                        width: '100%',
-                        padding: '14px',
-                        borderRadius: '16px',
-                        border: 'none',
-                        background: 'rgba(239, 68, 68, 0.12)',
-                        color: '#EF4444',
-                        fontWeight: 800,
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      <PhoneOff size={16} /> Recusar
-                    </button>
-                  </div>
-                )}
-
-                {/* Active or Outgoing Call Controls */}
-                {(status === 'active' || status === 'monitoring' || status === 'calling') && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    
-                    {/* Media buttons */}
-                    <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', alignItems: 'center' }}>
-                      {status === 'active' && (
-                        <button
-                          onClick={toggleMute}
-                          style={{
-                            width: '56px',
-                            height: '56px',
-                            borderRadius: '50%',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            background: isMuted ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.08)',
-                            color: isMuted ? '#EF4444' : '#FFF',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            outline: 'none'
-                          }}
-                        >
-                          <MicOff size={22} />
-                        </button>
-                      )}
-
-                      {status === 'active' && call.callerName !== 'Portaria' && (
-                        <button
-                          onClick={toggleCam}
-                          style={{
-                            width: '56px',
-                            height: '56px',
-                            borderRadius: '50%',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            background: camOn ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.08)',
-                            color: camOn ? '#3B82F6' : '#FFF',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all 0.2s',
-                            outline: 'none'
-                          }}
-                        >
-                          {camOn ? <Video size={22} /> : <VideoOff size={22} />}
-                        </button>
-                      )}
-
-                      <button
-                        onClick={handleEnd}
-                        style={{
-                          width: '64px',
-                          height: '64px',
-                          borderRadius: '50%',
-                          border: 'none',
-                          background: '#EF4444',
-                          color: '#fff',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: '0 8px 24px rgba(239,68,68,0.4)',
-                          transition: 'all 0.2s',
-                          outline: 'none'
-                        }}
-                      >
-                        <PhoneOff size={26} />
-                      </button>
-                    </div>
-
-                    {/* Enable speech from Monitor mode */}
-                    {status === 'monitoring' && (
-                      <button
-                        onClick={() => handleAnswer(false)}
-                        style={{
-                          width: '100%',
-                          padding: '16px',
-                          borderRadius: '16px',
-                          border: 'none',
-                          background: '#10B981',
-                          color: '#FFF',
-                          fontWeight: 800,
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px'
-                        }}
-                      >
-                        <Phone size={18} /> Ativar Voz (Falar)
-                      </button>
-                    )}
-
-                    {/* Gate Release Button */}
-                    {!isHouseResident && (status === 'active' || status === 'monitoring') && (
-                      <button
-                        onClick={handleOpenGate}
-                        style={{
-                          width: '100%',
-                          padding: '16px',
-                          borderRadius: '16px',
-                          border: 'none',
-                          background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                          color: '#FFF',
-                          fontWeight: 800,
-                          fontSize: '15px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          boxShadow: '0 8px 32px rgba(16, 185, 129, 0.25)',
-                          marginTop: '8px'
-                        }}
-                      >
-                        <KeyRound size={20} /> LIBERAR ENTRADA
-                      </button>
-                    )}
-
-                  </div>
-                )}
-              </div>
-
             </div>
+
+            {/* BottomNavBar */}
+            <nav style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              width: '100%',
+              zIndex: 50,
+              display: 'flex',
+              justifyContent: 'space-around',
+              alignItems: 'center',
+              padding: '0 16px',
+              height: '80px',
+              background: '#e5eeff',
+              boxShadow: '0 -4px 12px rgba(0,0,0,0.05)',
+              borderRadius: '16px 16px 0 0'
+            }}>
+              <button 
+                onClick={() => { handleEnd(); setTab('home'); }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: tab === 'home' ? '#2563eb' : 'none',
+                  color: tab === 'home' ? '#ffffff' : '#434655',
+                  borderRadius: '12px',
+                  padding: '6px 16px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: tab === 'home' ? "'FILL' 1" : "'FILL' 0" }}>home</span>
+                <span style={{ fontSize: '12px', fontWeight: 500 }}>Início</span>
+              </button>
+              
+              <button 
+                onClick={() => { handleEnd(); setTab('history'); }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: tab === 'history' ? '#2563eb' : 'none',
+                  color: tab === 'history' ? '#ffffff' : '#434655',
+                  borderRadius: '12px',
+                  padding: '6px 16px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: tab === 'history' ? "'FILL' 1" : "'FILL' 0" }}>history</span>
+                <span style={{ fontSize: '12px', fontWeight: 500 }}>Histórico</span>
+              </button>
+
+              <button 
+                onClick={() => { handleEnd(); setTab('intercom'); }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: tab === 'intercom' ? '#2563eb' : 'none',
+                  color: tab === 'intercom' ? '#ffffff' : '#434655',
+                  borderRadius: '12px',
+                  padding: '6px 16px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: tab === 'intercom' ? "'FILL' 1" : "'FILL' 0" }}>doorbell</span>
+                <span style={{ fontSize: '12px', fontWeight: 500 }}>Dispositivos</span>
+              </button>
+
+              <button 
+                onClick={() => { handleEnd(); setTab('settings'); }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: tab === 'settings' ? '#2563eb' : 'none',
+                  color: tab === 'settings' ? '#ffffff' : '#434655',
+                  borderRadius: '12px',
+                  padding: '6px 16px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: tab === 'settings' ? "'FILL' 1" : "'FILL' 0" }}>person</span>
+                <span style={{ fontSize: '12px', fontWeight: 500 }}>Perfil</span>
+              </button>
+            </nav>
           </div>
         )}
 
