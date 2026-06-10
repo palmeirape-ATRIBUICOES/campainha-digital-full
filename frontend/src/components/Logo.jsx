@@ -91,9 +91,9 @@ export default function Logo({
             fontSize: `${mainFontSize}px`, 
             fontWeight: 900, 
             letterSpacing: '-0.3px',
-            background: textColor ? 'none' : (light ? '#FFF' : 'linear-gradient(135deg, #4F46E5, #8B5CF6)'),
+            background: textColor ? 'none' : (light ? 'none' : 'linear-gradient(135deg, #4F46E5, #8B5CF6)'),
             WebkitBackgroundClip: textColor ? 'none' : (light ? 'none' : 'text'),
-            WebkitTextFillColor: textColor ? 'initial' : (light ? 'none' : 'transparent'),
+            WebkitTextFillColor: textColor ? 'initial' : (light ? 'initial' : 'transparent'),
             color: textColor || (light ? '#FFF' : 'transparent'),
             textTransform: 'uppercase'
           }}>
