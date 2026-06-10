@@ -291,7 +291,9 @@ export default function VilaAdminDashboard() {
     if (!propertyId) return;
     setQrLoading(true);
     try {
-      const baseUrl = window.location.origin + window.location.pathname;
+      let path = window.location.pathname;
+      if (!path.endsWith('/')) path += '/';
+      const baseUrl = window.location.origin + path;
       const finalUrl = `${baseUrl}#/chamada/${propertyId}`;
       const res = await fetch(`${API}/api/qrcode?text=${encodeURIComponent(finalUrl)}&json=true`);
       if (res.ok) {
@@ -966,7 +968,9 @@ export default function VilaAdminDashboard() {
                   </span>
                   <button 
                     onClick={() => {
-                      const url = `${window.location.origin}${window.location.pathname}#/chamada/${propertyId}`;
+                      let path = window.location.pathname;
+                      if (!path.endsWith('/')) path += '/';
+                      const url = `${window.location.origin}${path}#/chamada/${propertyId}`;
                       navigator.clipboard.writeText(url);
                       alert('Link de chamada copiado com sucesso!');
                     }}
@@ -1086,13 +1090,15 @@ export default function VilaAdminDashboard() {
                 </div>
 
                 <div style={{ padding: '12px 16px', background: '#F8FAFC', borderRadius: '10px', fontFamily: 'monospace', fontSize: '12px', color: '#3B82F6', wordBreak: 'break-all', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}>
-                  {window.location.origin}{window.location.pathname}#/chamada/{propertyId}
+                  {window.location.origin}{window.location.pathname}{!window.location.pathname.endsWith('/') ? '/' : ''}#/chamada/{propertyId}
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
                   <button 
                     onClick={() => {
-                      const url = `${window.location.origin}${window.location.pathname}#/chamada/${propertyId}`;
+                      let path = window.location.pathname;
+                      if (!path.endsWith('/')) path += '/';
+                      const url = `${window.location.origin}${path}#/chamada/${propertyId}`;
                       const shareText = `Escaneie para tocar as campainhas da Vila:\n👉 ${url}`;
                       if (navigator.share) {
                         navigator.share({
@@ -1551,7 +1557,7 @@ export default function VilaAdminDashboard() {
               </div>
 
               <div style={{ padding: '12px 16px', background: '#F8FAFC', borderRadius: '10px', fontFamily: 'monospace', fontSize: '12px', color: '#3B82F6', wordBreak: 'break-all', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}>
-                {window.location.origin}{window.location.pathname}#/chamada/{propertyId}
+                {window.location.origin}{window.location.pathname}{!window.location.pathname.endsWith('/') ? '/' : ''}#/chamada/{propertyId}
               </div>
 
               {/* Printable Plate invisível removido (declarado globalmente abaixo) */}

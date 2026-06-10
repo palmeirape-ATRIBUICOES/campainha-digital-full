@@ -244,7 +244,9 @@ export function SettingsPanel({ unitName, setUnitName, onSave, unitId, propertyI
   const loadQrCode = async (code, isPlate) => {
     setQrLoading(true);
     try {
-      const baseUrl = window.location.origin + window.location.pathname;
+      let path = window.location.pathname;
+      if (!path.endsWith('/')) path += '/';
+      const baseUrl = window.location.origin + path;
       const finalUrl = isPlate 
         ? `${baseUrl}#/auth?plate=${code}`
         : `${baseUrl}#/chamada/${code}`;

@@ -1782,9 +1782,13 @@ export default function ResidentDashboard() {
   const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId');
   const isVilaUser = residentIsVila || localStorage.getItem('residentIsVila') === 'true';
 
+  let path = window.location.pathname;
+  if (!path.endsWith('/')) path += '/';
+  const baseUrl = window.location.origin + path;
+
   const qrCodeUrl = (isVilaUser && currentUnitId)
-    ? `${window.location.origin + window.location.pathname}#/chamada/${currentPropId}?unitId=${currentUnitId}`
-    : `${window.location.origin + window.location.pathname}#/chamada/${currentPropId}`;
+    ? `${baseUrl}#/chamada/${currentPropId}?unitId=${currentUnitId}`
+    : `${baseUrl}#/chamada/${currentPropId}`;
 
 
 
@@ -2576,7 +2580,7 @@ export default function ResidentDashboard() {
                           <h4 style={{ fontSize: '18px', fontWeight: 800, color: layoutStyle.primaryColor || '#004ac6', margin: '2px 0 0', fontFamily: 'monospace', letterSpacing: '1px' }}>{accessCode || '...'}</h4>
                         </div>
                         <button onClick={() => {
-                          const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin + window.location.pathname}#/auth`;
+                          const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${baseUrl}#/auth`;
                           window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank');
                         }} style={{ background: '#25D366', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
                           WhatsApp
@@ -4127,7 +4131,7 @@ export default function ResidentDashboard() {
                 </div>
                 <button
                   onClick={() => {
-                    const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin + window.location.pathname}#/auth`;
+                    const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${baseUrl}#/auth`;
                     window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank');
                   }}
                   style={{
