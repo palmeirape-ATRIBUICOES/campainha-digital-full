@@ -1730,6 +1730,8 @@ export default function ResidentDashboard() {
         }
         .glass { background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
         .video-container { aspect-ratio: 16/10; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes pulse-blue {
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
           100% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
@@ -1874,52 +1876,133 @@ export default function ResidentDashboard() {
         {/* Hamburger Menu Drawer */}
         <HamburgerMenu />
 
-        {/* Header (Fixed at the top of the container) */}
-        <div style={{ 
-          padding: '16px 20px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          background: 'rgba(255, 255, 255, 0.85)', 
-          backdropFilter: 'blur(16px)', 
-          zIndex: 90,
-          borderBottom: '1px solid #E2E8F0',
-          flexShrink: 0
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button onClick={() => setShowMenu(true)} style={{ background: '#0F172A', color: '#FFF', border: 'none', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '20px' }}>
-                <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
-                <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
-                <div style={{ height: '2px', width: '60%', background: '#FFF', borderRadius: '2px' }} />
+        {tab === 'home' ? (
+          /* BEGIN: Modern Prominent Header matching user mock */
+          <header style={{
+            background: 'linear-gradient(135deg, #004ac6 0%, #1d4ed8 100%)',
+            color: '#ffffff',
+            padding: '32px 20px 24px',
+            borderRadius: '0 0 2rem 2rem',
+            boxShadow: '0 10px 25px -5px rgba(0, 74, 198, 0.2), 0 8px 10px -6px rgba(0, 74, 198, 0.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '24px',
+            zIndex: 90,
+            flexShrink: 0,
+            fontFamily: "'Inter', sans-serif"
+          }}>
+            {/* Title & Top Icons */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>shield</span>
+                <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' }}>Campainha Digital</span>
               </div>
-            </button>
-            <div>
-              <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#0F172A' }}>{unitName}</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#94A3B8' : (status === 'idle' ? '#10B981' : '#EF4444') }} />
-                <span style={{ fontSize: '11px', color: isTrialExpired ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
-                  {isTrialExpired ? 'Campainha OFF' : (status === 'idle' ? 'Disponível' : 'Em Chamada')}
-                </span>
+              <div style={{ display: 'flex', gap: '16px' }}>
+                {/* Search Icon */}
+                <button style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>search</span>
+                </button>
+                {/* Help Icon */}
+                <button style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>help</span>
+                </button>
               </div>
             </div>
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {installPrompt && (
-              <button onClick={async () => { installPrompt.prompt(); const r = await installPrompt.userChoice; if (r.outcome === 'accepted') setInstallPrompt(null); }}
-                style={{ background: '#F1F5F9', color: '#1E293B', border: 'none', padding: '8px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Download size={14} /> Instalar
+
+            {/* User Info & Menu Action */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ 
+                    position: 'relative', 
+                    width: '56px', 
+                    height: '56px', 
+                    borderRadius: '50%', 
+                    border: '2px solid rgba(255,255,255,0.5)', 
+                    overflow: 'hidden', 
+                    cursor: 'pointer',
+                    flexShrink: 0 
+                  }}
+                >
+                  {userPhoto ? (
+                    <img src={userPhoto} alt="User Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', background: '#eff4ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#004ac6', fontWeight: 'bold' }}>
+                      {unitName ? unitName.slice(0, 2).toUpperCase() : 'M'}
+                    </div>
+                  )}
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0, 0, 0, 0.4)', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '10px' }}>photo_camera</span>
+                  </div>
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: 0, lineHeight: 1.2 }}>
+                    Olá, {localStorage.getItem('residentName') || 'Morador'}
+                  </h2>
+                  <p style={{ fontSize: '13px', color: '#d3e4fe', margin: '2px 0 0', opacity: 0.9 }}>
+                    {isHouseResident ? 'Residência Privada' : 'Condomínio Residencial'} • {unitName}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowMenu(true)} 
+                style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', opacity: 0.8, padding: '8px', display: 'flex', alignItems: 'center' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>more_vert</span>
               </button>
-            )}
+            </div>
+          </header>
+        ) : (
+          /* Compact Header for other tabs */
+          <div style={{ 
+            padding: '16px 20px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            background: 'rgba(255, 255, 255, 0.85)', 
+            backdropFilter: 'blur(16px)', 
+            zIndex: 90,
+            borderBottom: '1px solid #E2E8F0',
+            flexShrink: 0,
+            fontFamily: "'Inter', sans-serif"
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button onClick={() => setShowMenu(true)} style={{ background: '#0F172A', color: '#FFF', border: 'none', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '20px' }}>
+                  <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+                  <div style={{ height: '2px', width: '100%', background: '#FFF', borderRadius: '2px' }} />
+                  <div style={{ height: '2px', width: '60%', background: '#FFF', borderRadius: '2px' }} />
+                </div>
+              </button>
+              <div>
+                <h2 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: '#0F172A' }}>{unitName}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#94A3B8' : (status === 'idle' ? '#10B981' : '#EF4444') }} />
+                  <span style={{ fontSize: '11px', color: isTrialExpired ? '#94A3B8' : '#64748B', fontWeight: 600 }}>
+                    {isTrialExpired ? 'Campainha OFF' : (status === 'idle' ? 'Disponível' : 'Em Chamada')}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {installPrompt && (
+                <button onClick={async () => { installPrompt.prompt(); const r = await installPrompt.userChoice; if (r.outcome === 'accepted') setInstallPrompt(null); }}
+                  style={{ background: '#F1F5F9', color: '#1E293B', border: 'none', padding: '8px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>download</span> Instalar
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Content Area (Scrollable internally) */}
         <div className="app-content-area">
           {audioError && (
             <div style={{ margin: '12px 20px 0', background: '#EF4444', color: '#fff', padding: '10px 14px', borderRadius: '12px', fontSize: '13px', fontWeight: 600, display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <AlertCircle size={16} /> Toque na tela para ativar o som!
+              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#fff' }}>info</span> Toque na tela para ativar o som!
             </div>
           )}
 
@@ -1928,23 +2011,26 @@ export default function ResidentDashboard() {
             <>
               {/* IDLE */}
               {status === 'idle' && (
-                <div style={{ display: 'flex', flexDirection: 'column', padding: '20px 0 32px', gap: '20px', width: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', padding: '20px 0 32px', gap: '24px', width: '100%', fontFamily: "'Inter', sans-serif" }}>
 
-                  {/* Welcome Greet Header */}
-                  <div style={{ width: '100%', padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600 }}>Olá, seja bem-vindo!</span>
-                    <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.5px' }}>{unitName}</h1>
-                  </div>
+                  {/* File input invisível para foto de perfil */}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handlePhotoUpload} 
+                    accept="image/*" 
+                    style={{ display: 'none' }} 
+                  />
 
                   {/* Banners de Assinatura Premium / Trial */}
                   {isTrialExpired && (
-                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', border: '1px solid #FCA5A5', borderRadius: '24px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(239, 68, 68, 0.04)' }}>
+                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', border: '1px solid #FCA5A5', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(239, 68, 68, 0.04)' }}>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <span style={{ background: '#EF4444', color: '#fff', fontWeight: 900, fontSize: '11px', letterSpacing: '1px', padding: '4px 12px', borderRadius: '100px' }}>⛔ CAMPAINHA OFF</span>
+                        <span style={{ background: '#EFF6FF', color: '#1E293B', fontWeight: 800, fontSize: '11px', letterSpacing: '1px', padding: '4px 12px', borderRadius: '100px', background: '#ba1a1a', color: '#ffffff' }}>⛔ CAMPAINHA OFF</span>
                       </div>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                        <div style={{ background: '#EF4444', color: '#FFF', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <AlertCircle size={20} />
+                        <div style={{ background: '#ba1a1a', color: '#FFF', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>error</span>
                         </div>
                         <div>
                           <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#991B1B', margin: '0 0 2px' }}>Campainha Inativa!</h4>
@@ -1955,7 +2041,7 @@ export default function ResidentDashboard() {
                       </div>
                       <button 
                         onClick={() => setShowPaymentModal(true)}
-                        style={{ width: '100%', padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)' }}
+                        style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'linear-gradient(135deg, #ba1a1a 0%, #93000a 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(186, 26, 26, 0.2)' }}
                       >
                         💳 Assinar Agora — R$ {planPrice.replace('.', ',')}/ano
                       </button>
@@ -1963,10 +2049,10 @@ export default function ResidentDashboard() {
                   )}
 
                   {isTrialExpiringSoon && (
-                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', border: '1px solid #FCD34D', borderRadius: '24px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(245, 158, 11, 0.04)' }}>
+                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', border: '1px solid #FCD34D', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(245, 158, 11, 0.04)' }}>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                         <div style={{ background: '#F59E0B', color: '#FFF', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <AlertCircle size={20} />
+                          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>warning</span>
                         </div>
                         <div>
                           <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#92400E', margin: '0 0 2px' }}>Renovação Pendente</h4>
@@ -1978,7 +2064,7 @@ export default function ResidentDashboard() {
                       <button 
                         onClick={handleUpgrade}
                         disabled={upgradeLoading}
-                        style={{ width: '100%', padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.15)' }}
+                        style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.15)' }}
                       >
                         {upgradeLoading ? 'Gerando...' : `Garantir Acesso Premium — R$ ${planPrice.replace('.', ',')}/ano`}
                       </button>
@@ -1986,10 +2072,10 @@ export default function ResidentDashboard() {
                   )}
 
                   {trialEndsDate && !isTrialExpired && !isTrialExpiringSoon && (
-                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', border: '1px solid #A7F3D0', borderRadius: '20px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.02)' }}>
+                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', border: '1px solid #A7F3D0', borderRadius: '16px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.02)' }}>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                         <div style={{ background: '#10B981', color: '#FFF', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <ShieldCheck size={16} />
+                          <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#ffffff' }}>verified</span>
                         </div>
                         <div>
                           <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#065F46', margin: 0 }}>Premium Ativo</h4>
@@ -2001,13 +2087,13 @@ export default function ResidentDashboard() {
                   )}
 
                   {/* Status Header Hero */}
-                  <div style={{ margin: '0 20px', display: 'flex', alignItems: 'center', gap: '16px', background: '#FFF', padding: '20px', borderRadius: '24px', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                  <div style={{ margin: '0 20px', display: 'flex', alignItems: 'center', gap: '16px', background: '#FFF', padding: '20px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
                     <div style={{
                       width: '56px', height: '56px', borderRadius: '50%',
                       background: 'rgba(16, 185, 129, 0.08)', display: 'flex',
                       alignItems: 'center', justifyContent: 'center'
                     }}>
-                      <Bell size={24} color="#10B981" />
+                      <span className="material-symbols-outlined text-primary text-[24px]" style={{ color: '#10B981', fontSize: '24px', animation: 'bounce 2s infinite' }}>notifications_active</span>
                     </div>
                     <div>
                       <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 2px', color: '#0F172A' }}>Aguardando Chamadas</h3>
@@ -2015,228 +2101,235 @@ export default function ResidentDashboard() {
                     </div>
                   </div>
 
-                  {/* Widgets Row/Grid */}
-                  <div style={{ margin: '0 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    
-                    {/* Sonoff gate (pedestrian) */}
-                    {!isHouseResident && (
-                      <button
-                        onClick={openGateSonoff}
-                        disabled={openGateLoading}
-                        style={{
-                          background: 'linear-gradient(135deg, #FFF 0%, #F8FAFC 100%)',
-                          border: '1px solid #E2E8F0',
-                          borderRadius: '20px',
-                          padding: '18px 14px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.01)',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          outline: 'none'
-                        }}
-                      >
-                        <div style={{
-                          width: '40px', height: '40px', borderRadius: '12px',
-                          background: 'rgba(16, 185, 129, 0.08)', color: '#10B981',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '20px'
-                        }}>
-                          🔓
+                  {/* Acesso Rápido Carrossel Section */}
+                  <div style={{ width: '100%', padding: '0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: '0 0 4px 20px' }}>Acesso Rápido</h3>
+                    <div className="hide-scrollbar" style={{ display: 'flex', gap: '16px', overflowX: 'auto', padding: '0 20px 8px', width: '100%' }}>
+                      
+                      {/* Abrir Portão */}
+                      {!isHouseResident && (
+                        <div 
+                          onClick={openGateSonoff}
+                          style={{
+                            flexShrink: 0,
+                            width: '260px',
+                            background: '#ffffff',
+                            padding: '16px',
+                            borderRadius: '12px',
+                            border: '1px solid #E2E8F0',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px',
+                            cursor: openGateLoading ? 'default' : 'pointer'
+                          }}
+                        >
+                          <div style={{ background: 'rgba(0, 74, 198, 0.08)', color: '#004ac6', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>key</span>
+                          </div>
+                          <div>
+                            <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', margin: 0 }}>
+                              {openGateLoading ? 'Abrindo...' : 'Abrir Portão'}
+                            </h4>
+                            <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0' }}>Liberar portão de entrada</p>
+                          </div>
                         </div>
-                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', textAlign: 'center' }}>
-                          {openGateLoading ? 'Abrindo...' : 'Abrir Portão'}
-                        </span>
-                      </button>
-                    )}
+                      )}
 
-                    {/* Interfonar para Portaria */}
-                    {!isHouseResident && (
-                      <button
-                        onClick={handleCallDoorman}
-                        style={{
-                          background: 'linear-gradient(135deg, #FFF 0%, #F8FAFC 100%)',
-                          border: '1px solid #E2E8F0',
-                          borderRadius: '20px',
-                          padding: '18px 14px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.01)',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          outline: 'none'
-                        }}
-                      >
-                        <div style={{
-                          width: '40px', height: '40px', borderRadius: '12px',
-                          background: 'rgba(59, 130, 246, 0.08)', color: '#3B82F6',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '20px'
-                        }}>
-                          📞
+                      {/* Chamar Portaria */}
+                      {!isHouseResident && (
+                        <div 
+                          onClick={handleCallDoorman}
+                          style={{
+                            flexShrink: 0,
+                            width: '260px',
+                            background: '#ffffff',
+                            padding: '16px',
+                            borderRadius: '12px',
+                            border: '1px solid #E2E8F0',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <div style={{ background: 'rgba(59, 130, 246, 0.08)', color: '#3B82F6', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>call</span>
+                          </div>
+                          <div>
+                            <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', margin: 0 }}>Chamar Portaria</h4>
+                            <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0' }}>Contato direto com guarita</p>
+                          </div>
                         </div>
-                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', textAlign: 'center' }}>
-                          Chamar Portaria
-                        </span>
-                      </button>
-                    )}
+                      )}
 
-                    {/* Fale com o Síndico (mailbox shortcut) */}
-                    {!isHouseResident && (
-                      <button
-                        onClick={() => {
-                          setTab('messages');
-                          setMessagesSubTab('chat');
-                        }}
-                        style={{
-                          background: 'linear-gradient(135deg, #FFF 0%, #F8FAFC 100%)',
-                          border: '1px solid #E2E8F0',
-                          borderRadius: '20px',
-                          padding: '18px 14px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.01)',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          outline: 'none',
-                          gridColumn: isHouseResident ? 'span 2' : 'auto'
-                        }}
-                      >
-                        <div style={{
-                          width: '40px', height: '40px', borderRadius: '12px',
-                          background: 'rgba(79, 70, 229, 0.08)', color: '#4F46E5',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '20px'
-                        }}>
-                          📬
+                      {/* Novo Código */}
+                      {!isDependent && !isHouseResident && (
+                        <div 
+                          onClick={() => setTab('visitor-codes')}
+                          style={{
+                            flexShrink: 0,
+                            width: '260px',
+                            background: '#ffffff',
+                            padding: '16px',
+                            borderRadius: '12px',
+                            border: '1px solid #E2E8F0',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <div style={{ background: 'rgba(245, 158, 11, 0.08)', color: '#F59E0B', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>vpn_key</span>
+                          </div>
+                          <div>
+                            <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', margin: 0 }}>Novo Código</h4>
+                            <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0' }}>Gerar senha temporária</p>
+                          </div>
                         </div>
-                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', textAlign: 'center' }}>
-                          Falar com Síndico
-                        </span>
-                      </button>
-                    )}
+                      )}
 
-                    {/* Novo Código de Visitante */}
-                    {!isDependent && !isHouseResident && (
-                      <button
-                        onClick={() => setTab('visitor-codes')}
+                      {/* Placa Física */}
+                      <div 
+                        onClick={() => setTab('plate')}
                         style={{
-                          background: 'linear-gradient(135deg, #FFF 0%, #F8FAFC 100%)',
+                          flexShrink: 0,
+                          width: '260px',
+                          background: '#ffffff',
+                          padding: '16px',
+                          borderRadius: '12px',
                           border: '1px solid #E2E8F0',
-                          borderRadius: '20px',
-                          padding: '18px 14px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                           display: 'flex',
-                          flexDirection: 'column',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.01)',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          outline: 'none'
+                          gap: '16px',
+                          cursor: 'pointer'
                         }}
                       >
-                        <div style={{
-                          width: '40px', height: '40px', borderRadius: '12px',
-                          background: 'rgba(245, 158, 11, 0.08)', color: '#F59E0B',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '20px'
-                        }}>
-                          🔑
+                        <div style={{ background: 'rgba(71, 85, 105, 0.08)', color: '#475569', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>download</span>
                         </div>
-                        <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', textAlign: 'center' }}>
-                          Novo Código
-                        </span>
-                      </button>
-                    )}
+                        <div>
+                          <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', margin: 0 }}>Placa da Unidade</h4>
+                          <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0' }}>Baixar placa oficial</p>
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
 
-                  {/* Novo Card de Perfil & Hub de Controle Unificado */}
-                  <div style={{ 
-                    margin: '0 20px', 
-                    background: '#FFF', 
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '24px', 
-                    padding: '24px', 
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)',
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    gap: '20px' 
-                  }}>
-                    {/* Cabeçalho do Perfil com Avatar Interativo */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  {/* Menu Completo Grid Section */}
+                  <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: '0 0 4px' }}>Menu Completo</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                      
+                      {/* Item: Avisos */}
                       <div 
-                        onClick={() => fileInputRef.current.click()} 
-                        style={{ 
-                          position: 'relative', 
-                          width: '64px', 
-                          height: '64px', 
-                          borderRadius: '50%', 
+                        onClick={() => {
+                          setTab('messages');
+                          setMessagesSubTab('board');
+                        }}
+                        style={{
+                          background: '#ffffff',
+                          borderRadius: '12px',
+                          border: '1px solid #E2E8F0',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                          padding: '16px 8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '10px',
                           cursor: 'pointer',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                          flexShrink: 0,
-                          overflow: 'hidden',
-                          border: '2px solid #3B82F6'
+                          textAlign: 'center'
                         }}
                       >
-                        {userPhoto ? (
-                          <img src={userPhoto} alt="Foto de Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3B82F6', fontWeight: 800, fontSize: '20px' }}>
-                            {unitName ? unitName.slice(0, 2).toUpperCase() : 'M'}
-                          </div>
-                        )}
-                        {/* Camera Overlay */}
-                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0, 0, 0, 0.5)', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
-                          <Camera size={10} />
+                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.08)', color: '#004ac6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>campaign</span>
                         </div>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>Avisos</span>
                       </div>
-                      
-                      {/* File input invisível */}
-                      <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={handlePhotoUpload} 
-                        accept="image/*" 
-                        style={{ display: 'none' }} 
-                      />
 
-                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
-                        <span style={{ fontSize: '11px', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase', letterSpacing: '1px' }}>Morador</span>
-                        <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {localStorage.getItem('residentName') || 'Morador'}
-                        </h3>
-                        <p style={{ fontSize: '13px', color: '#64748B', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {unitName} • {propertyName || 'Campainha Digital'}
-                        </p>
+                      {/* Item: Câmeras */}
+                      <div 
+                        onClick={() => setTab('intercom')}
+                        style={{
+                          background: '#ffffff',
+                          borderRadius: '12px',
+                          border: '1px solid #E2E8F0',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                          padding: '16px 8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '10px',
+                          cursor: 'pointer',
+                          textAlign: 'center'
+                        }}
+                      >
+                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.08)', color: '#004ac6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>videocam</span>
+                        </div>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>Câmeras</span>
                       </div>
+
+                      {/* Item: Acessos */}
+                      <div 
+                        onClick={() => setTab('residents')}
+                        style={{
+                          background: '#ffffff',
+                          borderRadius: '12px',
+                          border: '1px solid #E2E8F0',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                          padding: '16px 8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '10px',
+                          cursor: 'pointer',
+                          textAlign: 'center'
+                        }}
+                      >
+                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.08)', color: '#004ac6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>group</span>
+                        </div>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>Acessos</span>
+                      </div>
+
                     </div>
+                  </div>
 
-                    <div style={{ height: '1px', background: 'rgba(226, 232, 240, 0.8)' }} />
-
-                    {/* Grid de Configurações Rápidas */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Hub de Controle de Switches */}
+                  <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: '0' }}>Controle da Unidade</h3>
+                    <div style={{ 
+                      background: '#FFF', 
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '16px', 
+                      padding: '20px', 
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '16px' 
+                    }}>
                       {/* Item Campainha */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: doorbellEnabled ? '#ECFDF5' : '#F1F5F9', color: doorbellEnabled ? '#10B981' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {doorbellEnabled ? <Bell size={18} /> : <BellOff size={18} />}
+                          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: doorbellEnabled ? '#ECFDF5' : '#F1F5F9', color: doorbellEnabled ? '#10B981' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: doorbellEnabled ? "'FILL' 1" : "'FILL' 0" }}>
+                              {doorbellEnabled ? 'notifications_active' : 'notifications_off'}
+                            </span>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Campainha Ativa</span>
                             <span style={{ fontSize: '11px', color: '#64748B' }}>{doorbellEnabled ? 'Toca quando visitantes chamam' : 'Silenciada'}</span>
                           </div>
                         </div>
-                        {/* Switch CSS */}
                         <label className="switch">
                           <input 
                             type="checkbox" 
@@ -2251,8 +2344,8 @@ export default function ResidentDashboard() {
                       {!isHouseResident && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: intercomEnabled ? '#EFF6FF' : '#F1F5F9', color: intercomEnabled ? '#3B82F6' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Phone size={18} />
+                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: intercomEnabled ? '#EFF6FF' : '#F1F5F9', color: intercomEnabled ? '#3B82F6' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>phone_in_talk</span>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                               <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Interfone Interno</span>
@@ -2273,8 +2366,8 @@ export default function ResidentDashboard() {
                       {/* Item Modo Silencioso */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: (quietModeStart && quietModeEnd) ? '#FEF3C7' : '#F1F5F9', color: (quietModeStart && quietModeEnd) ? '#F59E0B' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Moon size={18} />
+                          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: (quietModeStart && quietModeEnd) ? '#FEF3C7' : '#F1F5F9', color: (quietModeStart && quietModeEnd) ? '#F59E0B' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: (quietModeStart && quietModeEnd) ? "'FILL' 1" : "'FILL' 0" }}>dark_mode</span>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Modo Silencioso</span>
@@ -2305,14 +2398,14 @@ export default function ResidentDashboard() {
                     </div>
                   </div>
 
-                  {/* QR Code de Campainha Digital (Accordion style) */}
+                  {/* QR Code de Campainha Digital Accordion */}
                   {propertyId && (
-                    <div style={{ margin: '0 20px' }}>
+                    <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{
                         background: '#FFF',
-                        borderRadius: '24px',
+                        borderRadius: '16px',
                         border: '1px solid #E2E8F0',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                         overflow: 'hidden',
                         transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                       }}>
@@ -2331,7 +2424,7 @@ export default function ResidentDashboard() {
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ fontSize: '20px' }}>📱</span>
+                            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#004ac6' }}>qr_code_2</span>
                             <div style={{ textAlign: 'left' }}>
                               <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Código QR da Campainha</h4>
                               <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>Toque para visualizar ou compartilhar</p>
@@ -2378,9 +2471,9 @@ export default function ResidentDashboard() {
                                     window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
                                   }
                                 }}
-                                style={{ flex: 1, padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)', border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)' }}
+                                style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'linear-gradient(135deg, #004ac6 0%, #1d4ed8 100%)', border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)' }}
                               >
-                                <MessageCircle size={16} /> Compartilhar
+                                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>share</span> Compartilhar
                               </button>
                               <button 
                                 onClick={() => {
@@ -2390,9 +2483,9 @@ export default function ResidentDashboard() {
                                   a.download = `Campainha_Digital_${unitName}.png`;
                                   a.click();
                                 }}
-                                style={{ padding: '12px 16px', borderRadius: '14px', background: '#F1F5F9', border: 'none', color: '#475569', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                style={{ padding: '12px 16px', borderRadius: '12px', background: '#F1F5F9', border: 'none', color: '#475569', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                               >
-                                <Download size={16} /> Baixar
+                                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>download</span> Baixar
                               </button>
                             </div>
                           </div>
@@ -2401,12 +2494,29 @@ export default function ResidentDashboard() {
                     </div>
                   )}
 
-                  {/* Status de notificações push se não ativado */}
+                  {/* Código de Acesso */}
+                  <div style={{ margin: '0 20px', background: '#FFF', borderRadius: '16px', padding: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', textTransform: 'uppercase' }}>Código de Acesso</span>
+                      <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#004ac6', letterSpacing: '4px', margin: '4px 0 0', fontFamily: 'monospace' }}>{accessCode || '...'}</h3>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin + window.location.pathname}#/auth`;
+                        window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank');
+                      }}
+                      style={{ padding: '10px 14px', borderRadius: '12px', background: '#25D366', border: 'none', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>chat</span> Enviar
+                    </button>
+                  </div>
+
+                  {/* Notificações Push status */}
                   {!pushEnabled && (
-                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', border: '1px solid #BFDBFE', borderRadius: '24px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.02)' }}>
+                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', border: '1px solid #BFDBFE', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.02)' }}>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                         <div style={{ background: '#3B82F6', color: '#FFF', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <BellOff size={16} />
+                          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>notifications_off</span>
                         </div>
                         <div style={{ flex: 1 }}>
                           <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#1E40AF', margin: '0 0 2px' }}>Notificações Inativas</h4>
@@ -2428,7 +2538,7 @@ export default function ResidentDashboard() {
                   {pushEnabled && (
                     <div style={{ margin: '0 20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', background: 'rgba(16,185,129,0.08)', padding: '5px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>
-                        <BellRing size={12} /> Push Ativo
+                        <span className="material-symbols-outlined" style={{ fontSize: '12px', color: '#10B981' }}>notifications_active</span> Push Ativo
                       </div>
                       <button
                         onClick={async () => {
@@ -2462,26 +2572,9 @@ export default function ResidentDashboard() {
                     </div>
                   )}
 
-                  {/* Código de Acesso */}
-                  <div style={{ margin: '0 20px', background: '#FFF', borderRadius: '24px', padding: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', textTransform: 'uppercase' }}>Código de Acesso</span>
-                      <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#3B82F6', letterSpacing: '4px', margin: '4px 0 0', fontFamily: 'monospace' }}>{accessCode || '...'}</h3>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin + window.location.pathname}#/auth`;
-                        window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank');
-                      }}
-                      style={{ padding: '10px 14px', borderRadius: '12px', background: '#25D366', border: 'none', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
-                    >
-                      <MessageCircle size={14}/> Enviar
-                    </button>
-                  </div>
-
                   {/* Pré-autorização e Alertas (Condomínio) */}
                   {!isHouseResident && (
-                    <div style={{ margin: '0 20px', background: '#FFF', borderRadius: '24px', padding: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                    <div style={{ margin: '0 20px', background: '#FFF', borderRadius: '16px', padding: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                       <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px' }}>Aviso Prévio para Portaria</h4>
                       <input
                         type="text"
@@ -2519,16 +2612,16 @@ export default function ResidentDashboard() {
                             gap: '4px'
                           }}
                         >
-                          <span>🔑</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#15803D' }}>key</span>
                           <span>Solicitar Liberação</span>
                         </button>
                         <button
                           onClick={() => dispatchAlert('package', '📦 Retirar Encomenda', 'Morador avisa que irá retirar encomenda na portaria.')}
                           disabled={dispatchAlertLoading}
                           style={{
-                            background: '#FEF3C7',
-                            border: '1px solid #FDE68A',
-                            color: '#B45309',
+                            background: '#EFF6FF',
+                            border: '1px solid #DBEAFE',
+                            color: '#1D4ED8',
                             padding: '12px',
                             borderRadius: '12px',
                             fontSize: '12px',
@@ -2540,7 +2633,7 @@ export default function ResidentDashboard() {
                             gap: '4px'
                           }}
                         >
-                          <span>📦</span>
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#1D4ED8' }}>local_shipping</span>
                           <span>Retirar Encomenda</span>
                         </button>
                       </div>
@@ -2563,7 +2656,7 @@ export default function ResidentDashboard() {
                           gap: '6px'
                         }}
                       >
-                        <span>⚠️</span>
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#991B1B' }}>warning</span>
                         <span>Solicitar Assistência Urgente</span>
                       </button>
                     </div>
@@ -2571,13 +2664,13 @@ export default function ResidentDashboard() {
 
                   {/* Caixa Postal & Quadro de Comunicados */}
                   {!isHouseResident && !isDependent && (
-                    <div style={{ margin: '0 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ margin: '0 20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                       <div style={{
                         background: '#FFF',
-                        borderRadius: '24px',
+                        borderRadius: '16px',
                         padding: '20px',
                         border: '1px solid #E2E8F0',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.02)'
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
                       }}>
                         <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px' }}>📬 Falar com a Administração</h4>
                         <form onSubmit={sendSupportMessage} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -2632,10 +2725,79 @@ export default function ResidentDashboard() {
                           </button>
                         </form>
                       </div>
-
-                      <MessagesPanel messages={broadcastMessages} unreadCount={unreadCount} onClear={markMessagesRead}/>
                     </div>
                   )}
+
+                  {/* Section: Últimas Atualizações (Footer Preview) */}
+                  <div style={{ margin: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: 0 }}>Últimas Atualizações</h3>
+                      <button 
+                        onClick={() => {
+                          setTab('messages');
+                          setMessagesSubTab('board');
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#004ac6', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', cursor: 'pointer' }}
+                      >
+                        Ver Todas
+                      </button>
+                    </div>
+                    {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id)).length > 0 ? (
+                      (() => {
+                        const activeAnnouncements = broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id));
+                        const latestAnn = activeAnnouncements[0];
+                        return (
+                          <div 
+                            onClick={() => {
+                              setTab('messages');
+                              setMessagesSubTab('board');
+                            }}
+                            style={{
+                              background: '#ffffff',
+                              borderRadius: '12px',
+                              padding: '16px',
+                              border: '1px solid #E2E8F0',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{ background: 'rgba(0, 74, 198, 0.08)', padding: '10px', borderRadius: '10px', color: '#004ac6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>campaign</span>
+                              </div>
+                              <div>
+                                <h5 style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', margin: 0 }}>
+                                  {latestAnn.title || 'Novo Aviso'}
+                                </h5>
+                                <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '200px' }}>
+                                  {latestAnn.body || 'Toque para abrir a mensagem.'}
+                                </p>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#94A3B8' }}>
+                              {new Date(latestAnn.createdAt || latestAnn.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                            </span>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <div style={{
+                        background: '#ffffff',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        border: '1px dashed #E2E8F0',
+                        textAlign: 'center',
+                        color: '#94A3B8',
+                        fontSize: '13px',
+                        fontWeight: 600
+                      }}>
+                        Nenhum comunicado recente
+                      </div>
+                    )}
+                  </div>
 
                 </div>
               )}
