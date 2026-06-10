@@ -142,6 +142,9 @@ export default function ResidentDashboard() {
   const [entryNotification, setEntryNotification] = useState(null);
   const [callDuration, setCallDuration] = useState(0);
   const [showQrAccordion, setShowQrAccordion] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [showPreAuthModal, setShowPreAuthModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   useEffect(() => {
     let timer = null;
@@ -1723,6 +1726,11 @@ export default function ResidentDashboard() {
       <style>{`
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; line-height: 1; }
         .active-ring { animation: ring 2s infinite; }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
         @keyframes ring {
             0% { box-shadow: 0 0 0 0 rgba(0, 74, 198, 0.4); }
             70% { box-shadow: 0 0 0 15px rgba(0, 74, 198, 0); }
@@ -1877,16 +1885,14 @@ export default function ResidentDashboard() {
         <HamburgerMenu />
 
         {tab === 'home' ? (
-          /* BEGIN: Modern Prominent Header matching user mock */
           <header style={{
-            background: 'linear-gradient(135deg, #004ac6 0%, #1d4ed8 100%)',
-            color: '#ffffff',
-            padding: '32px 20px 24px',
-            borderRadius: '0 0 2rem 2rem',
-            boxShadow: '0 10px 25px -5px rgba(0, 74, 198, 0.2), 0 8px 10px -6px rgba(0, 74, 198, 0.2)',
+            background: '#ffffff',
+            color: '#0F172A',
+            padding: '24px 20px 16px',
+            borderBottom: '1px solid #E2E8F0',
             display: 'flex',
             flexDirection: 'column',
-            gap: '24px',
+            gap: '16px',
             zIndex: 90,
             flexShrink: 0,
             fontFamily: "'Inter', sans-serif"
@@ -1894,18 +1900,17 @@ export default function ResidentDashboard() {
             {/* Title & Top Icons */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>shield</span>
-                <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' }}>Campainha Digital</span>
+                <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#004ac6', fontVariationSettings: "'FILL' 1" }}>shield</span>
+                <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: '#0F172A' }}>Campainha Digital</span>
               </div>
-              <div style={{ display: 'flex', gap: '16px' }}>
-                {/* Search Icon */}
-                <button style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>search</span>
-                </button>
-                {/* Help Icon */}
-                <button style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>help</span>
-                </button>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                {/* Indicador de Status Discreto */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isTrialExpired ? '#FEE2E2' : '#ECFDF5', padding: '4px 10px', borderRadius: '99px' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#EF4444' : (doorbellEnabled ? '#10B981' : '#F59E0B') }} />
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: isTrialExpired ? '#B91C1C' : (doorbellEnabled ? '#047857' : '#B45309') }}>
+                    {isTrialExpired ? 'Inativa' : (doorbellEnabled ? 'Online' : 'Silenciada')}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1916,10 +1921,10 @@ export default function ResidentDashboard() {
                   onClick={() => fileInputRef.current?.click()}
                   style={{ 
                     position: 'relative', 
-                    width: '56px', 
-                    height: '56px', 
+                    width: '48px', 
+                    height: '48px', 
                     borderRadius: '50%', 
-                    border: '2px solid rgba(255,255,255,0.5)', 
+                    border: '1px solid #E2E8F0', 
                     overflow: 'hidden', 
                     cursor: 'pointer',
                     flexShrink: 0 
@@ -1928,28 +1933,28 @@ export default function ResidentDashboard() {
                   {userPhoto ? (
                     <img src={userPhoto} alt="User Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    <div style={{ width: '100%', height: '100%', background: '#eff4ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#004ac6', fontWeight: 'bold' }}>
+                    <div style={{ width: '100%', height: '100%', background: 'rgba(0, 74, 198, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#004ac6', fontWeight: 'bold', fontSize: '14px' }}>
                       {unitName ? unitName.slice(0, 2).toUpperCase() : 'M'}
                     </div>
                   )}
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0, 0, 0, 0.4)', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '10px' }}>photo_camera</span>
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0, 0, 0, 0.4)', height: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '8px' }}>photo_camera</span>
                   </div>
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: 0, lineHeight: 1.2 }}>
+                  <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#0F172A', margin: 0, lineHeight: 1.2 }}>
                     Olá, {localStorage.getItem('residentName') || 'Morador'}
                   </h2>
-                  <p style={{ fontSize: '13px', color: '#d3e4fe', margin: '2px 0 0', opacity: 0.9 }}>
-                    {isHouseResident ? 'Residência Privada' : 'Condomínio Residencial'} • {unitName}
+                  <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0' }}>
+                    {unitName} • {isHouseResident ? 'Residência' : 'Condomínio'}
                   </p>
                 </div>
               </div>
               <button 
                 onClick={() => setShowMenu(true)} 
-                style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', opacity: 0.8, padding: '8px', display: 'flex', alignItems: 'center' }}
+                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center' }}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>more_vert</span>
+                <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>more_vert</span>
               </button>
             </div>
           </header>
@@ -2022,312 +2027,184 @@ export default function ResidentDashboard() {
                     style={{ display: 'none' }} 
                   />
 
-                  {/* Banners de Assinatura Premium / Trial */}
+                  {/* Banners de Assinatura Premium / Trial Compactos */}
                   {isTrialExpired && (
-                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', border: '1px solid #FCA5A5', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(239, 68, 68, 0.04)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <span style={{ background: '#EFF6FF', color: '#1E293B', fontWeight: 800, fontSize: '11px', letterSpacing: '1px', padding: '4px 12px', borderRadius: '100px', background: '#ba1a1a', color: '#ffffff' }}>⛔ CAMPAINHA OFF</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                        <div style={{ background: '#ba1a1a', color: '#FFF', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>error</span>
-                        </div>
-                        <div>
-                          <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#991B1B', margin: '0 0 2px' }}>Campainha Inativa!</h4>
-                          <p style={{ fontSize: '11px', color: '#B91C1C', margin: 0, lineHeight: 1.4 }}>
-                            O teste expirou em <strong>{formattedExpiryDate}</strong>. Assine para receber chamadas.
-                          </p>
-                        </div>
+                    <div style={{ margin: '0 20px', background: '#FEF2F2', border: '1px solid #FEE2E2', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span className="material-symbols-outlined" style={{ color: '#EF4444', fontSize: '18px' }}>error</span>
+                        <span style={{ fontSize: '12px', color: '#991B1B', fontWeight: 600 }}>Campainha Inativa (Teste Expirou)</span>
                       </div>
                       <button 
                         onClick={() => setShowPaymentModal(true)}
-                        style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'linear-gradient(135deg, #ba1a1a 0%, #93000a 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(186, 26, 26, 0.2)' }}
+                        style={{ background: '#EF4444', color: '#FFF', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
                       >
-                        💳 Assinar Agora — R$ {planPrice.replace('.', ',')}/ano
+                        Assinar
                       </button>
                     </div>
                   )}
 
                   {isTrialExpiringSoon && (
-                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', border: '1px solid #FCD34D', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 10px 25px rgba(245, 158, 11, 0.04)' }}>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                        <div style={{ background: '#F59E0B', color: '#FFF', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>warning</span>
-                        </div>
-                        <div>
-                          <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#92400E', margin: '0 0 2px' }}>Renovação Pendente</h4>
-                          <p style={{ fontSize: '11px', color: '#B45309', margin: 0, lineHeight: 1.4 }}>
-                            Faltam <strong>{daysRemaining} dias</strong> de testes grátis (expira em {formattedExpiryDate}). Assine o plano premium.
-                          </p>
-                        </div>
+                    <div style={{ margin: '0 20px', background: '#FFFBEB', border: '1px solid #FEF3C7', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span className="material-symbols-outlined" style={{ color: '#F59E0B', fontSize: '18px' }}>warning</span>
+                        <span style={{ fontSize: '12px', color: '#92400E', fontWeight: 600 }}>Faltam {daysRemaining} dias de teste</span>
                       </div>
                       <button 
                         onClick={handleUpgrade}
-                        disabled={upgradeLoading}
-                        style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.15)' }}
+                        style={{ background: '#F59E0B', color: '#FFF', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
                       >
-                        {upgradeLoading ? 'Gerando...' : `Garantir Acesso Premium — R$ ${planPrice.replace('.', ',')}/ano`}
+                        Assinar
                       </button>
                     </div>
                   )}
 
-                  {trialEndsDate && !isTrialExpired && !isTrialExpiringSoon && (
-                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', border: '1px solid #A7F3D0', borderRadius: '16px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.02)' }}>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <div style={{ background: '#10B981', color: '#FFF', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#ffffff' }}>verified</span>
-                        </div>
-                        <div>
-                          <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#065F46', margin: 0 }}>Premium Ativo</h4>
-                          <p style={{ fontSize: '11px', color: '#047857', margin: 0 }}>Válido até {formattedExpiryDate}</p>
-                        </div>
+                  {/* Banner de Push compactado */}
+                  {!pushEnabled && (
+                    <div style={{ margin: '0 20px', background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
+                        <span className="material-symbols-outlined" style={{ color: '#3B82F6', fontSize: '18px' }}>notifications_off</span>
+                        <span style={{ fontSize: '12px', color: '#1E40AF', fontWeight: 600 }}>Ative as notificações para receber chamadas</span>
                       </div>
-                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '3px 8px', borderRadius: '100px' }}>ANUAL</span>
+                      <button
+                        onClick={enablePushNotifications}
+                        disabled={pushLoading}
+                        style={{ background: '#3B82F6', color: '#FFF', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                      >
+                        {pushLoading ? '...' : 'Ativar'}
+                      </button>
                     </div>
                   )}
 
-                  {/* Status Header Hero */}
-                  <div style={{ margin: '0 20px', display: 'flex', alignItems: 'center', gap: '16px', background: '#FFF', padding: '20px', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(0,0,0,0.02)' }}>
+                  {/* Ação Principal: Botão Redondo de Abertura do Portão */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 0', gap: '16px' }}>
+                    <button
+                      onClick={openGateSonoff}
+                      disabled={openGateLoading || isTrialExpired}
+                      style={{
+                        width: '120px',
+                        height: '120px',
+                        borderRadius: '50%',
+                        background: openGateLoading ? '#F8FAFC' : (isTrialExpired ? '#F1F5F9' : 'linear-gradient(135deg, #004ac6 0%, #1d4ed8 100%)'),
+                        border: openGateLoading ? '4px solid #004ac6' : '4px solid #E2E8F0',
+                        color: openGateLoading ? '#004ac6' : (isTrialExpired ? '#94A3B8' : '#ffffff'),
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: (openGateLoading || isTrialExpired) ? 'default' : 'pointer',
+                        boxShadow: (openGateLoading || isTrialExpired) ? 'none' : '0 10px 25px -5px rgba(0, 74, 198, 0.3), 0 8px 10px -6px rgba(0, 74, 198, 0.3)',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative'
+                      }}
+                    >
+                      {openGateLoading ? (
+                        <div className="spinner" style={{
+                          width: '32px', height: '32px',
+                          border: '3px solid rgba(0, 74, 198, 0.1)',
+                          borderTop: '3px solid #004ac6',
+                          borderRadius: '50%'
+                        }} />
+                      ) : (
+                        <span className="material-symbols-outlined" style={{ fontSize: '36px', fontVariationSettings: "'FILL' 1" }}>key</span>
+                      )}
+                    </button>
+                    <div style={{ textAlign: 'center' }}>
+                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                        {openGateLoading ? 'Abrindo...' : 'Liberar Portão'}
+                      </h4>
+                      <p style={{ fontSize: '11px', color: '#64748B', margin: '4px 0 0' }}>
+                        Toque para abrir o portão de pedestres
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Linha de Ações Secundárias (Modais) */}
+                  {(() => {
+                    const actions = [];
+                    if (!isHouseResident) {
+                      actions.push({
+                        id: 'doorman',
+                        label: 'Portaria',
+                        icon: 'call',
+                        onClick: handleCallDoorman
+                      });
+                      actions.push({
+                        id: 'preauth',
+                        label: 'Autorizar',
+                        icon: 'person_add',
+                        onClick: () => setShowPreAuthModal(true)
+                      });
+                    }
+                    if (propertyId) {
+                      actions.push({
+                        id: 'qrcode',
+                        label: 'QR Code/Senha',
+                        icon: 'qr_code_2',
+                        onClick: () => setShowQrModal(true)
+                      });
+                    }
+                    actions.push({
+                      id: 'plate',
+                      label: 'Baixar Placa',
+                      icon: 'download',
+                      onClick: () => setTab('plate')
+                    });
+
+                    return (
+                      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', width: '100%', padding: '0 20px', gap: '12px' }}>
+                        {actions.map(act => (
+                          <button
+                            key={act.id}
+                            onClick={act.onClick}
+                            style={{
+                              flex: 1,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '8px',
+                              background: '#ffffff',
+                              border: '1px solid #E2E8F0',
+                              borderRadius: '16px',
+                              padding: '12px 6px',
+                              cursor: 'pointer',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                              transition: 'all 0.2s',
+                              outline: 'none'
+                            }}
+                          >
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.05)', color: '#004ac6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>{act.icon}</span>
+                            </div>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textAlign: 'center' }}>{act.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Controle da Unidade (Switches) */}
+                  <div style={{ margin: '0 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: '0 0 2px 4px' }}>Controles</h3>
                     <div style={{
-                      width: '56px', height: '56px', borderRadius: '50%',
-                      background: 'rgba(16, 185, 129, 0.08)', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      <span className="material-symbols-outlined text-primary text-[24px]" style={{ color: '#10B981', fontSize: '24px', animation: 'bounce 2s infinite' }}>notifications_active</span>
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 2px', color: '#0F172A' }}>Aguardando Chamadas</h3>
-                      <p style={{ color: '#64748B', fontSize: '12px', margin: 0 }}>Você será notificado em tempo real.</p>
-                    </div>
-                  </div>
-
-                  {/* Acesso Rápido Carrossel Section */}
-                  <div style={{ width: '100%', padding: '0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: '0 0 4px 20px' }}>Acesso Rápido</h3>
-                    <div className="hide-scrollbar" style={{ display: 'flex', gap: '16px', overflowX: 'auto', padding: '0 20px 8px', width: '100%' }}>
-                      
-                      {/* Abrir Portão */}
-                      {!isHouseResident && (
-                        <div 
-                          onClick={openGateSonoff}
-                          style={{
-                            flexShrink: 0,
-                            width: '260px',
-                            background: '#ffffff',
-                            padding: '16px',
-                            borderRadius: '12px',
-                            border: '1px solid #E2E8F0',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '16px',
-                            cursor: openGateLoading ? 'default' : 'pointer'
-                          }}
-                        >
-                          <div style={{ background: 'rgba(0, 74, 198, 0.08)', color: '#004ac6', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>key</span>
-                          </div>
-                          <div>
-                            <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', margin: 0 }}>
-                              {openGateLoading ? 'Abrindo...' : 'Abrir Portão'}
-                            </h4>
-                            <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0' }}>Liberar portão de entrada</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Chamar Portaria */}
-                      {!isHouseResident && (
-                        <div 
-                          onClick={handleCallDoorman}
-                          style={{
-                            flexShrink: 0,
-                            width: '260px',
-                            background: '#ffffff',
-                            padding: '16px',
-                            borderRadius: '12px',
-                            border: '1px solid #E2E8F0',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '16px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <div style={{ background: 'rgba(59, 130, 246, 0.08)', color: '#3B82F6', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>call</span>
-                          </div>
-                          <div>
-                            <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', margin: 0 }}>Chamar Portaria</h4>
-                            <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0' }}>Contato direto com guarita</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Novo Código */}
-                      {!isDependent && !isHouseResident && (
-                        <div 
-                          onClick={() => setTab('visitor-codes')}
-                          style={{
-                            flexShrink: 0,
-                            width: '260px',
-                            background: '#ffffff',
-                            padding: '16px',
-                            borderRadius: '12px',
-                            border: '1px solid #E2E8F0',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '16px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <div style={{ background: 'rgba(245, 158, 11, 0.08)', color: '#F59E0B', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>vpn_key</span>
-                          </div>
-                          <div>
-                            <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', margin: 0 }}>Novo Código</h4>
-                            <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0' }}>Gerar senha temporária</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Placa Física */}
-                      <div 
-                        onClick={() => setTab('plate')}
-                        style={{
-                          flexShrink: 0,
-                          width: '260px',
-                          background: '#ffffff',
-                          padding: '16px',
-                          borderRadius: '12px',
-                          border: '1px solid #E2E8F0',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '16px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <div style={{ background: 'rgba(71, 85, 105, 0.08)', color: '#475569', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>download</span>
-                        </div>
-                        <div>
-                          <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1E293B', margin: 0 }}>Placa da Unidade</h4>
-                          <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0' }}>Baixar placa oficial</p>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
-
-                  {/* Menu Completo Grid Section */}
-                  <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: '0 0 4px' }}>Menu Completo</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                      
-                      {/* Item: Avisos */}
-                      <div 
-                        onClick={() => {
-                          setTab('messages');
-                          setMessagesSubTab('board');
-                        }}
-                        style={{
-                          background: '#ffffff',
-                          borderRadius: '12px',
-                          border: '1px solid #E2E8F0',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                          padding: '16px 8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '10px',
-                          cursor: 'pointer',
-                          textAlign: 'center'
-                        }}
-                      >
-                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.08)', color: '#004ac6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>campaign</span>
-                        </div>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>Avisos</span>
-                      </div>
-
-                      {/* Item: Câmeras */}
-                      <div 
-                        onClick={() => setTab('intercom')}
-                        style={{
-                          background: '#ffffff',
-                          borderRadius: '12px',
-                          border: '1px solid #E2E8F0',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                          padding: '16px 8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '10px',
-                          cursor: 'pointer',
-                          textAlign: 'center'
-                        }}
-                      >
-                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.08)', color: '#004ac6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>videocam</span>
-                        </div>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>Câmeras</span>
-                      </div>
-
-                      {/* Item: Acessos */}
-                      <div 
-                        onClick={() => setTab('residents')}
-                        style={{
-                          background: '#ffffff',
-                          borderRadius: '12px',
-                          border: '1px solid #E2E8F0',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                          padding: '16px 8px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '10px',
-                          cursor: 'pointer',
-                          textAlign: 'center'
-                        }}
-                      >
-                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.08)', color: '#004ac6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>group</span>
-                        </div>
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#1E293B' }}>Acessos</span>
-                      </div>
-
-                    </div>
-                  </div>
-
-                  {/* Hub de Controle de Switches */}
-                  <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: '0' }}>Controle da Unidade</h3>
-                    <div style={{ 
-                      background: '#FFF', 
+                      background: '#FFF',
                       border: '1px solid #E2E8F0',
-                      borderRadius: '16px', 
-                      padding: '20px', 
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: '16px' 
+                      borderRadius: '16px',
+                      padding: '8px 16px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                      display: 'flex',
+                      flexDirection: 'column'
                     }}>
                       {/* Item Campainha */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #F1F5F9' }}>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: doorbellEnabled ? '#ECFDF5' : '#F1F5F9', color: doorbellEnabled ? '#10B981' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: doorbellEnabled ? "'FILL' 1" : "'FILL' 0" }}>
-                              {doorbellEnabled ? 'notifications_active' : 'notifications_off'}
-                            </span>
-                          </div>
+                          <span className="material-symbols-outlined" style={{ fontSize: '20px', color: doorbellEnabled ? '#10B981' : '#94A3B8' }}>
+                            {doorbellEnabled ? 'notifications_active' : 'notifications_off'}
+                          </span>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Campainha Ativa</span>
-                            <span style={{ fontSize: '11px', color: '#64748B' }}>{doorbellEnabled ? 'Toca quando visitantes chamam' : 'Silenciada'}</span>
+                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>Campainha Ativa</span>
+                            <span style={{ fontSize: '11px', color: '#64748B' }}>
+                              {doorbellEnabled ? 'Receber chamadas de visitantes' : 'Chamadas silenciadas'}
+                            </span>
                           </div>
                         </div>
                         <label className="switch">
@@ -2340,16 +2217,16 @@ export default function ResidentDashboard() {
                         </label>
                       </div>
 
-                      {/* Item Interfone (apenas para condomínios) */}
+                      {/* Item Interfone */}
                       {!isHouseResident && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #F1F5F9' }}>
                           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: intercomEnabled ? '#EFF6FF' : '#F1F5F9', color: intercomEnabled ? '#3B82F6' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>phone_in_talk</span>
-                            </div>
+                            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: intercomEnabled ? '#3B82F6' : '#94A3B8' }}>phone_in_talk</span>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Interfone Interno</span>
-                              <span style={{ fontSize: '11px', color: '#64748B' }}>{intercomEnabled ? 'Recebe chamadas de vizinhos' : 'Bloqueado'}</span>
+                              <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>Interfone Interno</span>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                {intercomEnabled ? 'Receber chamadas de vizinhos' : 'Bloqueado'}
+                              </span>
                             </div>
                           </div>
                           <label className="switch">
@@ -2364,13 +2241,11 @@ export default function ResidentDashboard() {
                       )}
 
                       {/* Item Modo Silencioso */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0' }}>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: (quietModeStart && quietModeEnd) ? '#FEF3C7' : '#F1F5F9', color: (quietModeStart && quietModeEnd) ? '#F59E0B' : '#64748B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: (quietModeStart && quietModeEnd) ? "'FILL' 1" : "'FILL' 0" }}>dark_mode</span>
-                          </div>
+                          <span className="material-symbols-outlined" style={{ fontSize: '20px', color: (quietModeStart && quietModeEnd) ? '#F59E0B' : '#94A3B8' }}>dark_mode</span>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B' }}>Modo Silencioso</span>
+                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>Modo Silencioso</span>
                             <span style={{ fontSize: '11px', color: '#64748B' }}>
                               {(quietModeStart && quietModeEnd) 
                                 ? `Ativo das ${quietModeStart} às ${quietModeEnd}` 
@@ -2398,350 +2273,9 @@ export default function ResidentDashboard() {
                     </div>
                   </div>
 
-                  {/* QR Code de Campainha Digital Accordion */}
-                  {propertyId && (
-                    <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{
-                        background: '#FFF',
-                        borderRadius: '16px',
-                        border: '1px solid #E2E8F0',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                        overflow: 'hidden',
-                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-                      }}>
-                        <button
-                          onClick={() => setShowQrAccordion(!showQrAccordion)}
-                          style={{
-                            width: '100%',
-                            padding: '16px 20px',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            outline: 'none'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#004ac6' }}>qr_code_2</span>
-                            <div style={{ textAlign: 'left' }}>
-                              <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Código QR da Campainha</h4>
-                              <p style={{ fontSize: '11px', color: '#64748B', margin: 0 }}>Toque para visualizar ou compartilhar</p>
-                            </div>
-                          </div>
-                          <span style={{
-                            fontSize: '12px',
-                            color: '#94A3B8',
-                            transform: showQrAccordion ? 'rotate(180deg)' : 'none',
-                            transition: 'transform 0.2s'
-                          }}>
-                            ▼
-                          </span>
-                        </button>
-
-                        {showQrAccordion && (
-                          <div style={{
-                            padding: '0 20px 20px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '16px',
-                            animation: 'fade-in 0.3s ease-out'
-                          }}>
-                            <div style={{ height: '1px', background: '#F1F5F9', width: '100%' }} />
-                            <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '20px', display: 'flex', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
-                              <img 
-                                src={`${API}/api/qrcode?text=${encodeURIComponent(qrCodeUrl)}`} 
-                                alt="QR Code Campainha Digital" 
-                                style={{ width: '180px', height: '180px', display: 'block', borderRadius: '12px' }} 
-                              />
-                            </div>
-                            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-                              <button 
-                                onClick={() => {
-                                  const shareText = `Toque a minha Campainha Digital online quando chegar:\n👉 ${qrCodeUrl}`;
-                                  if (navigator.share) {
-                                    navigator.share({
-                                      title: 'Minha Campainha Digital',
-                                      text: shareText,
-                                      url: qrCodeUrl
-                                    }).catch(() => {});
-                                  } else {
-                                    window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-                                  }
-                                }}
-                                style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'linear-gradient(135deg, #004ac6 0%, #1d4ed8 100%)', border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)' }}
-                              >
-                                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>share</span> Compartilhar
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  const url = `${API}/api/qrcode?text=${encodeURIComponent(qrCodeUrl)}`;
-                                  const a = document.createElement('a');
-                                  a.href = url;
-                                  a.download = `Campainha_Digital_${unitName}.png`;
-                                  a.click();
-                                }}
-                                style={{ padding: '12px 16px', borderRadius: '12px', background: '#F1F5F9', border: 'none', color: '#475569', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                              >
-                                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>download</span> Baixar
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Código de Acesso */}
-                  <div style={{ margin: '0 20px', background: '#FFF', borderRadius: '16px', padding: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                      <span style={{ fontSize: '10px', fontWeight: 800, color: '#94A3B8', letterSpacing: '1px', textTransform: 'uppercase' }}>Código de Acesso</span>
-                      <h3 style={{ fontSize: '24px', fontWeight: 900, color: '#004ac6', letterSpacing: '4px', margin: '4px 0 0', fontFamily: 'monospace' }}>{accessCode || '...'}</h3>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin + window.location.pathname}#/auth`;
-                        window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank');
-                      }}
-                      style={{ padding: '10px 14px', borderRadius: '12px', background: '#25D366', border: 'none', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>chat</span> Enviar
-                    </button>
-                  </div>
-
-                  {/* Notificações Push status */}
-                  {!pushEnabled && (
-                    <div style={{ margin: '0 20px', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', border: '1px solid #BFDBFE', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.02)' }}>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                        <div style={{ background: '#3B82F6', color: '#FFF', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>notifications_off</span>
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#1E40AF', margin: '0 0 2px' }}>Notificações Inativas</h4>
-                          <p style={{ fontSize: '11px', color: '#1E3A8A', margin: 0, lineHeight: 1.4 }}>
-                            Ative as notificações para receber chamadas mesmo com a tela do celular apagada!
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={enablePushNotifications}
-                        disabled={pushLoading}
-                        style={{ width: '100%', padding: '10px', borderRadius: '12px', background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', color: '#FFF', border: 'none', fontWeight: 800, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)' }}
-                      >
-                        {pushLoading ? 'Ativando...' : '🔔 Ativar Notificações'}
-                      </button>
-                    </div>
-                  )}
-
-                  {pushEnabled && (
-                    <div style={{ margin: '0 20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', background: 'rgba(16,185,129,0.08)', padding: '5px 14px', borderRadius: '99px', fontSize: '11px', fontWeight: 700 }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: '12px', color: '#10B981' }}>notifications_active</span> Push Ativo
-                      </div>
-                      <button
-                        onClick={async () => {
-                          setPushLoading(true);
-                          try {
-                            const token = localStorage.getItem('cd_token');
-                            if (!token) {
-                              alert('Erro: Token não encontrado.');
-                              return;
-                            }
-                            const res = await fetch(`${API}/api/push/test`, { method: 'POST', headers: { 'Authorization': token } });
-                            if (res.ok) {
-                              const resData = await res.json().catch(() => ({}));
-                              if (resData.success === false) {
-                                alert(`⚠️ Alerta: ${resData.message}`);
-                              } else {
-                                alert(`Sinal enviado com sucesso!\n\nSe a notificação não aparecer, certifique-se de que o PWA está instalado e você autorizou as notificações.`);
-                              }
-                            } else {
-                              alert('Falha ao enviar sinal de teste.');
-                            }
-                          } catch (e) {
-                            alert(`Erro: ${e.message}`);
-                          } finally { setPushLoading(false); }
-                        }}
-                        disabled={pushLoading}
-                        style={{ padding: '5px 12px', borderRadius: '99px', background: 'rgba(59,130,246,0.1)', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        {pushLoading ? '...' : '🔔 Testar Notificação'}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Pré-autorização e Alertas (Condomínio) */}
-                  {!isHouseResident && (
-                    <div style={{ margin: '0 20px', background: '#FFF', borderRadius: '16px', padding: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px' }}>Aviso Prévio para Portaria</h4>
-                      <input
-                        type="text"
-                        placeholder="Nome do Visitante / Entregador (Opcional)"
-                        value={visitorOrPackageName}
-                        onChange={e => setVisitorOrPackageName(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '12px 14px',
-                          border: '1px solid #E2E8F0',
-                          borderRadius: '12px',
-                          fontSize: '13px',
-                          outline: 'none',
-                          marginBottom: '12px',
-                          background: '#F8FAFC',
-                          fontFamily: 'inherit'
-                        }}
-                      />
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                        <button
-                          onClick={() => dispatchAlert('release', '🔑 Solicitação de Liberação', 'Morador solicita liberação de visitante na portaria.')}
-                          disabled={dispatchAlertLoading}
-                          style={{
-                            background: '#F0FDF4',
-                            border: '1px solid #DCFCE7',
-                            color: '#15803D',
-                            padding: '12px',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#15803D' }}>key</span>
-                          <span>Solicitar Liberação</span>
-                        </button>
-                        <button
-                          onClick={() => dispatchAlert('package', '📦 Retirar Encomenda', 'Morador avisa que irá retirar encomenda na portaria.')}
-                          disabled={dispatchAlertLoading}
-                          style={{
-                            background: '#EFF6FF',
-                            border: '1px solid #DBEAFE',
-                            color: '#1D4ED8',
-                            padding: '12px',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#1D4ED8' }}>local_shipping</span>
-                          <span>Retirar Encomenda</span>
-                        </button>
-                      </div>
-                      <button
-                        onClick={() => dispatchAlert('alert', '⚠️ Pedido de Ajuda / Suporte', 'Morador solicita assistência urgente da portaria ou administração.')}
-                        disabled={dispatchAlertLoading}
-                        style={{
-                          width: '100%',
-                          background: '#FEF2F2',
-                          border: '1px solid #FEE2E2',
-                          color: '#991B1B',
-                          padding: '12px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#991B1B' }}>warning</span>
-                        <span>Solicitar Assistência Urgente</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Caixa Postal & Quadro de Comunicados */}
-                  {!isHouseResident && !isDependent && (
-                    <div style={{ margin: '0 20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                      <div style={{
-                        background: '#FFF',
-                        borderRadius: '16px',
-                        padding: '20px',
-                        border: '1px solid #E2E8F0',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                      }}>
-                        <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px' }}>📬 Falar com a Administração</h4>
-                        <form onSubmit={sendSupportMessage} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          <input
-                            type="text"
-                            placeholder="Assunto (ex: Vazamento, Dúvida...)"
-                            value={supportSubject}
-                            onChange={e => setSupportSubject(e.target.value)}
-                            style={{
-                              width: '100%',
-                              padding: '12px 14px',
-                              border: '1px solid #E2E8F0',
-                              borderRadius: '12px',
-                              fontSize: '13px',
-                              outline: 'none',
-                              background: '#F8FAFC'
-                            }}
-                          />
-                          <textarea
-                            placeholder="Descreva detalhadamente sua solicitação..."
-                            value={supportBody}
-                            onChange={e => setSupportBody(e.target.value)}
-                            rows={3}
-                            style={{
-                              width: '100%',
-                              padding: '12px 14px',
-                              border: '1px solid #E2E8F0',
-                              borderRadius: '12px',
-                              fontSize: '13px',
-                              outline: 'none',
-                              resize: 'none',
-                              background: '#F8FAFC'
-                            }}
-                          />
-                          <button
-                            type="submit"
-                            disabled={supportSending}
-                            style={{
-                              width: '100%',
-                              background: 'var(--primary)',
-                              color: '#fff',
-                              border: 'none',
-                              padding: '12px',
-                              borderRadius: '12px',
-                              fontSize: '13px',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              boxShadow: '0 4px 12px rgba(59,130,246,0.2)'
-                            }}
-                          >
-                            {supportSending ? 'Enviando...' : 'Enviar Mensagem'}
-                          </button>
-                        </form>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Section: Últimas Atualizações (Footer Preview) */}
-                  <div style={{ margin: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: 0 }}>Últimas Atualizações</h3>
-                      <button 
-                        onClick={() => {
-                          setTab('messages');
-                          setMessagesSubTab('board');
-                        }}
-                        style={{ background: 'none', border: 'none', color: '#004ac6', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', cursor: 'pointer' }}
-                      >
-                        Ver Todas
-                      </button>
-                    </div>
+                  {/* Tira de Aviso / Última Atualização e Link de Suporte */}
+                  <div style={{ margin: '0 20px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
+                    
                     {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id)).length > 0 ? (
                       (() => {
                         const activeAnnouncements = broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id));
@@ -2755,31 +2289,23 @@ export default function ResidentDashboard() {
                             style={{
                               background: '#ffffff',
                               borderRadius: '12px',
-                              padding: '16px',
+                              padding: '12px 16px',
                               border: '1px solid #E2E8F0',
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
                               cursor: 'pointer'
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <div style={{ background: 'rgba(0, 74, 198, 0.08)', padding: '10px', borderRadius: '10px', color: '#004ac6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>campaign</span>
-                              </div>
-                              <div>
-                                <h5 style={{ fontSize: '13px', fontWeight: 700, color: '#1E293B', margin: 0 }}>
-                                  {latestAnn.title || 'Novo Aviso'}
-                                </h5>
-                                <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '200px' }}>
-                                  {latestAnn.body || 'Toque para abrir a mensagem.'}
-                                </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#004ac6' }}>campaign</span>
+                              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 600, color: '#1E293B' }}>{latestAnn.title || 'Aviso'}: </span>
+                                <span style={{ fontSize: '12px', color: '#64748B' }}>{latestAnn.body}</span>
                               </div>
                             </div>
-                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#94A3B8' }}>
-                              {new Date(latestAnn.createdAt || latestAnn.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                            </span>
+                            <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#94A3B8', flexShrink: 0 }}>chevron_right</span>
                           </div>
                         );
                       })()
@@ -2787,11 +2313,11 @@ export default function ResidentDashboard() {
                       <div style={{
                         background: '#ffffff',
                         borderRadius: '12px',
-                        padding: '16px',
+                        padding: '12px 16px',
                         border: '1px dashed #E2E8F0',
                         textAlign: 'center',
                         color: '#94A3B8',
-                        fontSize: '13px',
+                        fontSize: '12px',
                         fontWeight: 600
                       }}>
                         Nenhum comunicado recente
@@ -3740,6 +3266,432 @@ export default function ResidentDashboard() {
               setShowPaymentModal(false);
             }}
           />
+        )}
+
+        {/* QR Code & Access Code Modal */}
+        {showQrModal && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            animation: 'fade-in 0.3s ease-out'
+          }}>
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '24px',
+              padding: '24px',
+              maxWidth: '360px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '20px',
+              animation: 'scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              position: 'relative'
+            }}>
+              {/* Fechar Button */}
+              <button 
+                onClick={() => setShowQrModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '16px', right: '16px',
+                  background: '#F1F5F9',
+                  border: 'none',
+                  width: '32px', height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748B'
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+              </button>
+
+              <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Código QR & Acesso</h3>
+                <p style={{ fontSize: '11px', color: '#64748B', margin: '4px 0 0' }}>Compartilhe com visitantes autorizados</p>
+              </div>
+
+              {/* QR Code Image */}
+              <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '20px', display: 'flex', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
+                <img 
+                  src={`${API}/api/qrcode?text=${encodeURIComponent(qrCodeUrl)}`} 
+                  alt="QR Code" 
+                  style={{ width: '160px', height: '160px', display: 'block', borderRadius: '12px' }} 
+                />
+              </div>
+
+              {/* Access Code Display */}
+              <div style={{ width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Código da Unidade</span>
+                  <h4 style={{ fontSize: '20px', fontWeight: 800, color: '#004ac6', margin: '2px 0 0', fontFamily: 'monospace', letterSpacing: '2px' }}>{accessCode || '...'}</h4>
+                </div>
+                <button
+                  onClick={() => {
+                    const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin + window.location.pathname}#/auth`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank');
+                  }}
+                  style={{
+                    background: '#25D366',
+                    border: 'none',
+                    borderRadius: '12px',
+                    color: '#ffffff',
+                    padding: '8px 12px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>chat</span> WhatsApp
+                </button>
+              </div>
+
+              {/* Sharing & Download Options */}
+              <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                <button 
+                  onClick={() => {
+                    const shareText = `Para tocar a minha Campainha Digital online clique aqui:\n👉 ${qrCodeUrl}`;
+                    if (navigator.share) {
+                      navigator.share({
+                        title: 'Minha Campainha Digital',
+                        text: shareText,
+                        url: qrCodeUrl
+                      }).catch(() => {});
+                    } else {
+                      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+                    }
+                  }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'linear-gradient(135deg, #004ac6 0%, #1d4ed8 100%)', border: 'none', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>share</span> Link Direto
+                </button>
+                <button 
+                  onClick={() => {
+                    const url = `${API}/api/qrcode?text=${encodeURIComponent(qrCodeUrl)}`;
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Campainha_Digital_${unitName}.png`;
+                    a.click();
+                  }}
+                  style={{ padding: '12px', borderRadius: '12px', background: '#F1F5F9', border: 'none', color: '#475569', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>download</span> Download
+                </button>
+              </div>
+
+              {/* Push Testing in QrModal */}
+              {pushEnabled && (
+                <div style={{ width: '100%', borderTop: '1px solid #F1F5F9', paddingTop: '16px', display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    onClick={async () => {
+                      setPushLoading(true);
+                      try {
+                        const token = localStorage.getItem('cd_token');
+                        if (!token) {
+                          alert('Erro: Token não encontrado.');
+                          return;
+                        }
+                        const res = await fetch(`${API}/api/push/test`, { method: 'POST', headers: { 'Authorization': token } });
+                        if (res.ok) {
+                          const resData = await res.json().catch(() => ({}));
+                          if (resData.success === false) {
+                            alert(`⚠️ Alerta: ${resData.message}`);
+                          } else {
+                            alert(`Sinal enviado com sucesso!\n\nSe a notificação não aparecer, certifique-se de que o PWA está instalado e você autorizou as notificações.`);
+                          }
+                        } else {
+                          alert('Falha ao enviar sinal de teste.');
+                        }
+                      } catch (e) {
+                        alert(`Erro: ${e.message}`);
+                      } finally { setPushLoading(false); }
+                    }}
+                    disabled={pushLoading}
+                    style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>notifications_active</span> Testar Notificação Push
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Pre-Authorization Modal */}
+        {showPreAuthModal && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            animation: 'fade-in 0.3s ease-out'
+          }}>
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '24px',
+              padding: '24px',
+              maxWidth: '360px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              animation: 'scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              position: 'relative'
+            }}>
+              {/* Fechar Button */}
+              <button 
+                onClick={() => setShowPreAuthModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '16px', right: '16px',
+                  background: '#F1F5F9',
+                  border: 'none',
+                  width: '32px', height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748B'
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+              </button>
+
+              <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Autorizar Entrada</h3>
+                <p style={{ fontSize: '11px', color: '#64748B', margin: '4px 0 0' }}>Avise a portaria sobre visitas ou encomendas</p>
+              </div>
+
+              <input
+                type="text"
+                placeholder="Nome do Visitante / Entregador (Opcional)"
+                value={visitorOrPackageName}
+                onChange={e => setVisitorOrPackageName(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  outline: 'none',
+                  background: '#F8FAFC',
+                  fontFamily: 'inherit'
+                }}
+              />
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <button
+                  onClick={() => {
+                    dispatchAlert('release', '🔑 Solicitação de Liberação', 'Morador solicita liberação de visitante na portaria.');
+                    setShowPreAuthModal(false);
+                  }}
+                  disabled={dispatchAlertLoading}
+                  style={{
+                    background: '#F0FDF4',
+                    border: '1px solid #DCFCE7',
+                    color: '#15803D',
+                    padding: '14px 10px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#15803D' }}>key</span>
+                  <span>Liberar Visitante</span>
+                </button>
+                <button
+                  onClick={() => {
+                    dispatchAlert('package', '📦 Retirar Encomenda', 'Morador avisa que irá retirar encomenda na portaria.');
+                    setShowPreAuthModal(false);
+                  }}
+                  disabled={dispatchAlertLoading}
+                  style={{
+                    background: '#EFF6FF',
+                    border: '1px solid #DBEAFE',
+                    color: '#1D4ED8',
+                    padding: '14px 10px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#1D4ED8' }}>local_shipping</span>
+                  <span>Avisar Encomenda</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => {
+                  dispatchAlert('alert', '⚠️ Pedido de Ajuda / Suporte', 'Morador solicita assistência urgente da portaria ou administração.');
+                  setShowPreAuthModal(false);
+                }}
+                disabled={dispatchAlertLoading}
+                style={{
+                  width: '100%',
+                  background: '#FEF2F2',
+                  border: '1px solid #FEE2E2',
+                  color: '#991B1B',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#991B1B' }}>warning</span>
+                <span>Solicitar Assistência Urgente</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Support Modal (📬 Falar com a Administração) */}
+        {showSupportModal && (
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            animation: 'fade-in 0.3s ease-out'
+          }}>
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '24px',
+              padding: '24px',
+              maxWidth: '360px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              animation: 'scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              position: 'relative'
+            }}>
+              {/* Fechar Button */}
+              <button 
+                onClick={() => setShowSupportModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '16px', right: '16px',
+                  background: '#F1F5F9',
+                  border: 'none',
+                  width: '32px', height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748B'
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+              </button>
+
+              <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Falar com a Administração</h3>
+                <p style={{ fontSize: '11px', color: '#64748B', margin: '4px 0 0' }}>Sua mensagem será enviada diretamente para a caixa postal</p>
+              </div>
+
+              <form 
+                onSubmit={async (e) => {
+                  await sendSupportMessage(e);
+                  setShowSupportModal(false);
+                }} 
+                style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}
+              >
+                <input
+                  type="text"
+                  placeholder="Assunto (ex: Vazamento, Dúvida...)"
+                  value={supportSubject}
+                  onChange={e => setSupportSubject(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    background: '#F8FAFC',
+                    fontFamily: 'inherit'
+                  }}
+                />
+                <textarea
+                  placeholder="Descreva detalhadamente sua solicitação..."
+                  value={supportBody}
+                  onChange={e => setSupportBody(e.target.value)}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '12px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    background: '#F8FAFC',
+                    fontFamily: 'inherit',
+                    resize: 'none'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={supportSending}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #004ac6 0%, #1d4ed8 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)'
+                  }}
+                >
+                  {supportSending ? 'Enviando...' : 'Enviar Mensagem'}
+                </button>
+              </form>
+            </div>
+          </div>
         )}
 
         {entryNotification && (
