@@ -17,7 +17,7 @@ function CopyBtn({ text }) {
 
 function WaBtn({ code }) {
   const share = () => {
-    const msg = `Seu código de acesso à Campainha Digital!\n\n🔑 Código: ${code}\n📱 App: ${window.location.origin}/morador-login`;
+    const msg = `Seu código de acesso à Campainha Digital!\n\n🔑 Código: ${code}\n📱 App: ${window.location.origin}${window.location.pathname}#/auth`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
   return (

@@ -110,7 +110,7 @@ const PrintablePlate = React.forwardRef(({
     );
   }
 
-  const targetUrl = qrUrl || `${window.location.origin}/chamada/${propertyId}`;
+  const targetUrl = qrUrl || `${window.location.origin}${window.location.pathname}#/chamada/${propertyId}`;
 
   const getInteractiveProps = (sectionId) => {
     if (!onSectionClick) return {};

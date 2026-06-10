@@ -57,7 +57,7 @@ function CopyButton({ text }) {
 
 function WhatsAppButton({ code }) {
   const handleShare = () => {
-    const msg = `Esse é o seu login de acesso à Campainha Digital! Só precisa baixar o app, entrar na aba Morador e colocar o seu código de acesso para poder atender aos visitantes.\n\n🔑 *Seu Código:* ${code}\n📱 *Link do App:* ${window.location.origin}/morador-login`;
+    const msg = `Esse é o seu login de acesso à Campainha Digital! Só precisa baixar o app, entrar na aba Morador e colocar o seu código de acesso para poder atender aos visitantes.\n\n🔑 *Seu Código:* ${code}\n📱 *Link do App:* ${window.location.origin}${window.location.pathname}#/auth`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
   };
   return (
