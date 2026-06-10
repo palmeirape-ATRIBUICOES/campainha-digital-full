@@ -40,6 +40,34 @@ async function fetchIceConfig() {
 
 
 
+const DEFAULT_LAYOUT = {
+  headerStyle: 'clean-white', // 'blue-gradient' | 'clean-white' | 'dark-slate'
+  primaryColor: '#004ac6',
+  buttonGradientStart: '#004ac6',
+  buttonGradientEnd: '#1d4ed8',
+  backgroundColor: '#f8f9ff',
+  cardBgColor: '#ffffff',
+  borderColor: '#E2E8F0',
+  borderRadius: '16px', // '0px' | '8px' | '16px' | '24px'
+  shadowStyle: 'soft', // 'none' | 'soft' | 'medium' | 'glow'
+  mainButtonType: 'circular', // 'circular' | 'rectangular' | 'classic'
+  quickAccessType: 'row', // 'row' | 'carousel' | 'hidden'
+  qrCodeType: 'modal', // 'modal' | 'embedded'
+  preAuthType: 'modal', // 'modal' | 'embedded'
+  mailboxType: 'modal', // 'modal' | 'embedded'
+  showUpdates: true,
+  showSwitches: true
+};
+
+const resolveShadowStyle = (shadowStyle, primaryColor = '#004ac6') => {
+  if (shadowStyle === 'none') return 'none';
+  if (shadowStyle === 'medium') return '0 4px 12px rgba(15, 23, 42, 0.08)';
+  if (shadowStyle === 'glow') {
+    return `0 8px 24px -4px ${primaryColor}40, 0 4px 12px -2px ${primaryColor}20`;
+  }
+  return '0 1px 3px rgba(0,0,0,0.05)'; // soft default
+};
+
 export default function ResidentDashboard() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -145,6 +173,10 @@ export default function ResidentDashboard() {
   const [showQrModal, setShowQrModal] = useState(false);
   const [showPreAuthModal, setShowPreAuthModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [layoutStyle, setLayoutStyle] = useState(() => {
+    const saved = localStorage.getItem('cd_resident_layout_style');
+    return saved ? JSON.parse(saved) : DEFAULT_LAYOUT;
+  });
 
   useEffect(() => {
     let timer = null;
@@ -1648,6 +1680,10 @@ export default function ResidentDashboard() {
             <Settings size={20} color="#64748B" /> Configurações
           </button>
 
+          <button onClick={() => { setTab('layout-builder'); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: tab === 'layout-builder' ? '#F8FAFC' : 'transparent', color: '#1E293B', fontWeight: 600, fontSize: '15px', cursor: 'pointer', textAlign: 'left' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#64748B' }}>palette</span> Construtor de Layout
+          </button>
+
           <button onClick={() => { setShowPaymentModal(true); setShowMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', color: '#B45309', fontWeight: 700, fontSize: '15px', cursor: 'pointer', textAlign: 'left', border: '1px solid #FCD34D', marginTop: '8px' }}>
             <span>👑 Torne-se Pro</span>
           </button>
@@ -1716,6 +1752,568 @@ export default function ResidentDashboard() {
   const qrCodeUrl = (isVilaUser && currentUnitId)
     ? `${window.location.origin + window.location.pathname}#/chamada/${currentPropId}?unitId=${currentUnitId}`
     : `${window.location.origin + window.location.pathname}#/chamada/${currentPropId}`;
+
+  const LayoutBuilderPanel = () => {
+    const [draft, setDraft] = useState(layoutStyle);
+
+    const handleSave = () => {
+      setLayoutStyle(draft);
+      localStorage.setItem('cd_resident_layout_style', JSON.stringify(draft));
+      alert('Layout salvo e aplicado com sucesso!');
+      setTab('home');
+    };
+
+    const handleReset = () => {
+      if (window.confirm('Deseja realmente restaurar o layout padrão?')) {
+        setDraft(DEFAULT_LAYOUT);
+      }
+    };
+
+    // Predefined themes
+    const applyThemePreset = (presetName) => {
+      if (presetName === 'clean-light') {
+        setDraft({
+          ...draft,
+          headerStyle: 'clean-white',
+          primaryColor: '#004ac6',
+          buttonGradientStart: '#004ac6',
+          buttonGradientEnd: '#1d4ed8',
+          backgroundColor: '#f8f9ff',
+          cardBgColor: '#ffffff',
+          borderColor: '#E2E8F0',
+          borderRadius: '16px',
+          shadowStyle: 'soft',
+          mainButtonType: 'circular',
+          quickAccessType: 'row',
+          qrCodeType: 'modal',
+          preAuthType: 'modal',
+          mailboxType: 'modal',
+          showUpdates: true,
+          showSwitches: true
+        });
+      } else if (presetName === 'modern-dark') {
+        setDraft({
+          ...draft,
+          headerStyle: 'dark-slate',
+          primaryColor: '#F59E0B',
+          buttonGradientStart: '#1E293B',
+          buttonGradientEnd: '#0F172A',
+          backgroundColor: '#0F172A',
+          cardBgColor: '#1E293B',
+          borderColor: '#334155',
+          borderRadius: '16px',
+          shadowStyle: 'glow',
+          mainButtonType: 'rectangular',
+          quickAccessType: 'row',
+          qrCodeType: 'modal',
+          preAuthType: 'modal',
+          mailboxType: 'modal',
+          showUpdates: true,
+          showSwitches: true
+        });
+      } else if (presetName === 'premium-blue') {
+        setDraft({
+          ...draft,
+          headerStyle: 'blue-gradient',
+          primaryColor: '#0f82ff',
+          buttonGradientStart: '#004ac6',
+          buttonGradientEnd: '#1e3a8a',
+          backgroundColor: '#f0f5ff',
+          cardBgColor: '#ffffff',
+          borderColor: '#dbeafe',
+          borderRadius: '24px',
+          shadowStyle: 'glow',
+          mainButtonType: 'circular',
+          quickAccessType: 'carousel',
+          qrCodeType: 'modal',
+          preAuthType: 'modal',
+          mailboxType: 'modal',
+          showUpdates: true,
+          showSwitches: true
+        });
+      }
+    };
+
+    return (
+      <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#0F172A', margin: 0 }}>Personalização Visual</h2>
+            <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0' }}>Configure as cores, botões, raios de borda e visualização dos módulos.</p>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={handleReset} style={{ padding: '10px 16px', borderRadius: '12px', border: '1px solid #CBD5E1', background: '#FFF', color: '#475569', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>Restaurar Padrão</button>
+            <button onClick={handleSave} style={{ padding: '10px 18px', borderRadius: '12px', border: 'none', background: '#3B82F6', color: '#FFF', fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}>Salvar e Aplicar</button>
+          </div>
+        </div>
+
+        {/* Layout Grid */}
+        <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap-reverse', justifyContent: 'center', alignItems: 'flex-start' }}>
+          {/* Controls Panel */}
+          <div style={{ flex: '1 1 450px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            
+            {/* Presets Card */}
+            <div style={{ background: '#FFF', padding: '20px', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Temas Prontos</h3>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => applyThemePreset('clean-light')} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>☀️ Clean Light</button>
+                <button type="button" onClick={() => applyThemePreset('premium-blue')} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #DBEAFE', background: '#EFF6FF', fontSize: '12px', fontWeight: 700, color: '#1D4ED8', cursor: 'pointer' }}>🔷 Premium Blue</button>
+                <button type="button" onClick={() => applyThemePreset('modern-dark')} style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #334155', background: '#1E293B', fontSize: '12px', fontWeight: 700, color: '#F1F5F9', cursor: 'pointer' }}>🌙 Modern Dark</button>
+              </div>
+            </div>
+
+            {/* General Styling Fields */}
+            <div style={{ background: '#FFF', padding: '20px', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cabeçalho & Fundo</h3>
+              
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Estilo do Cabeçalho</label>
+                <select value={draft.headerStyle} onChange={e => setDraft({ ...draft, headerStyle: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFF', outline: 'none', fontSize: '13px' }}>
+                  <option value="clean-white">Clean White (Minimalista Branco)</option>
+                  <option value="blue-gradient">Blue Gradient (Gradiente Azul)</option>
+                  <option value="dark-slate">Dark Slate (Dark Mode com Ouro)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Cor Primária</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input type="color" value={draft.primaryColor} onChange={e => setDraft({ ...draft, primaryColor: e.target.value })} style={{ width: '36px', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', padding: 0 }} />
+                    <input type="text" value={draft.primaryColor} onChange={e => setDraft({ ...draft, primaryColor: e.target.value })} style={{ flex: 1, width: '10px', padding: '8px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '12px', textTransform: 'uppercase' }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Cor de Fundo da Tela</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input type="color" value={draft.backgroundColor} onChange={e => setDraft({ ...draft, backgroundColor: e.target.value })} style={{ width: '36px', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', padding: 0 }} />
+                    <input type="text" value={draft.backgroundColor} onChange={e => setDraft({ ...draft, backgroundColor: e.target.value })} style={{ flex: 1, width: '10px', padding: '8px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '12px', textTransform: 'uppercase' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Button Gradient Styling */}
+            <div style={{ background: '#FFF', padding: '20px', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Botões & Geometria</h3>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Gradiente Início</label>
+                  <input type="color" value={draft.buttonGradientStart} onChange={e => setDraft({ ...draft, buttonGradientStart: e.target.value })} style={{ width: '100%', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', padding: 0 }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Gradiente Fim</label>
+                  <input type="color" value={draft.buttonGradientEnd} onChange={e => setDraft({ ...draft, buttonGradientEnd: e.target.value })} style={{ width: '100%', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', padding: 0 }} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Botão de Liberação de Portão</label>
+                <select value={draft.mainButtonType} onChange={e => setDraft({ ...draft, mainButtonType: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFF', outline: 'none', fontSize: '13px' }}>
+                  <option value="circular">Circular Pulsante</option>
+                  <option value="rectangular">Retangular Largo</option>
+                  <option value="classic">Classic Card (Estilo Card)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Cantos Arredondados</label>
+                  <select value={draft.borderRadius} onChange={e => setDraft({ ...draft, borderRadius: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFF', outline: 'none', fontSize: '13px' }}>
+                    <option value="0px">Reto (0px)</option>
+                    <option value="8px">Suave (8px)</option>
+                    <option value="16px">Arredondado (16px)</option>
+                    <option value="24px">Curvado (24px)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Estilo de Sombra</label>
+                  <select value={draft.shadowStyle} onChange={e => setDraft({ ...draft, shadowStyle: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFF', outline: 'none', fontSize: '13px' }}>
+                    <option value="none">Sem Sombra</option>
+                    <option value="soft">Sombra Suave</option>
+                    <option value="medium">Sombra Média</option>
+                    <option value="glow">Brilho Colorido</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Layout modules layout configs */}
+            <div style={{ background: '#FFF', padding: '20px', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Módulos & Comportamento</h3>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Disposição de Ações Rápidas</label>
+                <select value={draft.quickAccessType} onChange={e => setDraft({ ...draft, quickAccessType: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFF', outline: 'none', fontSize: '13px' }}>
+                  <option value="row">Grade Horizontal (Botões Fixos)</option>
+                  <option value="carousel">Carrossel Scrollable</option>
+                  <option value="hidden">Ocultar Ações</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>QR Code / Senhas</label>
+                  <select value={draft.qrCodeType} onChange={e => setDraft({ ...draft, qrCodeType: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFF', outline: 'none', fontSize: '13px' }}>
+                    <option value="modal">Acionar Modal (Clean)</option>
+                    <option value="embedded">Fixo na Tela (Embedded)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Aviso Portaria</label>
+                  <select value={draft.preAuthType} onChange={e => setDraft({ ...draft, preAuthType: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFF', outline: 'none', fontSize: '13px' }}>
+                    <option value="modal">Acionar Modal (Clean)</option>
+                    <option value="embedded">Fixo na Tela (Embedded)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Caixa Postal Admin</label>
+                  <select value={draft.mailboxType} onChange={e => setDraft({ ...draft, mailboxType: e.target.value })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFF', outline: 'none', fontSize: '13px' }}>
+                    <option value="modal">Acionar Modal (Clean)</option>
+                    <option value="embedded">Fixo na Tela (Embedded)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Tira de Comunicados</label>
+                  <select value={draft.showUpdates ? 'yes' : 'no'} onChange={e => setDraft({ ...draft, showUpdates: e.target.value === 'yes' })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFF', outline: 'none', fontSize: '13px' }}>
+                    <option value="yes">Exibir no Feed</option>
+                    <option value="no">Ocultar</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>Controles & Switches</label>
+                <select value={draft.showSwitches ? 'yes' : 'no'} onChange={e => setDraft({ ...draft, showSwitches: e.target.value === 'yes' })} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #CBD5E1', background: '#FFF', outline: 'none', fontSize: '13px' }}>
+                  <option value="yes">Exibir no Feed</option>
+                  <option value="no">Ocultar</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Real-time Simulator View */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '1px' }}>📱 Simulador em Tempo Real</span>
+            
+            <div style={{
+              width: '320px',
+              height: '560px',
+              border: '10px solid #0F172A',
+              borderRadius: '40px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              overflowY: 'auto',
+              background: draft.backgroundColor || '#f8f9ff',
+              display: 'flex',
+              flexDirection: 'column',
+              position: 'relative',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}>
+              
+              {/* Simulated Header */}
+              {(() => {
+                const hStyle = draft.headerStyle || 'clean-white';
+                if (hStyle === 'blue-gradient') {
+                  return (
+                    <div style={{
+                      background: `linear-gradient(135deg, ${draft.buttonGradientStart} 0%, ${draft.buttonGradientEnd} 100%)`,
+                      color: '#ffffff',
+                      padding: '24px 16px 16px',
+                      borderRadius: '0 0 1.5rem 1.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>shield</span>
+                          <span style={{ fontSize: '14px', fontWeight: 700 }}>Campainha Digital</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.2)', padding: '2px 6px', borderRadius: '99px', fontSize: '9px' }}>
+                          <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#10B981' }} />
+                          <span>Online</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>JD</div>
+                        <div>
+                          <h4 style={{ fontSize: '12px', fontWeight: 700, margin: 0 }}>Olá, Morador</h4>
+                          <span style={{ fontSize: '10px', opacity: 0.8 }}>Apt 101 • Condomínio</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else if (hStyle === 'dark-slate') {
+                  return (
+                    <div style={{
+                      background: '#1E293B',
+                      color: '#ffffff',
+                      padding: '24px 16px 16px',
+                      borderBottom: `2px solid ${draft.primaryColor}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: draft.primaryColor }}>shield</span>
+                          <span style={{ fontSize: '14px', fontWeight: 700 }}>Campainha Digital</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '99px', fontSize: '9px' }}>
+                          <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: draft.primaryColor }} />
+                          <span>Online</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#334155', border: `1px solid ${draft.primaryColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>JD</div>
+                        <div>
+                          <h4 style={{ fontSize: '12px', fontWeight: 700, margin: 0 }}>Olá, Morador</h4>
+                          <span style={{ fontSize: '10px', opacity: 0.8 }}>Apt 101 • Condomínio</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  // clean-white default
+                  return (
+                    <div style={{
+                      background: '#ffffff',
+                      color: '#1E293B',
+                      padding: '24px 16px 16px',
+                      borderBottom: '1px solid #E2E8F0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: draft.primaryColor }}>shield</span>
+                          <span style={{ fontSize: '14px', fontWeight: 700 }}>Campainha Digital</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#ECFDF5', padding: '2px 6px', borderRadius: '99px', fontSize: '9px', color: '#047857' }}>
+                          <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#10B981' }} />
+                          <span>Online</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: draft.primaryColor, fontWeight: 'bold', fontSize: '12px' }}>JD</div>
+                        <div>
+                          <h4 style={{ fontSize: '12px', fontWeight: 700, margin: 0 }}>Olá, Morador</h4>
+                          <span style={{ fontSize: '10px', color: '#64748B' }}>Apt 101 • Condomínio</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+              })()}
+
+              {/* Simulated Content Feed */}
+              <div style={{ display: 'flex', flexDirection: 'column', padding: '16px 12px 24px', gap: '16px', width: '100%', flex: 1 }}>
+                
+                {/* Main Action Release Button */}
+                {(() => {
+                  const btnType = draft.mainButtonType || 'circular';
+                  
+                  if (btnType === 'circular') {
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0' }}>
+                        <button type="button" style={{
+                          width: '90px',
+                          height: '90px',
+                          borderRadius: '50%',
+                          background: `linear-gradient(135deg, ${draft.buttonGradientStart} 0%, ${draft.buttonGradientEnd} 100%)`,
+                          border: `1px solid ${draft.borderColor}`,
+                          color: '#ffffff',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor),
+                          cursor: 'pointer'
+                        }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>lock_open</span>
+                          <span style={{ fontSize: '8px', fontWeight: 800, marginTop: '2px', textTransform: 'uppercase' }}>Portão</span>
+                        </button>
+                      </div>
+                    );
+                  } else if (btnType === 'rectangular') {
+                    return (
+                      <button type="button" style={{
+                        width: '100%',
+                        padding: '12px',
+                        background: `linear-gradient(135deg, ${draft.buttonGradientStart} 0%, ${draft.buttonGradientEnd} 100%)`,
+                        border: `1px solid ${draft.borderColor}`,
+                        borderRadius: draft.borderRadius || '12px',
+                        color: '#ffffff',
+                        fontWeight: 800,
+                        fontSize: '11px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor),
+                        cursor: 'pointer'
+                      }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>lock_open</span>
+                        <span>LIBERAR ENTRADA</span>
+                      </button>
+                    );
+                  } else {
+                    // classic card style
+                    return (
+                      <div style={{
+                        background: draft.cardBgColor || '#ffffff',
+                        border: `1px solid ${draft.borderColor}`,
+                        borderRadius: draft.borderRadius || '12px',
+                        padding: '12px',
+                        boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer'
+                      }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(16,185,129,0.08)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>lock_open</span>
+                          </div>
+                          <div>
+                            <h4 style={{ fontSize: '11px', fontWeight: 700, margin: 0 }}>Liberar Portão</h4>
+                            <p style={{ fontSize: '8px', color: '#64748B', margin: '1px 0 0' }}>Abrir fechadura</p>
+                          </div>
+                        </div>
+                        <button type="button" style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          background: `linear-gradient(135deg, ${draft.buttonGradientStart} 0%, ${draft.buttonGradientEnd} 100%)`,
+                          color: '#fff',
+                          border: 'none',
+                          fontSize: '9px',
+                          fontWeight: 700
+                        }}>
+                          ABRIR
+                        </button>
+                      </div>
+                    );
+                  }
+                })()}
+
+                {/* Quick Actions layout preview */}
+                {(() => {
+                  const accessType = draft.quickAccessType || 'row';
+                  if (accessType === 'hidden') return null;
+
+                  const acts = [
+                    { label: 'Portaria', icon: 'call' },
+                    { label: 'Autorizar', icon: 'person_add' },
+                    { label: 'QR Code', icon: 'qr_code_2' }
+                  ];
+
+                  if (accessType === 'carousel') {
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '8px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Acesso Rápido</span>
+                        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                          {acts.map((a, i) => (
+                            <div key={i} style={{ flexShrink: 0, width: '110px', background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '8px', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor) }}>
+                              <div style={{ background: 'rgba(0, 74, 198, 0.05)', color: draft.primaryColor, padding: '4px', borderRadius: '6px', display: 'flex' }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>{a.icon}</span>
+                              </div>
+                              <span style={{ fontSize: '9px', fontWeight: 700 }}>{a.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                      {acts.map((a, i) => (
+                        <div key={i} style={{ flex: 1, background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor) }}>
+                          <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.05)', color: draft.primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '12px' }}>{a.icon}</span>
+                          </div>
+                          <span style={{ fontSize: '8px', fontWeight: 700, color: '#475569' }}>{a.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* Embedded QR Code preview */}
+                {draft.qrCodeType === 'embedded' && (
+                  <div style={{ background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '10px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor), display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#0F172A', alignSelf: 'flex-start' }}>🔑 QR Code</span>
+                    <div style={{ width: '70px', height: '70px', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', fontSize: '18px' }}>🔳</div>
+                    <span style={{ fontSize: '9px', fontWeight: 700, color: draft.primaryColor, fontFamily: 'monospace' }}>ABCD-1234</span>
+                  </div>
+                )}
+
+                {/* Embedded PreAuth preview */}
+                {draft.preAuthType === 'embedded' && (
+                  <div style={{ background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '10px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor), display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#0F172A' }}>🚗 Autorizar Entrada</span>
+                    <input type="text" placeholder="Nome do visitante..." disabled style={{ width: '100%', padding: '6px', fontSize: '9px', border: '1px solid #E2E8F0', borderRadius: '6px', background: '#F8FAFC' }} />
+                    <button type="button" style={{ width: '100%', padding: '6px', background: draft.primaryColor, color: '#fff', border: 'none', borderRadius: '6px', fontSize: '9px', fontWeight: 700 }}>Gerar Código</button>
+                  </div>
+                )}
+
+                {/* Embedded Mailbox preview */}
+                {draft.mailboxType === 'embedded' && (
+                  <div style={{ background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '10px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor), display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 800, color: '#0F172A' }}>📬 Falar com Administração</span>
+                    <input type="text" placeholder="Assunto..." disabled style={{ width: '100%', padding: '6px', fontSize: '9px', border: '1px solid #E2E8F0', borderRadius: '6px', background: '#F8FAFC' }} />
+                    <button type="button" style={{ width: '100%', padding: '6px', background: `linear-gradient(135deg, ${draft.buttonGradientStart} 0%, ${draft.buttonGradientEnd} 100%)`, color: '#fff', border: 'none', borderRadius: '6px', fontSize: '9px', fontWeight: 700 }}>Enviar</button>
+                  </div>
+                )}
+
+                {/* Simulated Control Switches */}
+                {draft.showSwitches && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '8px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>Controles</span>
+                    <div style={{ background: draft.cardBgColor || '#ffffff', border: `1px solid ${draft.borderColor}`, borderRadius: draft.borderRadius || '10px', padding: '8px 12px', boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor), display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '9px' }}>
+                        <span style={{ fontWeight: 600 }}>Campainha Ativa</span>
+                        <div style={{ width: '24px', height: '14px', borderRadius: '10px', background: '#10B981', position: 'relative' }}>
+                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FFF', position: 'absolute', top: '2px', right: '2px' }} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '9px' }}>
+                        <span style={{ fontWeight: 600 }}>Interfone Vizinhos</span>
+                        <div style={{ width: '24px', height: '14px', borderRadius: '10px', background: '#10B981', position: 'relative' }}>
+                          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#FFF', position: 'absolute', top: '2px', right: '2px' }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Updates strip preview */}
+                {draft.showUpdates && (
+                  <div style={{ background: draft.cardBgColor || '#ffffff', borderRadius: draft.borderRadius || '8px', padding: '6px 10px', border: `1px solid ${draft.borderColor}`, boxShadow: resolveShadowStyle(draft.shadowStyle, draft.primaryColor), display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '12px', color: draft.primaryColor }}>campaign</span>
+                      <span style={{ fontSize: '9px', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Aviso importante do condomínio...</span>
+                    </div>
+                    <span className="material-symbols-outlined" style={{ fontSize: '10px', color: '#94A3B8' }}>chevron_right</span>
+                  </div>
+                )}
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
 
   return (
     <div 
@@ -1885,79 +2483,243 @@ export default function ResidentDashboard() {
         <HamburgerMenu />
 
         {tab === 'home' ? (
-          <header style={{
-            background: '#ffffff',
-            color: '#0F172A',
-            padding: '24px 20px 16px',
-            borderBottom: '1px solid #E2E8F0',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            zIndex: 90,
-            flexShrink: 0,
-            fontFamily: "'Inter', sans-serif"
-          }}>
-            {/* Title & Top Icons */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#004ac6', fontVariationSettings: "'FILL' 1" }}>shield</span>
-                <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: '#0F172A' }}>Campainha Digital</span>
-              </div>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                {/* Indicador de Status Discreto */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isTrialExpired ? '#FEE2E2' : '#ECFDF5', padding: '4px 10px', borderRadius: '99px' }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#EF4444' : (doorbellEnabled ? '#10B981' : '#F59E0B') }} />
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: isTrialExpired ? '#B91C1C' : (doorbellEnabled ? '#047857' : '#B45309') }}>
-                    {isTrialExpired ? 'Inativa' : (doorbellEnabled ? 'Online' : 'Silenciada')}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* User Info & Menu Action */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{ 
-                    position: 'relative', 
-                    width: '48px', 
-                    height: '48px', 
-                    borderRadius: '50%', 
-                    border: '1px solid #E2E8F0', 
-                    overflow: 'hidden', 
-                    cursor: 'pointer',
-                    flexShrink: 0 
-                  }}
-                >
-                  {userPhoto ? (
-                    <img src={userPhoto} alt="User Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', background: 'rgba(0, 74, 198, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#004ac6', fontWeight: 'bold', fontSize: '14px' }}>
-                      {unitName ? unitName.slice(0, 2).toUpperCase() : 'M'}
+          (() => {
+            const hStyle = layoutStyle.headerStyle || 'clean-white';
+            
+            if (hStyle === 'blue-gradient') {
+              return (
+                <header style={{
+                  background: `linear-gradient(135deg, ${layoutStyle.buttonGradientStart || '#004ac6'} 0%, ${layoutStyle.buttonGradientEnd || '#1d4ed8'} 100%)`,
+                  color: '#ffffff',
+                  padding: '32px 20px 24px',
+                  borderRadius: '0 0 1.5rem 1.5rem',
+                  boxShadow: '0 10px 25px -5px rgba(0, 74, 198, 0.2)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '24px',
+                  zIndex: 90,
+                  flexShrink: 0,
+                  fontFamily: "'Inter', sans-serif"
+                }}>
+                  {/* Title & Top Icons */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>shield</span>
+                      <span style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.5px' }}>Campainha Digital</span>
                     </div>
-                  )}
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0, 0, 0, 0.4)', height: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '8px' }}>photo_camera</span>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      {/* Indicador de Status */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isTrialExpired ? '#ba1a1a' : 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '99px' }}>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#ffffff' : (doorbellEnabled ? '#10B981' : '#F59E0B') }} />
+                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#ffffff' }}>
+                          {isTrialExpired ? 'Inativa' : (doorbellEnabled ? 'Online' : 'Silenciada')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* User Info & Menu Action */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{ 
+                          position: 'relative', 
+                          width: '56px', 
+                          height: '56px', 
+                          borderRadius: '50%', 
+                          border: '2px solid rgba(255,255,255,0.5)', 
+                          overflow: 'hidden', 
+                          cursor: 'pointer',
+                          flexShrink: 0 
+                        }}
+                      >
+                        {userPhoto ? (
+                          <img src={userPhoto} alt="User Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', background: 'rgba(255, 255, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: 'bold', fontSize: '16px' }}>
+                            {unitName ? unitName.slice(0, 2).toUpperCase() : 'M'}
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0, 0, 0, 0.4)', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '8px' }}>photo_camera</span>
+                        </div>
+                      </div>
+                      <div>
+                        <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: 0, lineHeight: 1.2 }}>
+                          Olá, {localStorage.getItem('residentName') || 'Morador'}
+                        </h2>
+                        <p style={{ fontSize: '13px', color: '#d3e4fe', margin: '2px 0 0', opacity: 0.9 }}>
+                          {unitName} • {isHouseResident ? 'Residência' : 'Condomínio'}
+                        </p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setShowMenu(true)} 
+                      style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', opacity: 0.8, padding: '8px', display: 'flex', alignItems: 'center' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>more_vert</span>
+                    </button>
+                  </div>
+                </header>
+              );
+            }
+
+            if (hStyle === 'dark-slate') {
+              return (
+                <header style={{
+                  background: '#0F172A',
+                  color: '#ffffff',
+                  padding: '24px 20px 16px',
+                  borderBottom: '2px solid #D97706',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  zIndex: 90,
+                  flexShrink: 0,
+                  fontFamily: "'Inter', sans-serif"
+                }}>
+                  {/* Title & Top Icons */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#D97706', fontVariationSettings: "'FILL' 1" }}>shield</span>
+                      <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: '#ffffff' }}>Campainha Digital</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      {/* Status */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(217, 119, 6, 0.15)', padding: '4px 10px', borderRadius: '99px', border: '1px solid rgba(217, 119, 6, 0.3)' }}>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#EF4444' : (doorbellEnabled ? '#F59E0B' : '#64748B') }} />
+                        <span style={{ fontSize: '10px', fontWeight: 800, color: '#F59E0B' }}>
+                          {isTrialExpired ? 'Inativa' : (doorbellEnabled ? 'Online' : 'Silenciada')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* User Info & Menu Action */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{ 
+                          position: 'relative', 
+                          width: '48px', 
+                          height: '48px', 
+                          borderRadius: '50%', 
+                          border: '1px solid #334155', 
+                          overflow: 'hidden', 
+                          cursor: 'pointer',
+                          flexShrink: 0 
+                        }}
+                      >
+                        {userPhoto ? (
+                          <img src={userPhoto} alt="User Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', background: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706', fontWeight: 'bold', fontSize: '14px' }}>
+                            {unitName ? unitName.slice(0, 2).toUpperCase() : 'M'}
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0, 0, 0, 0.6)', height: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '8px' }}>photo_camera</span>
+                        </div>
+                      </div>
+                      <div>
+                        <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff', margin: 0, lineHeight: 1.2 }}>
+                          Olá, {localStorage.getItem('residentName') || 'Morador'}
+                        </h2>
+                        <p style={{ fontSize: '12px', color: '#94A3B8', margin: '2px 0 0' }}>
+                          {unitName} • {isHouseResident ? 'Residência' : 'Condomínio'}
+                        </p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setShowMenu(true)} 
+                      style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>more_vert</span>
+                    </button>
+                  </div>
+                </header>
+              );
+            }
+
+            // Fallback default clean-white
+            return (
+              <header style={{
+                background: '#ffffff',
+                color: '#0F172A',
+                padding: '24px 20px 16px',
+                borderBottom: '1px solid #E2E8F0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                zIndex: 90,
+                flexShrink: 0,
+                fontFamily: "'Inter', sans-serif"
+              }}>
+                {/* Title & Top Icons */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '24px', color: layoutStyle.primaryColor || '#004ac6', fontVariationSettings: "'FILL' 1" }}>shield</span>
+                    <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: '#0F172A' }}>Campainha Digital</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    {/* Status badge */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isTrialExpired ? '#FEE2E2' : '#ECFDF5', padding: '4px 10px', borderRadius: '99px' }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isTrialExpired ? '#EF4444' : (doorbellEnabled ? '#10B981' : '#F59E0B') }} />
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: isTrialExpired ? '#B91C1C' : (doorbellEnabled ? '#047857' : '#B45309') }}>
+                        {isTrialExpired ? 'Inativa' : (doorbellEnabled ? 'Online' : 'Silenciada')}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#0F172A', margin: 0, lineHeight: 1.2 }}>
-                    Olá, {localStorage.getItem('residentName') || 'Morador'}
-                  </h2>
-                  <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0' }}>
-                    {unitName} • {isHouseResident ? 'Residência' : 'Condomínio'}
-                  </p>
+
+                {/* User Info & Menu Action */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ 
+                        position: 'relative', 
+                        width: '48px', 
+                        height: '48px', 
+                        borderRadius: '50%', 
+                        border: '1px solid #E2E8F0', 
+                        overflow: 'hidden', 
+                        cursor: 'pointer',
+                        flexShrink: 0 
+                      }}
+                    >
+                      {userPhoto ? (
+                        <img src={userPhoto} alt="User Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', background: 'rgba(0, 74, 198, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: layoutStyle.primaryColor || '#004ac6', fontWeight: 'bold', fontSize: '14px' }}>
+                          {unitName ? unitName.slice(0, 2).toUpperCase() : 'M'}
+                        </div>
+                      )}
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0, 0, 0, 0.4)', height: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '8px' }}>photo_camera</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#0F172A', margin: 0, lineHeight: 1.2 }}>
+                        Olá, {localStorage.getItem('residentName') || 'Morador'}
+                      </h2>
+                      <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0' }}>
+                        {unitName} • {isHouseResident ? 'Residência' : 'Condomínio'}
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowMenu(true)} 
+                    style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center' }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>more_vert</span>
+                  </button>
                 </div>
-              </div>
-              <button 
-                onClick={() => setShowMenu(true)} 
-                style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center' }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>more_vert</span>
-              </button>
-            </div>
-          </header>
+              </header>
+            );
+          })()
         ) : (
           /* Compact Header for other tabs */
           <div style={{ 
@@ -2029,7 +2791,7 @@ export default function ResidentDashboard() {
 
                   {/* Banners de Assinatura Premium / Trial Compactos */}
                   {isTrialExpired && (
-                    <div style={{ margin: '0 20px', background: '#FEF2F2', border: '1px solid #FEE2E2', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ margin: '0 20px', background: '#FEF2F2', border: '1px solid #FEE2E2', borderRadius: layoutStyle.borderRadius || '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span className="material-symbols-outlined" style={{ color: '#EF4444', fontSize: '18px' }}>error</span>
                         <span style={{ fontSize: '12px', color: '#991B1B', fontWeight: 600 }}>Campainha Inativa (Teste Expirou)</span>
@@ -2044,7 +2806,7 @@ export default function ResidentDashboard() {
                   )}
 
                   {isTrialExpiringSoon && (
-                    <div style={{ margin: '0 20px', background: '#FFFBEB', border: '1px solid #FEF3C7', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ margin: '0 20px', background: '#FFFBEB', border: '1px solid #FEF3C7', borderRadius: layoutStyle.borderRadius || '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span className="material-symbols-outlined" style={{ color: '#F59E0B', fontSize: '18px' }}>warning</span>
                         <span style={{ fontSize: '12px', color: '#92400E', fontWeight: 600 }}>Faltam {daysRemaining} dias de teste</span>
@@ -2060,7 +2822,7 @@ export default function ResidentDashboard() {
 
                   {/* Banner de Push compactado */}
                   {!pushEnabled && (
-                    <div style={{ margin: '0 20px', background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ margin: '0 20px', background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: layoutStyle.borderRadius || '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1 }}>
                         <span className="material-symbols-outlined" style={{ color: '#3B82F6', fontSize: '18px' }}>notifications_off</span>
                         <span style={{ fontSize: '12px', color: '#1E40AF', fontWeight: 600 }}>Ative as notificações para receber chamadas</span>
@@ -2075,51 +2837,144 @@ export default function ResidentDashboard() {
                     </div>
                   )}
 
-                  {/* Ação Principal: Botão Redondo de Abertura do Portão */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 0', gap: '16px' }}>
-                    <button
-                      onClick={openGateSonoff}
-                      disabled={openGateLoading || isTrialExpired}
-                      style={{
-                        width: '120px',
-                        height: '120px',
-                        borderRadius: '50%',
-                        background: openGateLoading ? '#F8FAFC' : (isTrialExpired ? '#F1F5F9' : 'linear-gradient(135deg, #004ac6 0%, #1d4ed8 100%)'),
-                        border: openGateLoading ? '4px solid #004ac6' : '4px solid #E2E8F0',
-                        color: openGateLoading ? '#004ac6' : (isTrialExpired ? '#94A3B8' : '#ffffff'),
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: (openGateLoading || isTrialExpired) ? 'default' : 'pointer',
-                        boxShadow: (openGateLoading || isTrialExpired) ? 'none' : '0 10px 25px -5px rgba(0, 74, 198, 0.3), 0 8px 10px -6px rgba(0, 74, 198, 0.3)',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        position: 'relative'
-                      }}
-                    >
-                      {openGateLoading ? (
-                        <div className="spinner" style={{
-                          width: '32px', height: '32px',
-                          border: '3px solid rgba(0, 74, 198, 0.1)',
-                          borderTop: '3px solid #004ac6',
-                          borderRadius: '50%'
-                        }} />
-                      ) : (
-                        <span className="material-symbols-outlined" style={{ fontSize: '36px', fontVariationSettings: "'FILL' 1" }}>key</span>
-                      )}
-                    </button>
-                    <div style={{ textAlign: 'center' }}>
-                      <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                        {openGateLoading ? 'Abrindo...' : 'Liberar Portão'}
-                      </h4>
-                      <p style={{ fontSize: '11px', color: '#64748B', margin: '4px 0 0' }}>
-                        Toque para abrir o portão de pedestres
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Linha de Ações Secundárias (Modais) */}
+                  {/* Ação Principal: Botão de Abertura do Portão */}
                   {(() => {
+                    const btnType = layoutStyle.mainButtonType || 'circular';
+                    
+                    if (btnType === 'rectangular') {
+                      return (
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0' }}>
+                          <button
+                            onClick={openGateSonoff}
+                            disabled={openGateLoading || isTrialExpired}
+                            style={{
+                              width: 'calc(100% - 40px)',
+                              margin: '0 20px',
+                              padding: '16px',
+                              borderRadius: layoutStyle.borderRadius || '16px',
+                              background: openGateLoading ? '#F8FAFC' : (isTrialExpired ? '#F1F5F9' : `linear-gradient(135deg, ${layoutStyle.buttonGradientStart || '#004ac6'} 0%, ${layoutStyle.buttonGradientEnd || '#1d4ed8'} 100%)`),
+                              border: openGateLoading ? '2px solid #004ac6' : `1px solid ${layoutStyle.borderColor || '#E2E8F0'}`,
+                              color: openGateLoading ? '#004ac6' : (isTrialExpired ? '#94A3B8' : '#ffffff'),
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '12px',
+                              cursor: (openGateLoading || isTrialExpired) ? 'default' : 'pointer',
+                              boxShadow: (openGateLoading || isTrialExpired) ? 'none' : resolveShadowStyle(layoutStyle.shadowStyle, layoutStyle.primaryColor),
+                              fontWeight: 800,
+                              fontSize: '15px',
+                              transition: 'all 0.3s',
+                              outline: 'none'
+                            }}
+                          >
+                            {openGateLoading ? (
+                              <div className="spinner" style={{ width: '20px', height: '20px', border: '2px solid rgba(0, 74, 198, 0.1)', borderTop: `2px solid ${layoutStyle.primaryColor || '#004ac6'}`, borderRadius: '50%' }} />
+                            ) : (
+                              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>key</span>
+                            )}
+                            <span>{openGateLoading ? 'Abrindo Portão...' : 'Liberar Portão de Pedestres'}</span>
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    if (btnType === 'classic') {
+                      return (
+                        <div 
+                          onClick={(!openGateLoading && !isTrialExpired) ? openGateSonoff : undefined}
+                          style={{
+                            margin: '0 20px',
+                            background: layoutStyle.cardBgColor || '#ffffff',
+                            border: `1px solid ${layoutStyle.borderColor || '#E2E8F0'}`,
+                            borderRadius: layoutStyle.borderRadius || '16px',
+                            padding: '20px',
+                            boxShadow: resolveShadowStyle(layoutStyle.shadowStyle, layoutStyle.primaryColor),
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px',
+                            cursor: (openGateLoading || isTrialExpired) ? 'default' : 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          <div style={{
+                            background: 'rgba(0, 74, 198, 0.08)',
+                            color: layoutStyle.primaryColor || '#004ac6',
+                            padding: '16px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            {openGateLoading ? (
+                              <div className="spinner" style={{ width: '24px', height: '24px', border: '3px solid rgba(0, 74, 198, 0.1)', borderTop: `3px solid ${layoutStyle.primaryColor || '#004ac6'}`, borderRadius: '50%' }} />
+                            ) : (
+                              <span className="material-symbols-outlined" style={{ fontSize: '32px', fontVariationSettings: "'FILL' 1" }}>key</span>
+                            )}
+                          </div>
+                          <div>
+                            <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                              {openGateLoading ? 'Abrindo Portão...' : 'Liberar Portão'}
+                            </h4>
+                            <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0' }}>
+                              Toque para abrir o portão de entrada
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Default: circular
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px 0', gap: '16px' }}>
+                        <button
+                          onClick={openGateSonoff}
+                          disabled={openGateLoading || isTrialExpired}
+                          style={{
+                            width: '120px',
+                            height: '120px',
+                            borderRadius: '50%',
+                            background: openGateLoading ? '#F8FAFC' : (isTrialExpired ? '#F1F5F9' : `linear-gradient(135deg, ${layoutStyle.buttonGradientStart || '#004ac6'} 0%, ${layoutStyle.buttonGradientEnd || '#1d4ed8'} 100%)`),
+                            border: openGateLoading ? '4px solid #004ac6' : '4px solid #E2E8F0',
+                            color: openGateLoading ? '#004ac6' : (isTrialExpired ? '#94A3B8' : '#ffffff'),
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: (openGateLoading || isTrialExpired) ? 'default' : 'pointer',
+                            boxShadow: (openGateLoading || isTrialExpired) ? 'none' : resolveShadowStyle(layoutStyle.shadowStyle, layoutStyle.primaryColor),
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            position: 'relative',
+                            outline: 'none'
+                          }}
+                        >
+                          {openGateLoading ? (
+                            <div className="spinner" style={{
+                              width: '32px', height: '32px',
+                              border: '3px solid rgba(0, 74, 198, 0.1)',
+                              borderTop: `3px solid ${layoutStyle.primaryColor || '#004ac6'}`,
+                              borderRadius: '50%'
+                            }} />
+                          ) : (
+                            <span className="material-symbols-outlined" style={{ fontSize: '36px', fontVariationSettings: "'FILL' 1" }}>key</span>
+                          )}
+                        </button>
+                        <div style={{ textAlign: 'center' }}>
+                          <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                            {openGateLoading ? 'Abrindo...' : 'Liberar Portão'}
+                          </h4>
+                          <p style={{ fontSize: '11px', color: '#64748B', margin: '4px 0 0' }}>
+                            Toque para abrir o portão de pedestres
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Linha de Ações Secundárias (Row vs Carousel vs Hidden) */}
+                  {(() => {
+                    const accessType = layoutStyle.quickAccessType || 'row';
+                    if (accessType === 'hidden') return null;
+
                     const actions = [];
                     if (!isHouseResident) {
                       actions.push({
@@ -2132,7 +2987,14 @@ export default function ResidentDashboard() {
                         id: 'preauth',
                         label: 'Autorizar',
                         icon: 'person_add',
-                        onClick: () => setShowPreAuthModal(true)
+                        onClick: () => {
+                          if (layoutStyle.preAuthType === 'embedded') {
+                            // Focus on the input instead of opening modal
+                            document.getElementById('cd-preauth-input')?.focus();
+                          } else {
+                            setShowPreAuthModal(true);
+                          }
+                        }
                       });
                     }
                     if (propertyId) {
@@ -2140,7 +3002,13 @@ export default function ResidentDashboard() {
                         id: 'qrcode',
                         label: 'QR Code/Senha',
                         icon: 'qr_code_2',
-                        onClick: () => setShowQrModal(true)
+                        onClick: () => {
+                          if (layoutStyle.qrCodeType === 'embedded') {
+                            window.scrollTo({ top: document.getElementById('cd-qrcode-card')?.offsetTop - 80, behavior: 'smooth' });
+                          } else {
+                            setShowQrModal(true);
+                          }
+                        }
                       });
                     }
                     actions.push({
@@ -2150,6 +3018,53 @@ export default function ResidentDashboard() {
                       onClick: () => setTab('plate')
                     });
 
+                    if (!isHouseResident && !isDependent && layoutStyle.mailboxType === 'modal') {
+                      actions.push({
+                        id: 'support',
+                        label: 'Suporte/Admin',
+                        icon: 'mail',
+                        onClick: () => setShowSupportModal(true)
+                      });
+                    }
+
+                    if (accessType === 'carousel') {
+                      return (
+                        <div style={{ width: '100%', padding: '0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: '0 0 4px 20px' }}>Acesso Rápido</h3>
+                          <div className="hide-scrollbar" style={{ display: 'flex', gap: '16px', overflowX: 'auto', padding: '0 20px 8px', width: '100%' }}>
+                            {actions.map(act => (
+                              <div 
+                                key={act.id}
+                                onClick={act.onClick}
+                                style={{
+                                  flexShrink: 0,
+                                  width: '240px',
+                                  background: layoutStyle.cardBgColor || '#ffffff',
+                                  padding: '16px',
+                                  borderRadius: layoutStyle.borderRadius || '16px',
+                                  border: `1px solid ${layoutStyle.borderColor || '#E2E8F0'}`,
+                                  boxShadow: resolveShadowStyle(layoutStyle.shadowStyle, layoutStyle.primaryColor),
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '16px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <div style={{ background: 'rgba(0, 74, 198, 0.06)', color: layoutStyle.primaryColor || '#004ac6', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>{act.icon}</span>
+                                </div>
+                                <div>
+                                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#1E293B', margin: 0 }}>{act.label}</h4>
+                                  <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0' }}>Acesso rápido inteligente</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Default: row of buttons
                     return (
                       <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', width: '100%', padding: '0 20px', gap: '12px' }}>
                         {actions.map(act => (
@@ -2162,17 +3077,17 @@ export default function ResidentDashboard() {
                               flexDirection: 'column',
                               alignItems: 'center',
                               gap: '8px',
-                              background: '#ffffff',
-                              border: '1px solid #E2E8F0',
-                              borderRadius: '16px',
+                              background: layoutStyle.cardBgColor || '#ffffff',
+                              border: `1px solid ${layoutStyle.borderColor || '#E2E8F0'}`,
+                              borderRadius: layoutStyle.borderRadius || '16px',
                               padding: '12px 6px',
                               cursor: 'pointer',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                              boxShadow: resolveShadowStyle(layoutStyle.shadowStyle, layoutStyle.primaryColor),
                               transition: 'all 0.2s',
                               outline: 'none'
                             }}
                           >
-                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.05)', color: '#004ac6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(0, 74, 198, 0.05)', color: layoutStyle.primaryColor || '#004ac6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <span className="material-symbols-outlined" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>{act.icon}</span>
                             </div>
                             <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textAlign: 'center' }}>{act.label}</span>
@@ -2182,146 +3097,335 @@ export default function ResidentDashboard() {
                     );
                   })()}
 
-                  {/* Controle da Unidade (Switches) */}
-                  <div style={{ margin: '0 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: '0 0 2px 4px' }}>Controles</h3>
-                    <div style={{
-                      background: '#FFF',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '16px',
-                      padding: '8px 16px',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                      display: 'flex',
-                      flexDirection: 'column'
-                    }}>
-                      {/* Item Campainha */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #F1F5F9' }}>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '20px', color: doorbellEnabled ? '#10B981' : '#94A3B8' }}>
-                            {doorbellEnabled ? 'notifications_active' : 'notifications_off'}
-                          </span>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>Campainha Ativa</span>
-                            <span style={{ fontSize: '11px', color: '#64748B' }}>
-                              {doorbellEnabled ? 'Receber chamadas de visitantes' : 'Chamadas silenciadas'}
-                            </span>
-                          </div>
-                        </div>
-                        <label className="switch">
-                          <input 
-                            type="checkbox" 
-                            checked={doorbellEnabled} 
-                            onChange={(e) => toggleHomeSetting('doorbellEnabled', e.target.checked)} 
-                          />
-                          <span className="slider round"></span>
-                        </label>
+                  {/* QR Code & Access Code (Embedded) */}
+                  {layoutStyle.qrCodeType === 'embedded' && propertyId && (
+                    <div id="cd-qrcode-card" style={{ margin: '0 20px', background: layoutStyle.cardBgColor || '#ffffff', border: `1px solid ${layoutStyle.borderColor || '#E2E8F0'}`, borderRadius: layoutStyle.borderRadius || '16px', padding: '20px', boxShadow: resolveShadowStyle(layoutStyle.shadowStyle, layoutStyle.primaryColor), display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', margin: 0, width: '100%' }}>🔑 Código QR da Campainha</h4>
+                      <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: layoutStyle.borderRadius || '12px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'center' }}>
+                        <img src={`${API}/api/qrcode?text=${encodeURIComponent(qrCodeUrl)}`} alt="QR Code" style={{ width: '140px', height: '140px', borderRadius: '8px' }} />
                       </div>
+                      <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC', padding: '10px 14px', borderRadius: layoutStyle.borderRadius || '12px', border: '1px solid #E2E8F0' }}>
+                        <div>
+                          <span style={{ fontSize: '9px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>Código de Acesso</span>
+                          <h4 style={{ fontSize: '18px', fontWeight: 800, color: layoutStyle.primaryColor || '#004ac6', margin: '2px 0 0', fontFamily: 'monospace', letterSpacing: '1px' }}>{accessCode || '...'}</h4>
+                        </div>
+                        <button onClick={() => {
+                          const m = `Código de acesso Campainha Digital: ${accessCode}\nApp: ${window.location.origin + window.location.pathname}#/auth`;
+                          window.open(`https://wa.me/?text=${encodeURIComponent(m)}`,'_blank');
+                        }} style={{ background: '#25D366', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+                          WhatsApp
+                        </button>
+                      </div>
+                      {pushEnabled && (
+                        <button
+                          onClick={async () => {
+                            setPushLoading(true);
+                            try {
+                              const token = localStorage.getItem('cd_token');
+                              if (!token) return;
+                              await fetch(`${API}/api/push/test`, { method: 'POST', headers: { 'Authorization': token } });
+                              alert('Sinal enviado!');
+                            } catch (e) {} finally { setPushLoading(false); }
+                          }}
+                          style={{ background: 'none', border: 'none', color: '#3B82F6', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Testar Notificação Push
+                        </button>
+                      )}
+                    </div>
+                  )}
 
-                      {/* Item Interfone */}
-                      {!isHouseResident && (
+                  {/* Aviso Prévio Portaria (Embedded) */}
+                  {layoutStyle.preAuthType === 'embedded' && !isHouseResident && (
+                    <div style={{ margin: '0 20px', background: layoutStyle.cardBgColor || '#ffffff', border: `1px solid ${layoutStyle.borderColor || '#E2E8F0'}`, borderRadius: layoutStyle.borderRadius || '16px', padding: '20px', boxShadow: resolveShadowStyle(layoutStyle.shadowStyle, layoutStyle.primaryColor) }}>
+                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px' }}>Aviso Prévio para Portaria</h4>
+                      <input
+                        id="cd-preauth-input"
+                        type="text"
+                        placeholder="Nome do Visitante / Entregador (Opcional)"
+                        value={visitorOrPackageName}
+                        onChange={e => setVisitorOrPackageName(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: layoutStyle.borderRadius || '12px',
+                          fontSize: '13px',
+                          outline: 'none',
+                          marginBottom: '12px',
+                          background: '#F8FAFC',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                        <button
+                          onClick={() => dispatchAlert('release', '🔑 Solicitação de Liberação', 'Morador solicita liberação de visitante na portaria.')}
+                          disabled={dispatchAlertLoading}
+                          style={{
+                            background: '#F0FDF4',
+                            border: '1px solid #DCFCE7',
+                            color: '#15803D',
+                            padding: '12px',
+                            borderRadius: layoutStyle.borderRadius || '12px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#15803D' }}>key</span>
+                          <span>Solicitar Liberação</span>
+                        </button>
+                        <button
+                          onClick={() => dispatchAlert('package', '📦 Retirar Encomenda', 'Morador avisa que irá retirar encomenda na portaria.')}
+                          disabled={dispatchAlertLoading}
+                          style={{
+                            background: '#EFF6FF',
+                            border: '1px solid #DBEAFE',
+                            color: '#1D4ED8',
+                            padding: '12px',
+                            borderRadius: layoutStyle.borderRadius || '12px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#1D4ED8' }}>local_shipping</span>
+                          <span>Retirar Encomenda</span>
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => dispatchAlert('alert', '⚠️ Pedido de Ajuda / Suporte', 'Morador solicita assistência urgente da portaria ou administração.')}
+                        disabled={dispatchAlertLoading}
+                        style={{
+                          width: '100%',
+                          background: '#FEF2F2',
+                          border: '1px solid #FEE2E2',
+                          color: '#991B1B',
+                          padding: '12px',
+                          borderRadius: layoutStyle.borderRadius || '12px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#991B1B' }}>warning</span>
+                        <span>Solicitar Assistência Urgente</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Controle da Unidade (Switches) */}
+                  {layoutStyle.showSwitches && (
+                    <div style={{ margin: '0 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '1.5px', margin: '0 0 2px 4px' }}>Controles</h3>
+                      <div style={{
+                        background: layoutStyle.cardBgColor || '#ffffff',
+                        border: `1px solid ${layoutStyle.borderColor || '#E2E8F0'}`,
+                        borderRadius: layoutStyle.borderRadius || '16px',
+                        padding: '8px 16px',
+                        boxShadow: resolveShadowStyle(layoutStyle.shadowStyle, layoutStyle.primaryColor),
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}>
+                        {/* Item Campainha */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #F1F5F9' }}>
                           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: intercomEnabled ? '#3B82F6' : '#94A3B8' }}>phone_in_talk</span>
+                            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: doorbellEnabled ? '#10B981' : '#94A3B8' }}>
+                              {doorbellEnabled ? 'notifications_active' : 'notifications_off'}
+                            </span>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>Interfone Interno</span>
+                              <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>Campainha Ativa</span>
                               <span style={{ fontSize: '11px', color: '#64748B' }}>
-                                {intercomEnabled ? 'Receber chamadas de vizinhos' : 'Bloqueado'}
+                                {doorbellEnabled ? 'Receber chamadas de visitantes' : 'Chamadas silenciadas'}
                               </span>
                             </div>
                           </div>
                           <label className="switch">
                             <input 
                               type="checkbox" 
-                              checked={intercomEnabled} 
-                              onChange={(e) => toggleHomeSetting('intercomEnabled', e.target.checked)} 
+                              checked={doorbellEnabled} 
+                              onChange={(e) => toggleHomeSetting('doorbellEnabled', e.target.checked)} 
                             />
                             <span className="slider round"></span>
                           </label>
                         </div>
-                      )}
 
-                      {/* Item Modo Silencioso */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0' }}>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                          <span className="material-symbols-outlined" style={{ fontSize: '20px', color: (quietModeStart && quietModeEnd) ? '#F59E0B' : '#94A3B8' }}>dark_mode</span>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>Modo Silencioso</span>
-                            <span style={{ fontSize: '11px', color: '#64748B' }}>
-                              {(quietModeStart && quietModeEnd) 
-                                ? `Ativo das ${quietModeStart} às ${quietModeEnd}` 
-                                : 'Desativado'}
-                            </span>
-                          </div>
-                        </div>
-                        <label className="switch">
-                          <input 
-                            type="checkbox" 
-                            checked={!!(quietModeStart && quietModeEnd)} 
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                toggleHomeSetting('quietModeStart', '22:00');
-                                toggleHomeSetting('quietModeEnd', '07:00');
-                              } else {
-                                toggleHomeSetting('quietModeStart', '');
-                                toggleHomeSetting('quietModeEnd', '');
-                              }
-                            }} 
-                          />
-                          <span className="slider round"></span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tira de Aviso / Última Atualização e Link de Suporte */}
-                  <div style={{ margin: '0 20px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
-                    
-                    {broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id)).length > 0 ? (
-                      (() => {
-                        const activeAnnouncements = broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id));
-                        const latestAnn = activeAnnouncements[0];
-                        return (
-                          <div 
-                            onClick={() => {
-                              setTab('messages');
-                              setMessagesSubTab('board');
-                            }}
-                            style={{
-                              background: '#ffffff',
-                              borderRadius: '12px',
-                              padding: '12px 16px',
-                              border: '1px solid #E2E8F0',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#004ac6' }}>campaign</span>
-                              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                <span style={{ fontSize: '12px', fontWeight: 600, color: '#1E293B' }}>{latestAnn.title || 'Aviso'}: </span>
-                                <span style={{ fontSize: '12px', color: '#64748B' }}>{latestAnn.body}</span>
+                        {/* Item Interfone */}
+                        {!isHouseResident && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #F1F5F9' }}>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: intercomEnabled ? '#3B82F6' : '#94A3B8' }}>phone_in_talk</span>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>Interfone Interno</span>
+                                <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                  {intercomEnabled ? 'Receber chamadas de vizinhos' : 'Bloqueado'}
+                                </span>
                               </div>
                             </div>
-                            <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#94A3B8', flexShrink: 0 }}>chevron_right</span>
+                            <label className="switch">
+                              <input 
+                                type="checkbox" 
+                                checked={intercomEnabled} 
+                                onChange={(e) => toggleHomeSetting('intercomEnabled', e.target.checked)} 
+                              />
+                              <span className="slider round"></span>
+                            </label>
                           </div>
-                        );
-                      })()
-                    ) : (
-                      <div style={{
-                        background: '#ffffff',
-                        borderRadius: '12px',
-                        padding: '12px 16px',
-                        border: '1px dashed #E2E8F0',
-                        textAlign: 'center',
-                        color: '#94A3B8',
-                        fontSize: '12px',
-                        fontWeight: 600
-                      }}>
-                        Nenhum comunicado recente
+                        )}
+
+                        {/* Item Modo Silencioso */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0' }}>
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: (quietModeStart && quietModeEnd) ? '#F59E0B' : '#94A3B8' }}>dark_mode</span>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ fontSize: '14px', fontWeight: 600, color: '#0F172A' }}>Modo Silencioso</span>
+                              <span style={{ fontSize: '11px', color: '#64748B' }}>
+                                {(quietModeStart && quietModeEnd) 
+                                  ? `Ativo das ${quietModeStart} às ${quietModeEnd}` 
+                                  : 'Desativado'}
+                              </span>
+                            </div>
+                          </div>
+                          <label className="switch">
+                            <input 
+                              type="checkbox" 
+                              checked={!!(quietModeStart && quietModeEnd)} 
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  toggleHomeSetting('quietModeStart', '22:00');
+                                  toggleHomeSetting('quietModeEnd', '07:00');
+                                } else {
+                                  toggleHomeSetting('quietModeStart', '');
+                                  toggleHomeSetting('quietModeEnd', '');
+                                }
+                              }} 
+                            />
+                            <span className="slider round"></span>
+                          </label>
+                        </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Caixa Postal / Suporte (Embedded) */}
+                  {layoutStyle.mailboxType === 'embedded' && !isHouseResident && !isDependent && (
+                    <div style={{ margin: '0 20px', background: layoutStyle.cardBgColor || '#ffffff', border: `1px solid ${layoutStyle.borderColor || '#E2E8F0'}`, borderRadius: layoutStyle.borderRadius || '16px', padding: '20px', boxShadow: resolveShadowStyle(layoutStyle.shadowStyle, layoutStyle.primaryColor) }}>
+                      <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', margin: '0 0 12px' }}>📬 Falar com a Administração</h4>
+                      <form onSubmit={sendSupportMessage} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <input
+                          type="text"
+                          placeholder="Assunto (ex: Vazamento, Dúvida...)"
+                          value={supportSubject}
+                          onChange={e => setSupportSubject(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '12px 14px',
+                            border: '1px solid #E2E8F0',
+                            borderRadius: layoutStyle.borderRadius || '12px',
+                            fontSize: '13px',
+                            outline: 'none',
+                            background: '#F8FAFC'
+                          }}
+                        />
+                        <textarea
+                          placeholder="Descreva detalhadamente sua solicitação..."
+                          value={supportBody}
+                          onChange={e => setSupportBody(e.target.value)}
+                          rows={3}
+                          style={{
+                            width: '100%',
+                            padding: '12px 14px',
+                            border: '1px solid #E2E8F0',
+                            borderRadius: layoutStyle.borderRadius || '12px',
+                            fontSize: '13px',
+                            outline: 'none',
+                            background: '#F8FAFC',
+                            fontFamily: 'inherit',
+                            resize: 'none'
+                          }}
+                        />
+                        <button
+                          type="submit"
+                          disabled={supportSending}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            borderRadius: layoutStyle.borderRadius || '12px',
+                            background: `linear-gradient(135deg, ${layoutStyle.buttonGradientStart || '#004ac6'} 0%, ${layoutStyle.buttonGradientEnd || '#1d4ed8'} 100%)`,
+                            color: '#fff',
+                            border: 'none',
+                            fontWeight: 700,
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            boxShadow: `0 4px 12px rgba(0, 74, 198, 0.2)`
+                          }}
+                        >
+                          {supportSending ? 'Enviando...' : 'Enviar Mensagem'}
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Tira de Aviso / Última Atualização e Links Adicionais */}
+                  <div style={{ margin: '0 20px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
+                    
+                    {layoutStyle.showUpdates && (
+                      broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id)).length > 0 ? (
+                        (() => {
+                          const activeAnnouncements = broadcastMessages.filter(m => !JSON.parse(localStorage.getItem('cd_deleted_msgs') || '[]').includes(m.id));
+                          const latestAnn = activeAnnouncements[0];
+                          return (
+                            <div 
+                              onClick={() => {
+                                setTab('messages');
+                                setMessagesSubTab('board');
+                              }}
+                              style={{
+                                background: layoutStyle.cardBgColor || '#ffffff',
+                                borderRadius: layoutStyle.borderRadius || '12px',
+                                padding: '12px 16px',
+                                border: `1px solid ${layoutStyle.borderColor || '#E2E8F0'}`,
+                                boxShadow: resolveShadowStyle(layoutStyle.shadowStyle, layoutStyle.primaryColor),
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: '18px', color: layoutStyle.primaryColor || '#004ac6' }}>campaign</span>
+                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#1E293B' }}>{latestAnn.title || 'Aviso'}: </span>
+                                  <span style={{ fontSize: '12px', color: '#64748B' }}>{latestAnn.body}</span>
+                                </div>
+                              </div>
+                              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#94A3B8', flexShrink: 0 }}>chevron_right</span>
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <div style={{
+                          padding: '12px 16px',
+                          textAlign: 'center',
+                          color: '#94A3B8',
+                          fontSize: '12px',
+                          fontWeight: 600
+                        }}>
+                          Nenhum comunicado recente
+                        </div>
+                      )
                     )}
                   </div>
 
@@ -2618,7 +3722,9 @@ export default function ResidentDashboard() {
             </div>
           )}
 
-          {tab === 'settings' && <SettingsPanel unitName={unitName} setUnitName={setUnitName} onSave={saveSettings} unitId={id} propertyId={localStorage.getItem('residentPropertyId')} />}
+          {tab === 'settings' && <SettingsPanel unitName={unitName} setUnitName={setUnitName} onSave={saveSettings} unitId={id} propertyId={localStorage.getItem('residentPropertyId')} onOpenLayoutBuilder={() => setTab('layout-builder')} />}
+
+          {tab === 'layout-builder' && <LayoutBuilderPanel />}
 
           {tab === 'plate' && (
             <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
