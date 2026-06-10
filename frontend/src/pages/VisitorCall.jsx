@@ -51,9 +51,22 @@ export default function VisitorCall() {
   const [errorMsg, setErrorMsg]     = useState('');
   const [residentSocket, setResidentSocket] = useState(null);
   const [quickMessage, setQuickMessage] = useState('');
-  // Geofence
   const [geoStatus, setGeoStatus]   = useState('idle'); // idle | requesting | denied | ready
   const geoCoordsRef = useRef(null); // { lat, lng }
+  const [remoteStream, setRemoteStream] = useState(null);
+
+  useEffect(() => {
+    if (remoteStream) {
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch(e => console.warn('[Audio] play error:', e));
+      }
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(e => console.warn('[Video] play error:', e));
+      }
+    }
+  }, [remoteStream, remoteAudioRef.current, remoteVideoRef.current]);
 
   const localVideoRef   = useRef(null); // câmera do visitante (oculta)
   const canvasRef       = useRef(null);
@@ -194,6 +207,7 @@ export default function VisitorCall() {
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = null;
     }
+    setRemoteStream(null);
     webrtcStartedRef.current = false; // Permite nova chamada depois
   };
 
@@ -238,7 +252,13 @@ export default function VisitorCall() {
         return canvas.toDataURL('image/jpeg', 0.5);
       }
     } catch (err) {
-      console.warn('[Media] Câmera indisponível:', err.message);
+      console.warn('[Media] Câmera indisponível, tentando apenas áudio:', err.message);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        localStreamRef.current = stream;
+      } catch (errAudio) {
+        console.error('[Media] Microfone também indisponível:', errAudio.message);
+      }
     }
     return null;
   };
@@ -260,14 +280,8 @@ export default function VisitorCall() {
     // Quando receber áudio/vídeo do morador
     pc.ontrack = (event) => {
       if (event.streams[0]) {
-        if (event.track.kind === 'audio' && remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = event.streams[0];
-          remoteAudioRef.current.play().catch(e => console.warn('[Audio] autoplay bloqueado:', e));
-        }
-        if (event.track.kind === 'video' && remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-          remoteVideoRef.current.play().catch(e => console.warn('[Video] autoplay bloqueado:', e));
-        }
+        console.log('[WebRTC] Visitor remote stream received:', event.streams[0].id);
+        setRemoteStream(event.streams[0]);
       }
     };
 
@@ -380,32 +394,34 @@ export default function VisitorCall() {
           top: '30px', 
           left: '50%', 
           transform: 'translateX(-50%)', 
-          background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', 
-          border: '3px solid #000000', 
+          background: 'linear-gradient(135deg, #4F46E5 0%, #8B5CF6 50%, #EC4899 100%)', 
           borderRadius: '24px', 
           padding: '24px 32px', 
           zIndex: 9999, 
           maxWidth: '450px', 
           width: '92%', 
           textAlign: 'center', 
-          boxShadow: '0 20px 50px rgba(255, 165, 0, 0.4), 0 0 0 10px rgba(255, 255, 255, 0.1)'
+          boxShadow: '0 20px 50px rgba(79, 70, 229, 0.35)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          color: '#ffffff',
+          animation: 'fade-in 0.3s ease-out'
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
             <div style={{ 
               width: '64px', 
               height: '64px', 
-              background: '#000000', 
+              background: 'rgba(255, 255, 255, 0.2)', 
               borderRadius: '50%', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
+              boxShadow: '0 8px 16px rgba(0,0,0,0.1)'
             }}>
-              <Bell size={32} color="#FFA500" />
+              <Bell size={32} color="#ffffff" />
             </div>
             <div>
-              <p style={{ fontSize: '13px', color: '#000000', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', margin: '0 0 6px 0' }}>💬 MENSAGEM DO MORADOR</p>
-              <h2 style={{ fontSize: '26px', fontWeight: 900, color: '#000000', margin: 0, lineHeight: '1.2', letterSpacing: '-0.5px' }}>
+              <p style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.8)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', margin: '0 0 6px 0' }}>💬 MENSAGEM DO MORADOR</p>
+              <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#ffffff', margin: 0, lineHeight: '1.2', letterSpacing: '-0.5px' }}>
                 "{quickMessage}"
               </h2>
             </div>

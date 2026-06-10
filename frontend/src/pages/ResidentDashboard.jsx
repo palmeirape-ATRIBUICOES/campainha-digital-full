@@ -114,14 +114,14 @@ export default function ResidentDashboard() {
   const plateRef = useRef(null);
   const fileInputRef = useRef(null);
   const HOUSE_QUICK_MSGS = [
-    { id: 'general', label: 'Geral', messages: ['Já estou indo', 'Já está Aberto', 'Pode entrar'] },
-    { id: 'services', label: 'Serviços', messages: ['Pode entrar pra marcar a luz', 'Pode entrar para marcar a água'] },
-    { id: 'delivery', label: 'Delivery', messages: ['Pode deixar no portão', 'Já estou descendo'] }
+    { id: 'general', label: 'Geral', messages: ['Já estou indo', 'Já está Aberto', 'Pode entrar', 'Um momento, por favor', 'Não posso atender agora', 'Por favor, aguarde um minuto'] },
+    { id: 'services', label: 'Serviços', messages: ['Pode entrar pra marcar a luz', 'Pode entrar para marcar a água', 'Entrada autorizada', 'Por favor, aguarde o morador', 'Serviço cancelado/reagendar'] },
+    { id: 'delivery', label: 'Delivery', messages: ['Pode deixar no portão', 'Já estou descendo', 'Deixar na caixa de correio', 'Deixe com o vizinho, por favor', 'Por favor, jogue por cima do portão'] }
   ];
   const CONDO_QUICK_MSGS = [
-    { id: 'general', label: 'Geral', messages: ['Já estou descendo', 'Um momento', 'Pode subir', 'Deixar na portaria'] },
-    { id: 'services', label: 'Serviços', messages: ['Prestador autorizado', 'Aguarde na portaria'] },
-    { id: 'delivery', label: 'Delivery', messages: ['Pode deixar com o porteiro', 'Deixar no Locker'] }
+    { id: 'general', label: 'Geral', messages: ['Já estou descendo', 'Um momento', 'Pode subir', 'Deixar na portaria', 'Não posso atender agora', 'Estou em reunião, favor aguardar'] },
+    { id: 'services', label: 'Serviços', messages: ['Prestador autorizado', 'Aguarde na portaria', 'Pode subir para o apartamento', 'Aguardando liberação da administração', 'Serviço concluído'] },
+    { id: 'delivery', label: 'Delivery', messages: ['Pode deixar com o porteiro', 'Deixar no Locker', 'Deixar na recepção', 'Já estou descendo para retirar', 'Por favor, suba para entregar'] }
   ];
 
   const quickMsgs = isHouseResident ? HOUSE_QUICK_MSGS : CONDO_QUICK_MSGS;
@@ -214,12 +214,27 @@ export default function ResidentDashboard() {
 
   const audioRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const localVideoRef = useRef(null);
   const localStreamRef = useRef(null);
   const pcRef = useRef(null);
   const socketRef = useRef(null);
   const doorbellStartedRef = useRef(false);
   const lastCallIdRef = useRef(null); // Dedup: evita processar o mesmo incoming_call duas vezes
+  const [remoteStream, setRemoteStream] = useState(null);
+
+  useEffect(() => {
+    if (remoteStream) {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(e => console.warn('[Video] play failed:', e));
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch(e => console.warn('[Audio] play failed:', e));
+      }
+    }
+  }, [remoteStream, remoteVideoRef.current, remoteAudioRef.current]);
 
   // Redireciona Vila Admin imediatamente
   useEffect(() => {
@@ -1079,6 +1094,7 @@ export default function ResidentDashboard() {
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = null;
     }
+    setRemoteStream(null);
   };
 
   const searchNeighbor = async () => {
@@ -1115,9 +1131,9 @@ export default function ResidentDashboard() {
     });
 
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current && event.streams[0]) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-        remoteVideoRef.current.play().catch(e => console.warn('[Video] play failed:', e));
+      if (event.streams[0]) {
+        console.log('[WebRTC] Outbound remote stream received:', event.streams[0].id);
+        setRemoteStream(event.streams[0]);
       }
     };
 
@@ -1209,7 +1225,12 @@ export default function ResidentDashboard() {
     const pc = new RTCPeerConnection(iceConfig);
     pcRef.current = pc;
     if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => pc.addTrack(t, localStreamRef.current));
-    pc.ontrack = (e) => { if (remoteVideoRef.current && e.streams[0]) { remoteVideoRef.current.srcObject = e.streams[0]; remoteVideoRef.current.play().catch(() => {}); } };
+    pc.ontrack = (e) => {
+      if (e.streams[0]) {
+        console.log('[WebRTC] Inbound remote stream received:', e.streams[0].id);
+        setRemoteStream(e.streams[0]);
+      }
+    };
     pc.onicecandidate = (e) => { if (e.candidate) socketRef.current.emit('webrtc_ice_candidate', { target: senderSocketId, candidate: e.candidate }); };
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
     const answer = await pc.createAnswer();
@@ -1774,6 +1795,7 @@ export default function ResidentDashboard() {
       onClick={handleUserInteraction}
       onTouchStart={handleUserInteraction}
     >
+      <audio ref={remoteAudioRef} autoPlay playsInline />
       <style>{`
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; line-height: 1; }
         .active-ring { animation: ring 2s infinite; }
@@ -3521,157 +3543,380 @@ export default function ResidentDashboard() {
                 width: '100%',
                 marginBottom: '10px'
               }}>
-                {/* Button 1: Atender / Conversar / Mutar */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (status === 'ringing' || status === 'monitoring') {
-                      handleAnswer(true);
-                    } else if (status === 'active') {
-                      toggleMute();
-                    }
-                  }}
-                  disabled={status === 'calling'}
-                  className={(status === 'ringing' || status === 'monitoring') ? 'active-ring shadow-lg' : 'shadow-lg'}
-                  style={{
-                    background: status === 'active' && isMuted ? '#ba1a1a' : '#006242',
-                    color: '#ffffff',
-                    borderRadius: '16px',
-                    padding: '24px 16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    cursor: status === 'calling' ? 'default' : 'pointer',
-                    border: 'none',
-                    minHeight: '120px',
-                    transition: 'all 0.1s',
-                    outline: 'none'
-                  }}
-                  onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                  onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: (status === 'active' && isMuted) ? "'FILL' 0" : "'FILL' 1" }}>
-                    {(status === 'active' && isMuted) ? 'mic_off' : 'call'}
-                  </span>
-                  <span style={{ fontSize: '20px', fontWeight: 600 }}>
-                    {status === 'ringing' || status === 'monitoring' ? 'Atender' :
-                     status === 'active' ? (isMuted ? 'Mutado' : 'Mutar') :
-                     'Chamando'}
-                  </span>
-                </button>
+                {status === 'ringing' ? (
+                  <>
+                    {/* Atender com Vídeo */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAnswer(true); }}
+                      style={{
+                        background: '#006242', color: '#ffffff', borderRadius: '16px', padding: '24px 16px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        cursor: 'pointer', border: 'none', minHeight: '120px', transition: 'all 0.1s', outline: 'none'
+                      }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>video_call</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700 }}>Com Vídeo</span>
+                    </button>
 
-                {/* Button 2: Recusar / Desligar */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleEnd(); }}
-                  className="shadow-lg"
-                  style={{
-                    background: '#ba1a1a',
-                    color: '#ffffff',
-                    borderRadius: '16px',
-                    padding: '24px 16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    cursor: 'pointer',
-                    border: 'none',
-                    minHeight: '120px',
-                    transition: 'all 0.1s',
-                    outline: 'none'
-                  }}
-                  onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                  onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>call_end</span>
-                  <span style={{ fontSize: '20px', fontWeight: 600 }}>
-                    {status === 'ringing' ? 'Recusar' : 'Desligar'}
-                  </span>
-                </button>
+                    {/* Atender Oculto */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleMonitor(); }}
+                      style={{
+                        background: '#475569', color: '#ffffff', borderRadius: '16px', padding: '24px 16px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        cursor: 'pointer', border: 'none', minHeight: '120px', transition: 'all 0.1s', outline: 'none'
+                      }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>visibility_off</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700 }}>Atender Oculto</span>
+                    </button>
 
-                {/* Button 3: Abrir Portão */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleOpenGate(); }}
-                  disabled={isHouseResident}
-                  className="shadow-lg"
-                  style={{
-                    background: '#004ac6',
-                    color: '#ffffff',
-                    borderRadius: '16px',
-                    padding: '24px 16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    cursor: isHouseResident ? 'not-allowed' : 'pointer',
-                    border: 'none',
-                    minHeight: '120px',
-                    opacity: isHouseResident ? 0.5 : 1,
-                    transition: 'all 0.1s',
-                    outline: 'none'
-                  }}
-                  onMouseDown={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(0.95)' }}
-                  onMouseUp={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(1)' }}
-                  onMouseLeave={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(1)' }}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>key</span>
-                  <span style={{ fontSize: '20px', fontWeight: 600 }}>
-                    {openGateLoading ? 'Abrindo...' : 'Abrir Portão'}
-                  </span>
-                </button>
+                    {/* Atender Apenas Áudio */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAnswer(false); }}
+                      style={{
+                        background: '#4F46E5', color: '#ffffff', borderRadius: '16px', padding: '24px 16px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        cursor: 'pointer', border: 'none', minHeight: '120px', transition: 'all 0.1s', outline: 'none'
+                      }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>call</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700 }}>Apenas Áudio</span>
+                    </button>
 
-                {/* Button 4: Mensagem Rápida */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowQuickMsgs(!showQuickMsgs); }}
-                  disabled={!visitorSocketId}
-                  className="shadow-lg"
-                  style={{
-                    background: '#fea619',
-                    color: '#684000',
-                    borderRadius: '16px',
-                    padding: '24px 16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    cursor: !visitorSocketId ? 'not-allowed' : 'pointer',
-                    border: 'none',
-                    minHeight: '120px',
-                    opacity: !visitorSocketId ? 0.5 : 1,
-                    transition: 'all 0.1s',
-                    outline: 'none'
-                  }}
-                  onMouseDown={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(0.95)' }}
-                  onMouseUp={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(1)' }}
-                  onMouseLeave={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(1)' }}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
-                  <span style={{ fontSize: '20px', fontWeight: 600, textAlign: 'center', lineHeight: 1.1 }}>
-                    Mensagem Rápida
-                  </span>
-                </button>
+                    {/* Recusar */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleEnd(); }}
+                      style={{
+                        background: '#ba1a1a', color: '#ffffff', borderRadius: '16px', padding: '24px 16px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        cursor: 'pointer', border: 'none', minHeight: '120px', transition: 'all 0.1s', outline: 'none'
+                      }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>call_end</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700 }}>Recusar</span>
+                    </button>
+
+                    {/* Abrir Portão */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleOpenGate(); }}
+                      disabled={isHouseResident}
+                      style={{
+                        background: '#004ac6', color: '#ffffff', borderRadius: '16px', padding: '24px 16px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        cursor: isHouseResident ? 'not-allowed' : 'pointer', border: 'none', minHeight: '120px',
+                        opacity: isHouseResident ? 0.5 : 1, transition: 'all 0.1s', outline: 'none'
+                      }}
+                      onMouseDown={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(0.95)' }}
+                      onMouseUp={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(1)' }}
+                      onMouseLeave={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(1)' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>key</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700 }}>
+                        {openGateLoading ? 'Abrindo...' : 'Abrir Portão'}
+                      </span>
+                    </button>
+
+                    {/* Mensagem Rápida */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowQuickMsgs(!showQuickMsgs); }}
+                      disabled={!visitorSocketId}
+                      style={{
+                        background: '#fea619', color: '#684000', borderRadius: '16px', padding: '24px 16px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        cursor: !visitorSocketId ? 'not-allowed' : 'pointer', border: 'none', minHeight: '120px',
+                        opacity: !visitorSocketId ? 0.5 : 1, transition: 'all 0.1s', outline: 'none'
+                      }}
+                      onMouseDown={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(0.95)' }}
+                      onMouseUp={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(1)' }}
+                      onMouseLeave={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(1)' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700, textAlign: 'center', lineHeight: 1.1 }}>
+                        Msg Rápida
+                      </span>
+                    </button>
+                  </>
+                ) : status === 'monitoring' ? (
+                  <>
+                    {/* Ativar Vídeo */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAnswer(true); }}
+                      style={{
+                        background: '#006242', color: '#ffffff', borderRadius: '16px', padding: '24px 16px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        cursor: 'pointer', border: 'none', minHeight: '120px', transition: 'all 0.1s', outline: 'none'
+                      }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>videocam</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700 }}>Ativar Vídeo</span>
+                    </button>
+
+                    {/* Ativar Áudio */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAnswer(false); }}
+                      style={{
+                        background: '#4F46E5', color: '#ffffff', borderRadius: '16px', padding: '24px 16px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        cursor: 'pointer', border: 'none', minHeight: '120px', transition: 'all 0.1s', outline: 'none'
+                      }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>mic</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700 }}>Ativar Áudio</span>
+                    </button>
+
+                    {/* Desligar */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleEnd(); }}
+                      style={{
+                        background: '#ba1a1a', color: '#ffffff', borderRadius: '16px', padding: '24px 16px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        cursor: 'pointer', border: 'none', minHeight: '120px', transition: 'all 0.1s', outline: 'none'
+                      }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>call_end</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700 }}>Desligar</span>
+                    </button>
+
+                    {/* Abrir Portão */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleOpenGate(); }}
+                      disabled={isHouseResident}
+                      style={{
+                        background: '#004ac6', color: '#ffffff', borderRadius: '16px', padding: '24px 16px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        cursor: isHouseResident ? 'not-allowed' : 'pointer', border: 'none', minHeight: '120px',
+                        opacity: isHouseResident ? 0.5 : 1, transition: 'all 0.1s', outline: 'none'
+                      }}
+                      onMouseDown={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(0.95)' }}
+                      onMouseUp={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(1)' }}
+                      onMouseLeave={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(1)' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>key</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700 }}>
+                        {openGateLoading ? 'Abrindo...' : 'Abrir Portão'}
+                      </span>
+                    </button>
+
+                    {/* Mensagem Rápida */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowQuickMsgs(!showQuickMsgs); }}
+                      disabled={!visitorSocketId}
+                      style={{
+                        background: '#fea619', color: '#684000', borderRadius: '16px', padding: '24px 16px',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        cursor: !visitorSocketId ? 'not-allowed' : 'pointer', border: 'none', minHeight: '120px',
+                        opacity: !visitorSocketId ? 0.5 : 1, transition: 'all 0.1s', outline: 'none',
+                        gridColumn: 'span 2'
+                      }}
+                      onMouseDown={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(0.95)' }}
+                      onMouseUp={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(1)' }}
+                      onMouseLeave={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(1)' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
+                      <span style={{ fontSize: '18px', fontWeight: 700, textAlign: 'center', lineHeight: 1.1 }}>
+                        Mensagem Rápida
+                      </span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Button 1: Conversar / Mutar */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (status === 'active') {
+                          toggleMute();
+                        }
+                      }}
+                      disabled={status === 'calling'}
+                      className={(status === 'ringing') ? 'active-ring shadow-lg' : 'shadow-lg'}
+                      style={{
+                        background: status === 'active' && isMuted ? '#ba1a1a' : '#006242',
+                        color: '#ffffff',
+                        borderRadius: '16px',
+                        padding: '24px 16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        cursor: status === 'calling' ? 'default' : 'pointer',
+                        border: 'none',
+                        minHeight: '120px',
+                        transition: 'all 0.1s',
+                        outline: 'none'
+                      }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: (status === 'active' && isMuted) ? "'FILL' 0" : "'FILL' 1" }}>
+                        {(status === 'active' && isMuted) ? 'mic_off' : 'call'}
+                      </span>
+                      <span style={{ fontSize: '20px', fontWeight: 600 }}>
+                        {status === 'active' ? (isMuted ? 'Mutado' : 'Mutar') : 'Chamando'}
+                      </span>
+                    </button>
+
+                    {/* Button 2: Recusar / Desligar */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleEnd(); }}
+                      className="shadow-lg"
+                      style={{
+                        background: '#ba1a1a',
+                        color: '#ffffff',
+                        borderRadius: '16px',
+                        padding: '24px 16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        border: 'none',
+                        minHeight: '120px',
+                        transition: 'all 0.1s',
+                        outline: 'none'
+                      }}
+                      onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                      onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>call_end</span>
+                      <span style={{ fontSize: '20px', fontWeight: 600 }}>
+                        Desligar
+                      </span>
+                    </button>
+
+                    {/* Button 3: Abrir Portão */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleOpenGate(); }}
+                      disabled={isHouseResident}
+                      className="shadow-lg"
+                      style={{
+                        background: '#004ac6',
+                        color: '#ffffff',
+                        borderRadius: '16px',
+                        padding: '24px 16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        cursor: isHouseResident ? 'not-allowed' : 'pointer',
+                        border: 'none',
+                        minHeight: '120px',
+                        opacity: isHouseResident ? 0.5 : 1,
+                        transition: 'all 0.1s',
+                        outline: 'none'
+                      }}
+                      onMouseDown={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(0.95)' }}
+                      onMouseUp={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(1)' }}
+                      onMouseLeave={(e) => { if(!isHouseResident) e.currentTarget.style.transform = 'scale(1)' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>key</span>
+                      <span style={{ fontSize: '20px', fontWeight: 600 }}>
+                        {openGateLoading ? 'Abrindo...' : 'Abrir Portão'}
+                      </span>
+                    </button>
+
+                    {/* Button 4: Mensagem Rápida */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowQuickMsgs(!showQuickMsgs); }}
+                      disabled={!visitorSocketId}
+                      className="shadow-lg"
+                      style={{
+                        background: '#fea619',
+                        color: '#684000',
+                        borderRadius: '16px',
+                        padding: '24px 16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        cursor: !visitorSocketId ? 'not-allowed' : 'pointer',
+                        border: 'none',
+                        minHeight: '120px',
+                        opacity: !visitorSocketId ? 0.5 : 1,
+                        transition: 'all 0.1s',
+                        outline: 'none'
+                      }}
+                      onMouseDown={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(0.95)' }}
+                      onMouseUp={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(1)' }}
+                      onMouseLeave={(e) => { if(visitorSocketId) e.currentTarget.style.transform = 'scale(1)' }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '40px', fontVariationSettings: "'FILL' 1" }}>chat_bubble</span>
+                      <span style={{ fontSize: '20px', fontWeight: 600, textAlign: 'center', lineHeight: 1.1 }}>
+                        Mensagem Rápida
+                      </span>
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* Quick Messages Drawer */}
               {showQuickMsgs && visitorSocketId && (status === 'ringing' || status === 'active' || status === 'monitoring') && (
                 <div style={{
-                  background: 'rgba(255, 255, 255, 0.9)',
+                  background: 'rgba(255, 255, 255, 0.95)',
                   border: '1px solid #c3c6d7',
                   borderRadius: '20px',
                   padding: '16px',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
                   width: '100%',
-                  animation: 'fade-in 0.2s ease-out'
+                  animation: 'fade-in 0.2s ease-out',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
                 }}>
-                  <p style={{ fontSize: '11px', fontWeight: 800, color: '#434655', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Selecione uma resposta rápida:</p>
+                  {/* Category Filter Chips */}
                   <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
-                    {quickMsgs.find(c => c.id === 'general')?.messages.map((msg, i) => (
+                    {quickMsgs.map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={(e) => { e.stopPropagation(); setActiveMsgCat(cat.id); }}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '100px',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          border: 'none',
+                          background: activeMsgCat === cat.id ? (layoutStyle.primaryColor || '#004ac6') : '#eff4ff',
+                          color: activeMsgCat === cat.id ? '#ffffff' : '#475569',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <p style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 2px' }}>Selecione uma resposta rápida:</p>
+                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'none' }}>
+                    {quickMsgs.find(c => c.id === activeMsgCat)?.messages.map((msg, i) => (
                       <button
                         key={i}
                         onClick={() => sendQuickMsg(msg)}
