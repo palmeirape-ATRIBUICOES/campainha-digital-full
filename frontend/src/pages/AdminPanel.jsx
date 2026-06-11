@@ -470,7 +470,14 @@ export default function AdminPanel() {
     if (!currentProperty) return;
 
     const blockUnits = currentProperty.units.filter(u => {
-      const blockKey = u.block ? `Bloco ${u.block}` : (u.street ? `Rua ${u.street}` : 'Geral');
+      let blockVal = u.block;
+      if (!blockVal && u.name) {
+        const match = u.name.match(/^(?:B|Bloco\s*)(\d+|[A-Z]+)/i);
+        if (match) {
+          blockVal = match[1];
+        }
+      }
+      const blockKey = blockVal ? `Bloco ${blockVal}` : (u.street ? `Rua ${u.street}` : 'Geral');
       return blockKey === activeControlBlock;
     });
 
@@ -2698,34 +2705,57 @@ export default function AdminPanel() {
                               {blockKey ? `[${blockKey}] ` : ''}Unidade {unit ? unit.name : 'Morador'} - {alertItem.title}
                             </h4>
                             <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
-                              {alertItem.description || 'Aguardando liberação ou atendimento na portaria.'}
+                              {(alertItem.description || '').split('|')[0].trim() || 'Aguardando liberação ou atendimento na portaria.'}
                             </p>
                           </div>
                         </div>
                         
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           {alertItem.type === 'release' && (
-                            <button
-                              onClick={() => {
-                                alert('[eWelink/Sonoff] Comando de liberação de portão disparado!');
-                                resolveAlert(alertItem.id);
-                              }}
-                              style={{
-                                background: '#10B981',
-                                color: '#FFF',
-                                border: 'none',
-                                padding: '10px 16px',
-                                borderRadius: '10px',
-                                fontSize: '12px',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                              }}
-                            >
-                              🔑 Autorizar & Abrir Portão
-                            </button>
+                            <>
+                              <button
+                                onClick={() => {
+                                  alert('[eWelink/Sonoff] Comando de liberação de portão disparado!');
+                                  resolveAlert(alertItem.id, 'approve');
+                                }}
+                                style={{
+                                  background: '#10B981',
+                                  color: '#FFF',
+                                  border: 'none',
+                                  padding: '10px 16px',
+                                  borderRadius: '10px',
+                                  fontSize: '12px',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                              >
+                                🔑 Autorizar
+                              </button>
+                              
+                              <button
+                                onClick={() => {
+                                  resolveAlert(alertItem.id, 'deny');
+                                }}
+                                style={{
+                                  background: '#EF4444',
+                                  color: '#FFF',
+                                  border: 'none',
+                                  padding: '10px 16px',
+                                  borderRadius: '10px',
+                                  fontSize: '12px',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                              >
+                                ❌ Negar
+                              </button>
+                            </>
                           )}
                           
                           <button

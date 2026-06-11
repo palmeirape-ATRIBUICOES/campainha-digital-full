@@ -1601,7 +1601,10 @@ export default function ResidentDashboard() {
 
   const dispatchAlert = async (type, title, baseDescription) => {
     if (!savedUnitId) return;
-    const finalDescription = visitorOrPackageName.trim() ? `${baseDescription} (Nome: ${visitorOrPackageName})` : baseDescription;
+    const residentName = localStorage.getItem('residentName') || 'Morador';
+    const finalDescription = visitorOrPackageName.trim()
+      ? `${baseDescription} (Nome: ${visitorOrPackageName}) | Solicitante: ${residentName}`
+      : `${baseDescription} | Solicitante: ${residentName}`;
     setDispatchAlertLoading(true);
     try {
       const propId = propertyId || localStorage.getItem('residentPropertyId');

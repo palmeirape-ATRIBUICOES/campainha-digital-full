@@ -36,8 +36,17 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
         const data = await res.json();
         setUnits(data);
         
-        // Extrai blocos únicos e não nulos
-        const uniqueBlocks = Array.from(new Set(data.map(u => u.block).filter(Boolean))).sort();
+        // Extrai blocos únicos e não nulos (com inferência a partir do nome se u.block for nulo)
+        const uniqueBlocks = Array.from(new Set(data.map(u => {
+          let blockVal = u.block;
+          if (!blockVal && u.name) {
+            const match = u.name.match(/^(?:B|Bloco\s*)(\d+|[A-Z]+)/i);
+            if (match) {
+              blockVal = match[1];
+            }
+          }
+          return blockVal ? blockVal.trim() : null;
+        }).filter(Boolean))).sort();
         setBlocks(uniqueBlocks);
         
         // Extrai moradores únicos das unidades
@@ -205,9 +214,18 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
                 {targetType === 'block' && blocks.map(b => (
                   <option key={b} value={b}>Bloco {b}</option>
                 ))}
-                {targetType === 'unit' && units.map(u => (
-                  <option key={u.id} value={u.id}>{u.name} {u.block ? `(Bloco ${u.block})` : ''}</option>
-                ))}
+                {targetType === 'unit' && units.map(u => {
+                  let blockVal = u.block;
+                  if (!blockVal && u.name) {
+                    const match = u.name.match(/^(?:B|Bloco\s*)(\d+|[A-Z]+)/i);
+                    if (match) {
+                      blockVal = match[1];
+                    }
+                  }
+                  return (
+                    <option key={u.id} value={u.id}>{u.name} {blockVal ? `(Bloco ${blockVal})` : ''}</option>
+                  );
+                })}
                 {targetType === 'resident' && residents.map(r => (
                   <option key={r.id} value={r.id}>{r.name} {r.email ? `(${r.email})` : '(Sem e-mail)'}</option>
                 ))}

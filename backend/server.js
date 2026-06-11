@@ -3085,29 +3085,37 @@ app.delete('/api/properties/:propertyId/alerts/:alertId', async (req, res) => {
 
     // Formatar mensagem conforme solicitado pelo usuário
     let body = '';
+    let title = '';
+    
     if (updated.type === 'release') {
-      const nameMatch = (updated.description || '').match(/\(Nome:\s*(.*?)\)/);
-      const visitorName = nameMatch ? nameMatch[1].trim() : '';
-      if (visitorName) {
-        body = isApproved
-          ? `a portaria liberou o acesso do seu visitante: ${visitorName}`
-          : `a portaria negou o acesso do seu visitante: ${visitorName}`;
+      const desc = updated.description || '';
+      const nameMatch = desc.match(/\(Nome:\s*(.*?)\)/);
+      const visitorName = (nameMatch ? nameMatch[1].trim() : '').toUpperCase() || 'VISITANTE';
+      const senderMatch = desc.match(/\| Solicitante:\s*(.*)/);
+      const residentName = (senderMatch ? senderMatch[1].trim() : '').toUpperCase() || 'MORADOR';
+      
+      if (isApproved) {
+        title = 'ENTRADA LIBERADA PELA PORTARIA.';
+        body = `PORTEIRO LIBEROU O VISITANTE ${visitorName} A PEDIDO DO MORADOR ${residentName}.`;
       } else {
-        body = isApproved
-          ? 'a portaria liberou o acesso do seu visitante'
-          : 'a portaria negou o acesso do seu visitante';
+        title = 'ENTRADA NEGADA PELA PORTARIA.';
+        body = `PORTEIRO NEGOU O VISITANTE ${visitorName} A PEDIDO DO MORADOR ${residentName}.`;
       }
     } else {
-      body = isApproved
-        ? (updated.description || updated.title || 'A portaria autorizou e liberou o acesso.')
-        : (updated.description || 'A portaria não liberou o acesso.');
+      if (isApproved) {
+        title = updated.type === 'package' ? '📦 Encomenda / Entrega Liberada!' : '🔑 Entrada Liberada pela Portaria!';
+        body = (updated.description || updated.title || 'A portaria autorizou e liberou o acesso.').split('|')[0].trim();
+      } else {
+        title = '❌ Entrada Não Liberada pela Portaria';
+        body = (updated.description || 'A portaria não liberou o acesso.').split('|')[0].trim();
+      }
     }
 
     // Notifica em tempo real os moradores da unidade que a portaria respondeu ao acesso
     io.to(`user_${updated.unitId}`).emit('doorman_authorized_entry', {
       alertId,
       type: updated.type,
-      title: updated.title,
+      title: title || updated.title,
       description: updated.description,
       message: body,
       authorized: isApproved,
@@ -3116,13 +3124,6 @@ app.delete('/api/properties/:propertyId/alerts/:alertId', async (req, res) => {
 
     // Dispara notificações Push em background para cada morador da unidade
     if (updated.unit && updated.unit.residents) {
-      let title = '';
-      if (isApproved) {
-        title = updated.type === 'package' ? '📦 Encomenda / Entrega Liberada!' : '🔑 Entrada Liberada pela Portaria!';
-      } else {
-        title = '❌ Entrada Não Liberada pela Portaria';
-      }
-
       updated.unit.residents.forEach(resident => {
         sendPushToUser(resident.id, {
           title,
@@ -3697,8 +3698,15 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
       let matches = false;
       if (!targetType || targetType === 'all') {
         matches = true;
-      } else if (targetType === 'block' && targetValue && unit.block) {
-        matches = unit.block.trim().toLowerCase() === targetValue.trim().toLowerCase();
+      } else if (targetType === 'block' && targetValue) {
+        let blockVal = unit.block;
+        if (!blockVal && unit.name) {
+          const match = unit.name.match(/^(?:B|Bloco\s*)(\d+|[A-Z]+)/i);
+          if (match) {
+            blockVal = match[1];
+          }
+        }
+        matches = blockVal ? blockVal.trim().toLowerCase() === targetValue.trim().toLowerCase() : false;
       } else if (targetType === 'unit' && targetValue) {
         matches = unit.id === targetValue;
       }
