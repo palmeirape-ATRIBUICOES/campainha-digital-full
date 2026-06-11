@@ -3952,6 +3952,186 @@ app.post('/api/properties/:propertyId/validate-visitor-code', async (req, res) =
   }
 });
 
+// ─── Control iD Integration Endpoints ───────────────────────────────────────
+
+async function validateAndAuthorizeControlId(req, res, codeStr) {
+  try {
+    const portalId = parseInt(req.body.portal_id) || 1;
+    const deviceId = req.body.device_id || 0;
+    console.log(`[ControliD] Recebido evento de identificação. Código: "${codeStr}", Device: ${deviceId}, Portal: ${portalId}`);
+
+    if (!codeStr) {
+      return res.status(200).json({
+        result: {
+          event: 3, // Acesso negado / código inválido
+          user_id: 0,
+          user_name: 'Desconhecido',
+          user_image: false,
+          portal_id: portalId,
+          actions: []
+        }
+      });
+    }
+
+    // 1. Verificar se é um código de visitante ativo (6 dígitos ou qualquer código de visitante no DB)
+    const visitorCode = await prisma.visitorCode.findUnique({
+      where: { code: codeStr },
+      include: { unit: { include: { property: true } } }
+    });
+
+    if (visitorCode) {
+      // Verificar se o código expirou
+      if (new Date() > new Date(visitorCode.expiresAt)) {
+        console.log(`[ControliD] Código de visitante "${codeStr}" expirado.`);
+        return res.status(200).json({
+          result: {
+            event: 3, // Expirado / Negado
+            user_id: 0,
+            user_name: visitorCode.visitorName,
+            user_image: false,
+            portal_id: portalId,
+            actions: []
+          }
+        });
+      }
+
+      // Registra no histórico de visitantes
+      await prisma.visitor.create({
+        data: {
+          unitId: visitorCode.unitId,
+          propertyId: visitorCode.unit.propertyId,
+          callerName: `Leitor Control iD: ${visitorCode.visitorName} (Cód. ${codeStr})`,
+          status: 'liberado'
+        }
+      });
+
+      // Notifica o doorman/porteiro via socket
+      io.emit('incoming_visitor_code', {
+        propertyId: visitorCode.unit.propertyId,
+        visitorName: visitorCode.visitorName,
+        unitName: visitorCode.unit.name,
+        code: codeStr,
+        timestamp: new Date()
+      });
+
+      // Notifica os moradores da unidade via socket
+      io.to(`user_${visitorCode.unitId}`).emit('visitor_arrived', {
+        visitorName: visitorCode.visitorName,
+        timestamp: new Date()
+      });
+
+      // Envia Push Notification para os moradores da unidade
+      const unit = await prisma.unit.findUnique({
+        where: { id: visitorCode.unitId },
+        include: { residents: true }
+      });
+      if (unit) {
+        unit.residents.forEach(resident => {
+          if (resident.allowPortariaCalls !== false) {
+            sendPushToUser(resident.id, {
+              title: '🔑 Visitante Liberado!',
+              body: `${visitorCode.visitorName} entrou usando o QR Code no leitor da portaria.`,
+              tag: 'visitor-arrived',
+              vibrate: [300, 100, 300]
+            });
+          }
+        });
+      }
+
+      console.log(`[ControliD] Acesso LIBERADO para visitante: ${visitorCode.visitorName}`);
+
+      // Retorna a autorização para liberar a porta/SecBox
+      return res.status(200).json({
+        result: {
+          event: 7, // Acesso autorizado
+          user_id: 0,
+          user_name: visitorCode.visitorName,
+          user_image: false,
+          portal_id: portalId,
+          actions: [
+            { action: "door", parameters: `door=${portalId}` },
+            { action: "sec_box", parameters: `id=${portalId}, reason=1` }
+          ]
+        }
+      });
+    }
+
+    // 2. Verificar se é um morador cadastrado (procurando por clientCode, plateCode ou id)
+    const resident = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { clientCode: { equals: codeStr, mode: 'insensitive' } },
+          { plateCode: { equals: codeStr, mode: 'insensitive' } },
+          { id: codeStr }
+        ]
+      }
+    });
+
+    if (resident) {
+      console.log(`[ControliD] Acesso LIBERADO para morador: ${resident.name}`);
+      
+      return res.status(200).json({
+        result: {
+          event: 7, // Acesso autorizado
+          user_id: parseInt(codeStr) || 1,
+          user_name: resident.name,
+          user_image: !!resident.photo,
+          portal_id: portalId,
+          actions: [
+            { action: "door", parameters: `door=${portalId}` },
+            { action: "sec_box", parameters: `id=${portalId}, reason=1` }
+          ]
+        }
+      });
+    }
+
+    // 3. Se não encontrou visitante nem morador
+    console.log(`[ControliD] Código "${codeStr}" não identificado.`);
+    return res.status(200).json({
+      result: {
+        event: 3, // Acesso negado
+        user_id: 0,
+        user_name: 'Nao Autorizado',
+        user_image: false,
+        portal_id: portalId,
+        actions: []
+      }
+    });
+
+  } catch (error) {
+    console.error('[ControliD] Erro na validação de acesso:', error);
+    return res.status(200).json({
+      result: {
+        event: 0, // Erro
+        user_id: 0,
+        user_name: 'Erro Servidor',
+        user_image: false,
+        portal_id: req.body.portal_id || 1,
+        actions: []
+      }
+    });
+  }
+}
+
+app.post(['/api/controlid/device_is_alive.fcgi', '/api/controlid/device_is_alive'], (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+app.post(['/api/controlid/new_qrcode.fcgi', '/api/controlid/new_qrcode'], async (req, res) => {
+  const codeStr = String(req.body.qrcode_value || '').trim();
+  await validateAndAuthorizeControlId(req, res, codeStr);
+});
+
+app.post(['/api/controlid/new_card.fcgi', '/api/controlid/new_card'], async (req, res) => {
+  const codeStr = String(req.body.card_value || '').trim();
+  await validateAndAuthorizeControlId(req, res, codeStr);
+});
+
+app.post(['/api/controlid/new_user_identified.fcgi', '/api/controlid/new_user_identified'], async (req, res) => {
+  const codeStr = String(req.body.user_id || '').trim();
+  await validateAndAuthorizeControlId(req, res, codeStr);
+});
+
 // ─── Socket.io Logic ─────────────────────────────────────────────────────────
 
 const activeSockets = new Map();

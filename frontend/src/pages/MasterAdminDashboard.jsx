@@ -3114,19 +3114,32 @@ export default function MasterAdminDashboard() {
                   Contas pré-configuradas para apresentação comercial. Sempre disponíveis, trial até 2099.
                 </p>
               </div>
-              <button
-                onClick={setupDemo}
-                disabled={settingUpDemo}
-                style={{
-                  padding: '12px 24px', borderRadius: '14px', border: 'none', cursor: 'pointer',
-                  background: 'linear-gradient(135deg,#7C3AED,#5B21B6)', color: '#FFF',
-                  fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px',
-                  boxShadow: '0 4px 14px rgba(124,58,237,0.3)', opacity: settingUpDemo ? 0.7 : 1
-                }}
-              >
-                <Zap size={16} />
-                {settingUpDemo ? 'Configurando...' : 'Criar / Resetar Dados Demo'}
-              </button>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => window.open('#/controlid-simulator', '_blank')}
+                  style={{
+                    padding: '12px 24px', borderRadius: '14px', border: '1px solid #7C3AED', cursor: 'pointer',
+                    background: 'rgba(124, 58, 237, 0.05)', color: '#7C3AED',
+                    fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  🛠️ Abrir Simulador Control iD
+                </button>
+                <button
+                  onClick={setupDemo}
+                  disabled={settingUpDemo}
+                  style={{
+                    padding: '12px 24px', borderRadius: '14px', border: 'none', cursor: 'pointer',
+                    background: 'linear-gradient(135deg,#7C3AED,#5B21B6)', color: '#FFF',
+                    fontWeight: 700, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px',
+                    boxShadow: '0 4px 14px rgba(124,58,237,0.3)', opacity: settingUpDemo ? 0.7 : 1
+                  }}
+                >
+                  <Zap size={16} />
+                  {settingUpDemo ? 'Configurando...' : 'Criar / Resetar Dados Demo'}
+                </button>
+              </div>
             </div>
 
             {/* Feedback */}

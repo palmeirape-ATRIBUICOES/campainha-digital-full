@@ -13,6 +13,7 @@ import MasterAdminDashboard from './pages/MasterAdminDashboard';
 import PorteiroLogin from './pages/PorteiroLogin';
 import PorteiroDashboard from './pages/PorteiroDashboard';
 import VilaAdminDashboard from './pages/VilaAdminDashboard';
+import ControlIdSimulator from './pages/ControlIdSimulator';
 
 // ─── Proteção de rota: redireciona para login se não autenticado ──────────────
 function PrivateRoute({ children }) {
@@ -373,6 +374,7 @@ function App() {
           <Route path="/chamada/:id"    element={<VisitorCall />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/payment-failure" element={<PaymentFailure />} />
+          <Route path="/controlid-simulator" element={<ControlIdSimulator />} />
 
           {/* Fallback — não redireciona para landing para evitar loop em PWA */}
           <Route path="*"               element={<Navigate to="/" replace />} />
