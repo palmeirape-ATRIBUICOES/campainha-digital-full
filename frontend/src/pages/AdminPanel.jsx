@@ -922,14 +922,14 @@ export default function AdminPanel() {
     }
   };
 
-  const resolveAlert = async (alertId) => {
+  const resolveAlert = async (alertId, action = 'approve') => {
     if (isDemoMode) {
       setActiveAlerts(prev => prev.filter(a => a.id !== alertId));
       return;
     }
     if (!selectedProperty) return;
     try {
-      const res = await fetch(`${API}/api/properties/${selectedProperty}/alerts/${alertId}`, {
+      const res = await fetch(`${API}/api/properties/${selectedProperty}/alerts/${alertId}?action=${action}`, {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -3522,7 +3522,7 @@ export default function AdminPanel() {
                       {selectedMessage.description || 'Nenhuma descrição adicional.'}
                     </p>
 
-                    <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
                       <button
                         onClick={() => {
                           try {
@@ -3530,11 +3530,11 @@ export default function AdminPanel() {
                             audio.volume = 0.4;
                             audio.play().catch(() => {});
                           } catch {}
-                          resolveAlert(selectedMessage.id);
+                          resolveAlert(selectedMessage.id, 'approve');
                           setSelectedMessage(null);
                           alert('✅ Portaria autorizou o visitante e o portão social foi liberado!');
                         }}
-                        style={{ flex: 1, background: '#10B981', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                       >
                         🔑 AUTORIZAR / OK
                       </button>
@@ -3551,11 +3551,22 @@ export default function AdminPanel() {
                             setDoormanCallState('talking');
                           }, 2550);
                         }}
-                        style={{ flex: 1, background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        style={{ background: 'linear-gradient(135deg,#3B82F6,#2563EB)', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                       >
                         📞 LIGAR PRO MORADOR
                       </button>
                     </div>
+
+                    <button
+                      onClick={() => {
+                        resolveAlert(selectedMessage.id, 'deny');
+                        setSelectedMessage(null);
+                        alert('❌ Entrada recusada / não liberada pela portaria!');
+                      }}
+                      style={{ width: '100%', background: '#EF4444', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '10px' }}
+                    >
+                      ❌ NEGAR ENTRADA
+                    </button>
 
                     <button
                       onClick={() => {
@@ -3611,7 +3622,7 @@ export default function AdminPanel() {
                             audio.volume = 0.4;
                             audio.play().catch(() => {});
                           } catch {}
-                          resolveAlert(selectedMessage.id);
+                          resolveAlert(selectedMessage.id, 'approve');
                           setDoormanCallState('idle');
                           setSelectedMessage(null);
                           alert('✅ Visitante liberado e portão social aberto pelo porteiro!');
@@ -3653,7 +3664,7 @@ export default function AdminPanel() {
                     <button
                       onClick={() => {
                         if (selectedMessage.type === 'release') alert('[eWelink/Sonoff] Comando de liberação de portão disparado!');
-                        resolveAlert(selectedMessage.id);
+                        resolveAlert(selectedMessage.id, 'approve');
                         setSelectedMessage(null);
                       }}
                       style={{ flex: 1, background: '#10B981', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textAlign: 'center' }}
@@ -3666,7 +3677,7 @@ export default function AdminPanel() {
                         const unit = properties.flatMap(p => p.units).find(u => u.id === selectedMessage.unitId);
                         if (unit) {
                           handleCallUnit(unit);
-                          resolveAlert(selectedMessage.id);
+                          resolveAlert(selectedMessage.id, 'approve');
                           setSelectedMessage(null);
                         } else {
                           alert('Erro ao identificar unidade.');
@@ -3680,12 +3691,21 @@ export default function AdminPanel() {
 
                   <button
                     onClick={() => {
-                      resolveAlert(selectedMessage.id);
+                      resolveAlert(selectedMessage.id, 'deny');
+                      setSelectedMessage(null);
+                    }}
+                    style={{ width: '100%', background: '#EF4444', color: '#FFF', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                  >
+                    ❌ ENTRADA NÃO LIBERADA
+                  </button>
+
+                  <button
+                    onClick={() => {
                       setSelectedMessage(null);
                     }}
                     style={{ width: '100%', background: '#F1F5F9', color: 'var(--text-muted)', border: 'none', padding: '14px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
                   >
-                    Fechar / Descartar
+                    Fechar / Cancelar
                   </button>
                 </div>
               </div>

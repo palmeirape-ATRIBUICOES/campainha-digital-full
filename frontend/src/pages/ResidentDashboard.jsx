@@ -116,12 +116,12 @@ export default function ResidentDashboard() {
   const HOUSE_QUICK_MSGS = [
     { id: 'general', label: 'Geral', messages: ['Já estou indo', 'Já está Aberto', 'Pode entrar', 'Um momento, por favor', 'Não posso atender agora', 'Por favor, aguarde um minuto'] },
     { id: 'services', label: 'Serviços', messages: ['Pode entrar pra marcar a luz', 'Pode entrar para marcar a água', 'Entrada autorizada', 'Por favor, aguarde o morador', 'Serviço cancelado/reagendar'] },
-    { id: 'delivery', label: 'Delivery', messages: ['Pode deixar no portão', 'Já estou descendo', 'Deixar na caixa de correio', 'Deixe com o vizinho, por favor', 'Por favor, jogue por cima do portão'] }
+    { id: 'delivery', label: 'Delivery', messages: ['Pode deixar no portão', 'Já estou descendo', 'Deixar na caixa de correio', 'Deixe com o vizinho, por favor', 'Por favor, jogue por cima do portão', 'O entregador não sobe'] }
   ];
   const CONDO_QUICK_MSGS = [
     { id: 'general', label: 'Geral', messages: ['Já estou descendo', 'Um momento', 'Pode subir', 'Deixar na portaria', 'Não posso atender agora', 'Estou em reunião, favor aguardar'] },
     { id: 'services', label: 'Serviços', messages: ['Prestador autorizado', 'Aguarde na portaria', 'Pode subir para o apartamento', 'Aguardando liberação da administração', 'Serviço concluído'] },
-    { id: 'delivery', label: 'Delivery', messages: ['Pode deixar com o porteiro', 'Deixar no Locker', 'Deixar na recepção', 'Já estou descendo para retirar', 'Por favor, suba para entregar'] }
+    { id: 'delivery', label: 'Delivery', messages: ['Pode deixar com o porteiro', 'Deixar no Locker', 'Deixar na recepção', 'Já estou descendo para retirar', 'Por favor, suba para entregar', 'O entregador não sobe'] }
   ];
 
   const quickMsgs = isHouseResident ? HOUSE_QUICK_MSGS : CONDO_QUICK_MSGS;
@@ -171,6 +171,20 @@ export default function ResidentDashboard() {
   const [dispatchAlertLoading, setDispatchAlertLoading] = useState(false);
   const [openGateLoading, setOpenGateLoading] = useState(false);
   const [entryNotification, setEntryNotification] = useState(null);
+  const [toast, setToast] = useState(null); // { message: '', type: 'success' | 'error' }
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
   const [callDuration, setCallDuration] = useState(0);
   const [showQrAccordion, setShowQrAccordion] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -827,11 +841,17 @@ export default function ResidentDashboard() {
     s.on('doorman_authorized_entry', (data) => {
       console.log('[Socket] doorman_authorized_entry recebido:', data);
       const isPackage = data.type === 'package';
+      const isDenied = data.authorized === false;
       setEntryNotification({
         type: data.type || 'visitor',
-        title: isPackage ? '📦 Encomenda / Entrega Liberada!' : '🔑 Entrada Liberada pela Portaria!',
-        message: data.description || data.title || 'A portaria autorizou e liberou o acesso.',
-        timestamp: data.timestamp || new Date()
+        title: isDenied 
+          ? '❌ Entrada Não Liberada pela Portaria' 
+          : (isPackage ? '📦 Encomenda / Entrega Liberada!' : '🔑 Entrada Liberada pela Portaria!'),
+        message: isDenied 
+          ? (data.description || 'A portaria não liberou o acesso.') 
+          : (data.description || data.title || 'A portaria autorizou e liberou o acesso.'),
+        timestamp: data.timestamp || new Date(),
+        denied: isDenied
       });
 
       // Tocar som de notificação
@@ -1515,7 +1535,7 @@ export default function ResidentDashboard() {
   const sendSupportMessage = async (e) => {
     e.preventDefault();
     if (!supportSubject || !supportBody) {
-      alert('Por favor, preencha o assunto e a mensagem.');
+      showToast('Por favor, preencha o assunto e a mensagem.', 'error');
       return;
     }
     setSupportSending(true);
@@ -1544,11 +1564,11 @@ export default function ResidentDashboard() {
         if (res.ok) {
           const msg = await res.json();
           setRawVilaMessages(prev => [...prev, msg]);
-          alert('✅ Sua mensagem foi enviada com sucesso para o Administrador da Vila!');
+          showToast('Sua mensagem foi enviada com sucesso para o Administrador da Vila!', 'success');
           setSupportSubject('');
           setSupportBody('');
         } else {
-          alert('Erro ao enviar mensagem.');
+          showToast('Erro ao enviar mensagem.', 'error');
         }
       } else {
         const res = await fetch(`${API}/api/properties/${propId}/mailbox`, {
@@ -1564,16 +1584,16 @@ export default function ResidentDashboard() {
           })
         });
         if (res.ok) {
-          alert('Mensagem enviada com sucesso para a administração!');
+          showToast('Mensagem enviada com sucesso para a administração!', 'success');
           setSupportSubject('');
           setSupportBody('');
         } else {
-          alert('Erro ao enviar mensagem.');
+          showToast('Erro ao enviar mensagem.', 'error');
         }
       }
     } catch (err) {
       console.error(err);
-      alert('Erro de conexão ao enviar mensagem.');
+      showToast('Erro de conexão ao enviar mensagem.', 'error');
     } finally {
       setSupportSending(false);
     }
@@ -1597,13 +1617,13 @@ export default function ResidentDashboard() {
       });
       if (res.ok) {
         setVisitorOrPackageName(''); // clear input on success
-        alert('Notificação enviada com sucesso para a portaria!');
+        showToast('Notificação enviada com sucesso para a portaria!', 'success');
       } else {
-        alert('Erro ao despachar alerta.');
+        showToast('Erro ao despachar alerta.', 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('Erro de conexão ao enviar alerta.');
+      showToast('Erro de conexão ao enviar alerta.', 'error');
     } finally {
       setDispatchAlertLoading(false);
     }
@@ -1800,6 +1820,30 @@ export default function ResidentDashboard() {
       onTouchStart={handleUserInteraction}
     >
       <audio ref={remoteAudioRef} autoPlay playsInline />
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10000,
+          background: toast.type === 'success' ? '#DCFCE7' : '#FEE2E2',
+          border: toast.type === 'success' ? '1px solid #16A34A' : '1px solid #EF4444',
+          color: toast.type === 'success' ? '#15803D' : '#991B1B',
+          padding: '14px 24px',
+          borderRadius: '16px',
+          fontSize: '14px',
+          fontWeight: 800,
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          animation: 'fade-in 0.3s ease-out'
+        }}>
+          {toast.type === 'success' ? '✅' : '❌'}
+          <span>{toast.message}</span>
+        </div>
+      )}
       <style>{`
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; line-height: 1; }
         .active-ring { animation: ring 2s infinite; }
@@ -4518,8 +4562,12 @@ export default function ResidentDashboard() {
                 width: '64px',
                 height: '64px',
                 borderRadius: '20px',
-                background: entryNotification.type === 'package' ? '#FEF3C7' : '#DCFCE7',
-                color: entryNotification.type === 'package' ? '#D97706' : '#16A34A',
+                background: entryNotification.denied 
+                  ? '#FEE2E2' 
+                  : (entryNotification.type === 'package' ? '#FEF3C7' : '#DCFCE7'),
+                color: entryNotification.denied 
+                  ? '#EF4444' 
+                  : (entryNotification.type === 'package' ? '#D97706' : '#16A34A'),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -4527,7 +4575,13 @@ export default function ResidentDashboard() {
                 boxShadow: '0 8px 16px rgba(0,0,0,0.06)',
                 animation: 'bounce 2s infinite'
               }}>
-                {entryNotification.type === 'package' ? (
+                {entryNotification.denied ? (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                  </svg>
+                ) : entryNotification.type === 'package' ? (
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                     <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
