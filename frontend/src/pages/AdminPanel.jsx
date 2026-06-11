@@ -2654,8 +2654,8 @@ export default function AdminPanel() {
                   ⚠️ Notificações & Chamados de Ação Rápida
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {activeAlerts.map(alert => {
-                    const unit = properties.flatMap(p => p.units).find(u => u.id === alert.unitId);
+                  {activeAlerts.map(alertItem => {
+                    const unit = properties.flatMap(p => p.units).find(u => u.id === alertItem.unitId);
                     let blockVal = unit ? unit.block : null;
                     if (unit && !blockVal && unit.name) {
                       const match = unit.name.match(/^(?:B|Bloco\s*)(\d+|[A-Z]+)/i);
@@ -2665,7 +2665,7 @@ export default function AdminPanel() {
                     
                     return (
                       <div
-                        key={alert.id}
+                        key={alertItem.id}
                         style={{
                           background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.06), rgba(245, 158, 11, 0.06))',
                           border: '2px solid rgba(239, 68, 68, 0.2)',
@@ -2685,30 +2685,30 @@ export default function AdminPanel() {
                             width: '44px',
                             height: '44px',
                             borderRadius: '12px',
-                            background: alert.type === 'package' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                            background: alertItem.type === 'package' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '22px'
                           }}>
-                            {alert.type === 'package' ? '📦' : '🔑'}
+                            {alertItem.type === 'package' ? '📦' : '🔑'}
                           </div>
                           <div>
                             <h4 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
-                              {blockKey ? `[${blockKey}] ` : ''}Unidade {unit ? unit.name : 'Morador'} - {alert.title}
+                              {blockKey ? `[${blockKey}] ` : ''}Unidade {unit ? unit.name : 'Morador'} - {alertItem.title}
                             </h4>
                             <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
-                              {alert.description || 'Aguardando liberação ou atendimento na portaria.'}
+                              {alertItem.description || 'Aguardando liberação ou atendimento na portaria.'}
                             </p>
                           </div>
                         </div>
                         
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          {alert.type === 'release' && (
+                          {alertItem.type === 'release' && (
                             <button
                               onClick={() => {
                                 alert('[eWelink/Sonoff] Comando de liberação de portão disparado!');
-                                resolveAlert(alert.id);
+                                resolveAlert(alertItem.id);
                               }}
                               style={{
                                 background: '#10B981',
@@ -2751,22 +2751,6 @@ export default function AdminPanel() {
                             }}
                           >
                             📞 Ligar para Morador
-                          </button>
-                          
-                          <button
-                            onClick={() => resolveAlert(alert.id)}
-                            style={{
-                              background: 'var(--bg-deep)',
-                              border: '1px solid var(--border-subtle)',
-                              color: 'var(--text-main)',
-                              padding: '10px 16px',
-                              borderRadius: '10px',
-                              fontSize: '12px',
-                              fontWeight: 800,
-                              cursor: 'pointer'
-                            }}
-                          >
-                            ✅ Dar OK / Resolvido
                           </button>
                         </div>
                       </div>
