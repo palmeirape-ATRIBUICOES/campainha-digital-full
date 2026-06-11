@@ -23,6 +23,7 @@ model User {
   isDoorman                                Boolean                   @default(false)
   isReseller                               Boolean                   @default(false)
   doorbellEnabled                          Boolean                   @default(true)
+  allowPortariaCalls                       Boolean                   @default(true)
   quietModeStart                           String?
   quietModeEnd                             String?
   trialEndsAt                              DateTime?

@@ -1949,6 +1949,44 @@ app.delete('/api/properties/:propertyId/units/:unitId/residents/:residentId', as
   }
 });
 
+// Atualizar permissão de chamada (apenas para morador principal)
+app.put('/api/units/:unitId/residents/:residentId/allow-calls', async (req, res) => {
+  const { requesterId, allowPortariaCalls } = req.body;
+  const { unitId, residentId } = req.params;
+
+  if (!requesterId) {
+    return res.status(400).json({ error: 'ID do solicitante é obrigatório.' });
+  }
+
+  try {
+    const unit = await prisma.unit.findUnique({
+      where: { id: unitId },
+      include: { residents: true }
+    });
+    if (!unit) return res.status(404).json({ error: 'Unidade não encontrada.' });
+
+    // Ordenar moradores por data de criação para descobrir o principal
+    const sortedResidents = [...unit.residents].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const primaryResident = sortedResidents[0];
+
+    if (!primaryResident || primaryResident.id !== requesterId) {
+      return res.status(403).json({ error: 'Apenas o morador principal pode alterar essa configuração.' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: residentId },
+      data: {
+        allowPortariaCalls: !!allowPortariaCalls
+      }
+    });
+
+    res.json({ success: true, user: updatedUser });
+  } catch (err) {
+    console.error('Update resident allow-calls error:', err);
+    res.status(500).json({ error: 'Erro ao atualizar configuração de chamadas.' });
+  }
+});
+
 // Buscar visitantes de uma propriedade (Histórico do Painel)
 app.get('/api/visitors/property/:propertyId', async (req, res) => {
   try {
@@ -3027,6 +3065,9 @@ app.get('/api/properties/:propertyId/alerts', async (req, res) => {
 app.delete('/api/properties/:propertyId/alerts/:alertId', async (req, res) => {
   try {
     const { alertId } = req.params;
+    const { action } = req.query; // 'approve' | 'deny'
+    const isApproved = action !== 'deny';
+
     const updated = await prisma.unitAlert.update({
       where: { id: alertId },
       data: { active: false },
@@ -3042,19 +3083,28 @@ app.delete('/api/properties/:propertyId/alerts/:alertId', async (req, res) => {
     // Avisa em tempo real via Socket.io para limpar o alerta na portaria
     io.emit('clear_unit_alert', { propertyId: req.params.propertyId, unitId: updated.unitId, alertId });
 
-    // Notifica em tempo real os moradores da unidade que a portaria liberou o acesso
+    // Notifica em tempo real os moradores da unidade que a portaria respondeu ao acesso
     io.to(`user_${updated.unitId}`).emit('doorman_authorized_entry', {
       alertId,
       type: updated.type,
       title: updated.title,
       description: updated.description,
+      authorized: isApproved,
       timestamp: new Date()
     });
 
     // Dispara notificações Push em background para cada morador da unidade
     if (updated.unit && updated.unit.residents) {
-      const title = updated.type === 'package' ? '📦 Encomenda / Entrega Liberada!' : '🔑 Entrada Liberada pela Portaria!';
-      const body = updated.description || updated.title || 'A portaria autorizou e liberou o acesso.';
+      let title = '';
+      if (isApproved) {
+        title = updated.type === 'package' ? '📦 Encomenda / Entrega Liberada!' : '🔑 Entrada Liberada pela Portaria!';
+      } else {
+        title = '❌ Entrada Não Liberada pela Portaria';
+      }
+      const body = isApproved
+        ? (updated.description || updated.title || 'A portaria autorizou e liberou o acesso.')
+        : (updated.description || 'A portaria não liberou o acesso.');
+
       updated.unit.residents.forEach(resident => {
         sendPushToUser(resident.id, {
           title,
@@ -3920,16 +3970,18 @@ io.on('connection', (socket) => {
     
     // Faz o socket entrar na sala da unidade do morador também
     try {
-      const resident = await prisma.resident.findUnique({
+      const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { unitId: true }
+        include: { units: true }
       });
-      if (resident && resident.unitId) {
-        socket.join(`user_${resident.unitId}`);
-        console.log(`[WS] Socket ${socket.id} do morador ${userId} entrou na sala da unidade: user_${resident.unitId}`);
+      if (user && user.units) {
+        for (const unit of user.units) {
+          socket.join(`user_${unit.id}`);
+          console.log(`[WS] Socket ${socket.id} do morador ${userId} entrou na sala da unidade: user_${unit.id}`);
+        }
       }
     } catch (e) {
-      console.error('[WS] Erro ao obter unidade do morador para socket.join:', e.message);
+      console.error('[WS] Erro ao obter unidades do morador para socket.join:', e.message);
     }
     
     console.log(`[WS] Usuário ${userId} registrado no socket ${socket.id}`);
@@ -4110,16 +4162,21 @@ io.on('connection', (socket) => {
         propertyId
       });
     } else {
-      console.log(`[WS Call] 📡 Emitindo chamada geral para unidade user_${unitId} (callId: ${callId})`);
-      io.to(`user_${unitId}`).emit('incoming_call', {
-        callId,
-        visitorSocketId: socket.id,
-        photo: photoBase64,
-        callerName: callerName || 'Visitante',
-        timestamp: visit.timestamp,
-        visitId: visit.id,
-        propertyId
-      });
+      console.log(`[WS Call] 📡 Emitindo chamada para a unidade ${unitId} (filtrada por morador)`);
+      for (const resident of activeResidents) {
+        if (resident.allowPortariaCalls !== false) {
+          console.log(`[WS Call] 📡 Emitindo chamada para user_${resident.id} (callId: ${callId})`);
+          io.to(`user_${resident.id}`).emit('incoming_call', {
+            callId,
+            visitorSocketId: socket.id,
+            photo: photoBase64,
+            callerName: callerName || 'Visitante',
+            timestamp: visit.timestamp,
+            visitId: visit.id,
+            propertyId
+          });
+        }
+      }
     }
 
     // 2. Dispara Notificações Push individualmente para cada morador em background
@@ -4131,6 +4188,10 @@ io.on('connection', (socket) => {
         const isDoorman = isDoormanCall || /portaria|porteiro|admin|administra/i.test(callerName || '');
         let shouldRing = isDoorman || resident.doorbellEnabled !== false;
         
+        if (resident.allowPortariaCalls === false) {
+          shouldRing = false;
+        }
+        
         if (resident.quietModeStart && resident.quietModeEnd) {
           if (resident.quietModeStart < resident.quietModeEnd) {
             if (currentTime >= resident.quietModeStart && currentTime <= resident.quietModeEnd) shouldRing = false;
@@ -4140,7 +4201,7 @@ io.on('connection', (socket) => {
         }
 
         if (!shouldRing) {
-          console.log(`[WS Call] ⏸ Push para morador ${resident.name} silenciado (Modo Silencioso)`);
+          console.log(`[WS Call] ⏸ Push para morador ${resident.name} silenciado (Modo Silencioso / Sem permissão)`);
           continue;
         }
 

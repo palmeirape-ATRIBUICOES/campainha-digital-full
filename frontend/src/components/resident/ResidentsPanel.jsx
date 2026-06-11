@@ -60,6 +60,30 @@ export default function ResidentsPanel({ unitId, propertyId }) {
     }
   };
 
+  const sortedResidents = [...residents].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const primaryResident = sortedResidents[0];
+  const currentUserId = localStorage.getItem('cd_user_id');
+  const isMainResident = primaryResident && primaryResident.id === currentUserId;
+
+  const handleToggleCalls = async (residentId, currentVal) => {
+    try {
+      const requesterId = localStorage.getItem('cd_user_id') || '';
+      const res = await fetch(`${API}/api/units/${unitId}/residents/${residentId}/allow-calls`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requesterId, allowPortariaCalls: !currentVal })
+      });
+      if (res.ok) {
+        await fetchResidents();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Erro ao alterar configuração.');
+      }
+    } catch (err) {
+      alert('Erro de conexão ao alterar configuração.');
+    }
+  };
+
   const handleAddResident = async (e) => {
     e.preventDefault();
     if (!newResidentName.trim()) return;
@@ -118,7 +142,7 @@ export default function ResidentsPanel({ unitId, propertyId }) {
       </div>
 
       <div style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.1)', borderRadius: '14px', padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '24px' }}>
-        💡 <strong>Cada morador tem o seu próprio Código Único.</strong> Quem ligar para a sua unidade receberá a notificação em todos os celulares, mas mensagens pessoais vão apenas para o morador selecionado.
+        💡 <strong>Cada morador tem o seu próprio Código Único.</strong> O morador principal (1º cadastrado) pode decidir quem receberá as chamadas da portaria/visitantes através do botão de controle.
       </div>
 
       {/* Formulário de Cadastro */}
@@ -144,7 +168,7 @@ export default function ResidentsPanel({ unitId, propertyId }) {
         </div>
       ) : (
         <form onSubmit={handleAddResident} className="glass-panel" style={{ padding: '20px', marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px', color: 'var(--text-main)' }}>➕ CADASTRAR NOVO MORADOR (DEPENDENTE)</h3>
+          <h3 style={{ fontSize: '14px', fontWeight: 800, marginBottom: '12px', color: 'var(--text-main)' }}>➕ CADASTRAR NEW MORADOR (DEPENDENTE)</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>NOME DO MORADOR</label>
@@ -186,9 +210,78 @@ export default function ResidentsPanel({ unitId, propertyId }) {
             {residents.map(res => (
               <div key={res.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-main)' }}>{res.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-main)' }}>{res.name}</span>
+                    {res.id === primaryResident?.id && (
+                      <span style={{
+                        fontSize: '10px',
+                        background: 'rgba(59,130,246,0.1)',
+                        color: '#3B82F6',
+                        padding: '2px 8px',
+                        borderRadius: '99px',
+                        fontWeight: 700,
+                        marginLeft: '8px',
+                        display: 'inline-block'
+                      }}>
+                        Principal
+                      </span>
+                    )}
+                  </div>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Código Único do Morador:</span>
                   <code style={{ fontSize: '13px', fontWeight: 900, color: '#10B981', letterSpacing: '1px', background: 'rgba(16,185,129,0.08)', padding: '3px 8px', borderRadius: '6px', alignSelf: 'flex-start', marginTop: '4px' }}>{res.clientCode || '---'}</code>
+                  
+                  {res.id === primaryResident?.id ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        🟢 Recebe chamadas (Sempre)
+                      </span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => isMainResident && handleToggleCalls(res.id, res.allowPortariaCalls !== false)}
+                      disabled={!isMainResident}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: isMainResident ? 'pointer' : 'default',
+                        marginTop: '10px',
+                        opacity: 1,
+                        textAlign: 'left',
+                        outline: 'none'
+                      }}
+                    >
+                      <div style={{
+                        width: '36px',
+                        height: '20px',
+                        borderRadius: '10px',
+                        background: (res.allowPortariaCalls !== false) ? '#10B981' : '#CBD5E1',
+                        position: 'relative',
+                        transition: 'background-color 0.2s',
+                        display: 'inline-block',
+                        verticalAlign: 'middle'
+                      }}>
+                        <div style={{
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          background: '#FFFFFF',
+                          position: 'absolute',
+                          top: '2px',
+                          left: (res.allowPortariaCalls !== false) ? '18px' : '2px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                        }} />
+                      </div>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-main)', verticalAlign: 'middle' }}>
+                        {res.allowPortariaCalls !== false ? 'Recebe chamadas' : 'Chamadas desativadas'}
+                      </span>
+                    </button>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                   <CopyBtn text={res.clientCode || ''} />
