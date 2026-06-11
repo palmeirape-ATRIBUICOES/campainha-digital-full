@@ -3083,12 +3083,33 @@ app.delete('/api/properties/:propertyId/alerts/:alertId', async (req, res) => {
     // Avisa em tempo real via Socket.io para limpar o alerta na portaria
     io.emit('clear_unit_alert', { propertyId: req.params.propertyId, unitId: updated.unitId, alertId });
 
+    // Formatar mensagem conforme solicitado pelo usuário
+    let body = '';
+    if (updated.type === 'release') {
+      const nameMatch = (updated.description || '').match(/\(Nome:\s*(.*?)\)/);
+      const visitorName = nameMatch ? nameMatch[1].trim() : '';
+      if (visitorName) {
+        body = isApproved
+          ? `a portaria liberou o acesso do seu visitante: ${visitorName}`
+          : `a portaria negou o acesso do seu visitante: ${visitorName}`;
+      } else {
+        body = isApproved
+          ? 'a portaria liberou o acesso do seu visitante'
+          : 'a portaria negou o acesso do seu visitante';
+      }
+    } else {
+      body = isApproved
+        ? (updated.description || updated.title || 'A portaria autorizou e liberou o acesso.')
+        : (updated.description || 'A portaria não liberou o acesso.');
+    }
+
     // Notifica em tempo real os moradores da unidade que a portaria respondeu ao acesso
     io.to(`user_${updated.unitId}`).emit('doorman_authorized_entry', {
       alertId,
       type: updated.type,
       title: updated.title,
       description: updated.description,
+      message: body,
       authorized: isApproved,
       timestamp: new Date()
     });
@@ -3101,9 +3122,6 @@ app.delete('/api/properties/:propertyId/alerts/:alertId', async (req, res) => {
       } else {
         title = '❌ Entrada Não Liberada pela Portaria';
       }
-      const body = isApproved
-        ? (updated.description || updated.title || 'A portaria autorizou e liberou o acesso.')
-        : (updated.description || 'A portaria não liberou o acesso.');
 
       updated.unit.residents.forEach(resident => {
         sendPushToUser(resident.id, {
