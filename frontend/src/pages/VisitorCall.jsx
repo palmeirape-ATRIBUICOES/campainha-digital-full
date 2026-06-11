@@ -55,6 +55,15 @@ export default function VisitorCall() {
   const geoCoordsRef = useRef(null); // { lat, lng }
   const [remoteStream, setRemoteStream] = useState(null);
 
+  const localVideoRef   = useRef(null); // câmera do visitante (oculta)
+  const canvasRef       = useRef(null);
+  const remoteAudioRef  = useRef(null);
+  const remoteVideoRef  = useRef(null); // câmera do morador (se ativada)
+  const socketRef       = useRef(null);
+  const pcRef           = useRef(null);   // RTCPeerConnection
+  const localStreamRef  = useRef(null);
+  const webrtcStartedRef = useRef(false); // Dedup: evita criar 2 PeerConnections
+
   useEffect(() => {
     if (remoteStream) {
       if (remoteAudioRef.current) {
@@ -67,15 +76,6 @@ export default function VisitorCall() {
       }
     }
   }, [remoteStream, remoteAudioRef.current, remoteVideoRef.current]);
-
-  const localVideoRef   = useRef(null); // câmera do visitante (oculta)
-  const canvasRef       = useRef(null);
-  const remoteAudioRef  = useRef(null);
-  const remoteVideoRef  = useRef(null); // câmera do morador (se ativada)
-  const socketRef       = useRef(null);
-  const pcRef           = useRef(null);   // RTCPeerConnection
-  const localStreamRef  = useRef(null);
-  const webrtcStartedRef = useRef(false); // Dedup: evita criar 2 PeerConnections
 
   // ─── Inicialização do Socket.io ─────────────────────────────────────────
   useEffect(() => {

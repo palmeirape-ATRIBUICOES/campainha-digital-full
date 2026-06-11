@@ -4156,7 +4156,7 @@ export default function ResidentDashboard() {
               <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
                 <button 
                   onClick={() => {
-                    const shareText = `Para tocar a minha Campainha Digital online clique aqui:\n👉 ${qrCodeUrl}`;
+                    const shareText = `Para tocar a minha Campainha Digital online clique aqui:`;
                     if (navigator.share) {
                       navigator.share({
                         title: 'Minha Campainha Digital',
@@ -4164,7 +4164,7 @@ export default function ResidentDashboard() {
                         url: qrCodeUrl
                       }).catch(() => {});
                     } else {
-                      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+                      window.open(`https://wa.me/?text=${encodeURIComponent(shareText + '\n👉 ' + qrCodeUrl)}`, '_blank');
                     }
                   }}
                   style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'linear-gradient(135deg, #004ac6 0%, #1d4ed8 100%)', border: 'none', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}

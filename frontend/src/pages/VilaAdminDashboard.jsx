@@ -1099,7 +1099,7 @@ export default function VilaAdminDashboard() {
                       let path = window.location.pathname;
                       if (!path.endsWith('/')) path += '/';
                       const url = `${window.location.origin}${path}#/chamada/${propertyId}`;
-                      const shareText = `Escaneie para tocar as campainhas da Vila:\n👉 ${url}`;
+                      const shareText = `Escaneie para tocar as campainhas da Vila:`;
                       if (navigator.share) {
                         navigator.share({
                           title: `Campainhas - ${property?.name || 'Vila'}`,
@@ -1107,7 +1107,7 @@ export default function VilaAdminDashboard() {
                           url: url
                         }).catch(() => {});
                       } else {
-                        window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+                        window.open(`https://wa.me/?text=${encodeURIComponent(shareText + '\n👉 ' + url)}`, '_blank');
                       }
                     }}
                     style={{ flex: 1, padding: '12px', borderRadius: '14px', background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)', border: 'none', color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)' }}
