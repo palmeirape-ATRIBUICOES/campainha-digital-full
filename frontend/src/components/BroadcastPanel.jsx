@@ -8,6 +8,14 @@ function fmt(ts) {
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 }
 
+function getMediaUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `${API}${url}`;
+}
+
 export default function BroadcastPanel({ propertyId, adminEmail }) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -310,9 +318,9 @@ export default function BroadcastPanel({ propertyId, adminEmail }) {
               {m.mediaUrl && (
                 <div style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-subtle)', maxHeight: '180px', display: 'flex', justifyContent: 'flex-start', background: 'var(--bg-deep)' }}>
                   {m.mediaType === 'video' ? (
-                    <video src={m.mediaUrl} controls style={{ maxWidth: '100%', maxHeight: '180px', objectFit: 'contain' }} />
+                    <video src={getMediaUrl(m.mediaUrl)} controls style={{ maxWidth: '100%', maxHeight: '180px', objectFit: 'contain' }} />
                   ) : (
-                    <img src={m.mediaUrl} alt="Anexo" style={{ maxWidth: '100%', maxHeight: '180px', objectFit: 'contain' }} />
+                    <img src={getMediaUrl(m.mediaUrl)} alt="Anexo" style={{ maxWidth: '100%', maxHeight: '180px', objectFit: 'contain' }} />
                   )}
                 </div>
               )}

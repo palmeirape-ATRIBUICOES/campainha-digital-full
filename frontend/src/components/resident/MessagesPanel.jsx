@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
 import { Bell, ChevronDown, ChevronUp, AlertTriangle, MessageSquare, X } from 'lucide-react';
+import { API } from '../../config';
+
+function getMediaUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `${API}${url}`;
+}
 
 function fmt(ts) {
   const d = new Date(ts);
@@ -91,9 +100,9 @@ export default function MessagesPanel({ messages, unreadCount, onClear }) {
             {messages[selected].mediaUrl && (
               <div style={{ marginBottom: '16px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E2E8F0', maxHeight: '240px', display: 'flex', justifyContent: 'center', background: '#F8FAFC' }}>
                 {messages[selected].mediaType === 'video' ? (
-                  <video src={messages[selected].mediaUrl} controls style={{ maxWidth: '100%', maxHeight: '240px', objectFit: 'contain' }} />
+                  <video src={getMediaUrl(messages[selected].mediaUrl)} controls style={{ maxWidth: '100%', maxHeight: '240px', objectFit: 'contain' }} />
                 ) : (
-                  <img src={messages[selected].mediaUrl} alt="Anexo" style={{ maxWidth: '100%', maxHeight: '240px', objectFit: 'contain' }} />
+                  <img src={getMediaUrl(messages[selected].mediaUrl)} alt="Anexo" style={{ maxWidth: '100%', maxHeight: '240px', objectFit: 'contain' }} />
                 )}
               </div>
             )}

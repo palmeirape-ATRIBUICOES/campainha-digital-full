@@ -58,12 +58,47 @@ const io = new Server(server, {
   pingTimeout: 25000,
   pingInterval: 10000,
   transports: ['websocket', 'polling'],
-  allowEIO3: true
+  allowEIO3: true,
+  maxHttpBufferSize: 1e7 // 10MB
 });
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+// Pasta para uploads e arquivos estáticos
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
+
+// Helper para salvar arquivos base64 no disco
+function saveBase64File(base64Str, prefix = 'media') {
+  if (!base64Str || !base64Str.startsWith('data:')) return null;
+  try {
+    const matches = base64Str.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return null;
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+    let ext = 'png';
+    if (mimeType.includes('jpeg') || mimeType.includes('jpg')) ext = 'jpg';
+    else if (mimeType.includes('gif')) ext = 'gif';
+    else if (mimeType.includes('webp')) ext = 'webp';
+    else if (mimeType.includes('mp4')) ext = 'mp4';
+    else if (mimeType.includes('quicktime')) ext = 'mov';
+    else if (mimeType.includes('webm')) ext = 'webm';
+    
+    const fileName = `${prefix}-${uuidv4()}.${ext}`;
+    const filePath = path.join(uploadsDir, fileName);
+    fs.writeFileSync(filePath, buffer);
+    return `/uploads/${fileName}`;
+  } catch (err) {
+    console.error('[Upload] Erro ao salvar base64 no disco:', err);
+    return null;
+  }
+}
 
 // Health check endpoint
 app.get('/api/ping', async (req, res) => {
@@ -3669,6 +3704,14 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
       return res.status(404).json({ error: 'Propriedade não encontrada.' });
     }
     
+    let savedMediaUrl = mediaUrl || null;
+    if (mediaUrl && mediaUrl.startsWith('data:')) {
+      const fileUrl = saveBase64File(mediaUrl, 'broadcast');
+      if (fileUrl) {
+        savedMediaUrl = fileUrl;
+      }
+    }
+
     const msg = await prisma.message.create({
       data: {
         id: crypto.randomUUID(),
@@ -3679,7 +3722,7 @@ app.post('/api/properties/:propertyId/broadcast', async (req, res) => {
         senderId: adminEmail || 'Admin',
         targetType: targetType || 'all',
         targetValue: targetValue || null,
-        mediaUrl: mediaUrl || null,
+        mediaUrl: savedMediaUrl,
         mediaType: mediaType || null
       }
     });
