@@ -1,6 +1,6 @@
 // ─── Campainha Digital — Service Worker ───────────────────────────────────────
 // Versão do cache — altere para forçar atualização
-const CACHE_NAME = 'campainha-v31';
+const CACHE_NAME = 'campainha-v32';
 
 const STATIC_ASSETS = [
   './',
@@ -70,6 +70,17 @@ self.addEventListener('push', (event) => {
     if (parsed) data = { ...data, ...parsed };
   } catch (e) {
     console.warn('[SW] Erro ao parsear push payload:', e);
+  }
+
+  // Ajusta a URL dos dados para a origem correta do PWA instalado
+  if (data.data && typeof data.data.url === 'string' && data.data.url.includes('/#/')) {
+    try {
+      const hashIndex = data.data.url.indexOf('/#/');
+      const routePath = data.data.url.substring(hashIndex + 1);
+      data.data.url = BASE_URL + routePath;
+    } catch (err) {
+      console.warn('[SW] Erro ao reescrever URL no push event:', err);
+    }
   }
 
   // Detecção precisa de iOS (incluindo iPad em modo desktop)
@@ -145,9 +156,22 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  if (event.action === 'dismiss') return;
+  let targetUrl = event.notification.data?.url || './';
 
-  const targetUrl = event.notification.data?.url || './';
+  // Reescreve a URL se ela contiver o hash routing para garantir que abra no mesmo domínio/origem do PWA instalado
+  if (targetUrl.includes('/#/')) {
+    try {
+      const hashIndex = targetUrl.indexOf('/#/');
+      const routePath = targetUrl.substring(hashIndex + 1); // e.g. "#/morador/..."
+      
+      const basePath = self.location.pathname.substring(0, self.location.pathname.lastIndexOf('/') + 1);
+      const BASE_URL = self.location.origin + basePath;
+      
+      targetUrl = BASE_URL + routePath;
+    } catch (err) {
+      console.error('[SW] Erro ao reescrever targetUrl no click:', err);
+    }
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

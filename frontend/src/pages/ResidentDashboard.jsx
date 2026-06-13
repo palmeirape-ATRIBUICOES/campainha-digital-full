@@ -1069,6 +1069,13 @@ export default function ResidentDashboard() {
         
         triggerDoorbell(); // Toca a campainha imediatamente ao carregar via push
         
+        // Limpa os parâmetros de busca da URL para evitar re-gatilhos acidentais ao atualizar a página
+        try {
+          navigate(`/morador/${id}`, { replace: true });
+        } catch (e) {
+          console.warn('[URL Param] Falha ao limpar URL:', e);
+        }
+        
         try {
           let res = await fetch(`${API}/api/visitors/${id}`);
           if (!res.ok) {
