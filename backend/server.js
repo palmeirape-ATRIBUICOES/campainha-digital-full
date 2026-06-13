@@ -73,15 +73,21 @@ if (!fs.existsSync(uploadsDir)) {
 }
 app.use('/uploads', express.static(uploadsDir));
 
-// Helper para salvar arquivos base64 no disco
 function saveBase64File(base64Str, prefix = 'media') {
   if (!base64Str || !base64Str.startsWith('data:')) return null;
   try {
-    const matches = base64Str.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) return null;
-    const mimeType = matches[1];
-    const base64Data = matches[2];
+    const commaIndex = base64Str.indexOf(',');
+    if (commaIndex === -1) return null;
+    
+    const meta = base64Str.substring(0, commaIndex);
+    const base64Data = base64Str.substring(commaIndex + 1);
+    
+    // Extract mime type
+    const mimeMatch = meta.match(/data:([^;]+);base64/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+    
     const buffer = Buffer.from(base64Data, 'base64');
+    
     let ext = 'png';
     if (mimeType.includes('jpeg') || mimeType.includes('jpg')) ext = 'jpg';
     else if (mimeType.includes('gif')) ext = 'gif';
@@ -3023,8 +3029,13 @@ app.post('/api/properties/:propertyId/mailbox', async (req, res) => {
 // Buscar todas as mensagens da Caixa Postal da administração
 app.get('/api/properties/:propertyId/mailbox', async (req, res) => {
   try {
+    const { unitId } = req.query;
+    const where = { propertyId: req.params.propertyId };
+    if (unitId) {
+      where.unitId = unitId;
+    }
     const messages = await prisma.mailboxMessage.findMany({
-      where: { propertyId: req.params.propertyId },
+      where,
       include: { unit: true },
       orderBy: { createdAt: 'desc' }
     });
@@ -3034,16 +3045,39 @@ app.get('/api/properties/:propertyId/mailbox', async (req, res) => {
   }
 });
 
-// Atualizar status de mensagem da Caixa Postal (Ex: Resolvido)
+// Atualizar status de mensagem da Caixa Postal (Ex: Resolvido, Resposta)
 app.put('/api/properties/:propertyId/mailbox/:msgId', async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, response } = req.body;
+    const updateData = {};
+    if (status !== undefined) updateData.status = status;
+    if (response !== undefined) updateData.response = response;
+
     const updated = await prisma.mailboxMessage.update({
       where: { id: req.params.msgId },
-      data: { status }
+      data: updateData,
+      include: { unit: { include: { residents: true } } }
     });
+
+    // Enviar push notification aos moradores da unidade informando da resposta
+    if (response && updated.unit && updated.unit.residents) {
+      const payload = {
+        title: `📬 Resposta da Administração`,
+        body: `Sobre "${updated.subject}": ${response}`,
+        data: {
+          url: `/#/morador/${updated.propertyId}?tab=home`
+        }
+      };
+      for (const resident of updated.unit.residents) {
+        sendPushToUser(resident.id, payload).catch(err => 
+          console.error('[Mailbox Push] Erro ao enviar push de resposta:', err)
+        );
+      }
+    }
+
     res.json(updated);
   } catch (err) {
+    console.error('Mailbox message update error:', err);
     res.status(500).json({ error: 'Erro ao atualizar mensagem.' });
   }
 });

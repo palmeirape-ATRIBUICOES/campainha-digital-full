@@ -92,6 +92,7 @@ export default function AdminPanel() {
   
   // Novos estados para Caixa Postal, Alertas de Portão e Grade Visual Interativa
   const [mailboxMessages, setMailboxMessages] = useState([]);
+  const [mailboxReplies, setMailboxReplies]   = useState({});
   const [loadingMailbox, setLoadingMailbox]   = useState(false);
   const [activeAlerts, setActiveAlerts]       = useState([]);
   const [onlineStatus, setOnlineStatus]       = useState({});
@@ -965,6 +966,35 @@ export default function AdminPanel() {
       }
     } catch (e) {
       console.error('Failed to resolve mailbox message:', e);
+    }
+  };
+
+  const sendMailboxReply = async (msgId) => {
+    const text = mailboxReplies[msgId];
+    if (!text || !text.trim()) return;
+
+    if (isDemoMode) {
+      setMailboxMessages(prev => prev.map(m => m.id === msgId ? { ...m, response: text.trim(), status: 'resolved' } : m));
+      setMailboxReplies(prev => ({ ...prev, [msgId]: '' }));
+      return;
+    }
+    if (!selectedProperty) return;
+    try {
+      const res = await fetch(`${API}/api/properties/${selectedProperty}/mailbox/${msgId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          response: text.trim(), 
+          status: 'resolved' 
+        })
+      });
+      if (res.ok) {
+        setMailboxReplies(prev => ({ ...prev, [msgId]: '' }));
+        fetchMailbox(selectedProperty);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao responder mensagem.');
     }
   };
 
@@ -2470,7 +2500,7 @@ export default function AdminPanel() {
             {loadingMailbox ? (
               <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px' }}>Carregando caixa postal...</p>
             ) : mailboxMessages.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px 24px', background: '#FFF', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ textAlign: 'center', padding: '60px 24px', background: 'var(--bg-surface)', borderRadius: '16px', border: '1px solid var(--border-subtle)' }}>
                 <Send size={40} color="var(--text-muted)" style={{ opacity: 0.3, marginBottom: '16px' }} />
                 <p style={{ fontWeight: 700, color: 'var(--text-main)' }}>Sua Caixa Postal está vazia!</p>
                 <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '6px' }}>Nenhum morador enviou mensagens ou solicitações de suporte ainda.</p>
@@ -2478,7 +2508,7 @@ export default function AdminPanel() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {mailboxMessages.map(msg => (
-                  <div key={msg.id} style={{ background: '#FFF', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
+                  <div key={msg.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
                     <div style={{ flex: 1, paddingRight: '20px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                         <span style={{ fontSize: '12px', fontWeight: 800, background: 'rgba(59,130,246,0.1)', color: 'var(--primary)', padding: '4px 10px', borderRadius: '100px' }}>
@@ -2493,6 +2523,56 @@ export default function AdminPanel() {
                       </div>
                       <h4 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)' }}>{msg.subject}</h4>
                       <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{msg.body}</p>
+
+                      {/* Resposta do Síndico */}
+                      {msg.response && (
+                        <div style={{ marginTop: '14px', background: 'rgba(59,130,246,0.08)', borderLeft: '3px solid var(--primary)', padding: '10px 14px', borderRadius: '8px' }}>
+                          <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--primary)', margin: '0 0 4px' }}>💬 Resposta da Administração:</p>
+                          <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: 0 }}>{msg.response}</p>
+                        </div>
+                      )}
+
+                      {/* Caixa de Texto para Responder */}
+                      {!msg.response && (
+                        <div style={{ marginTop: '14px', display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                          <textarea
+                            rows={2}
+                            placeholder="Escreva uma resposta para o morador..."
+                            value={mailboxReplies[msg.id] || ''}
+                            onChange={e => setMailboxReplies(prev => ({ ...prev, [msg.id]: e.target.value }))}
+                            style={{
+                              flex: 1,
+                              padding: '10px 12px',
+                              borderRadius: '8px',
+                              border: '1px solid var(--border-subtle)',
+                              background: 'var(--bg-deep)',
+                              color: 'var(--text-main)',
+                              fontSize: '13px',
+                              outline: 'none',
+                              resize: 'none',
+                              fontFamily: 'inherit'
+                            }}
+                          />
+                          <button
+                            onClick={() => sendMailboxReply(msg.id)}
+                            disabled={!(mailboxReplies[msg.id] || '').trim()}
+                            style={{
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              background: 'linear-gradient(135deg, var(--primary), #2563EB)',
+                              color: '#FFF',
+                              border: 'none',
+                              fontWeight: 700,
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              height: '38px',
+                              opacity: (mailboxReplies[msg.id] || '').trim() ? 1 : 0.6
+                            }}
+                          >
+                            Responder
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>

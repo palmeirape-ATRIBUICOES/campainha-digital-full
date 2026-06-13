@@ -184,6 +184,7 @@ model MailboxMessage {
   subject    String
   body       String
   status     String   @default("pending")
+  response   String?  // Resposta da administração
   createdAt  DateTime @default(now())
   photo      String?
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)

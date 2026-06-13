@@ -168,6 +168,7 @@ export default function ResidentDashboard() {
   const [supportSubject, setSupportSubject] = useState('');
   const [supportBody, setSupportBody]       = useState('');
   const [supportSending, setSupportSending]   = useState(false);
+  const [myMailboxMessages, setMyMailboxMessages] = useState([]);
   const [dispatchAlertLoading, setDispatchAlertLoading] = useState(false);
   const [openGateLoading, setOpenGateLoading] = useState(false);
   const [entryNotification, setEntryNotification] = useState(null);
@@ -628,6 +629,7 @@ export default function ResidentDashboard() {
     fetchMessages();
     fetchUserProfile();
     healSession();
+    fetchMyMailbox();
 
     checkPushSubscription();
 
@@ -1532,6 +1534,21 @@ export default function ResidentDashboard() {
     }
   };
 
+  const fetchMyMailbox = useCallback(async () => {
+    const currentPropId = savedPropId || localStorage.getItem('residentPropertyId');
+    const currentUnitId = savedUnitId || localStorage.getItem('residentUnitId') || id;
+    if (!currentPropId || !currentUnitId) return;
+    try {
+      const res = await fetch(`${API}/api/properties/${currentPropId}/mailbox?unitId=${currentUnitId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setMyMailboxMessages(data);
+      }
+    } catch (err) {
+      console.error('[Mailbox] Erro ao buscar minhas mensagens:', err);
+    }
+  }, [savedPropId, savedUnitId, id]);
+
   const sendSupportMessage = async (e) => {
     e.preventDefault();
     if (!supportSubject || !supportBody) {
@@ -1540,8 +1557,11 @@ export default function ResidentDashboard() {
     }
     setSupportSending(true);
     try {
-      const propId = propertyId || localStorage.getItem('residentPropertyId');
-      const token = localStorage.getItem('cd_token');
+      const propId = savedPropId || localStorage.getItem('residentPropertyId');
+      if (!propId) {
+        showToast('Propriedade não identificada.', 'error');
+        return;
+      }
       
       const isVila = localStorage.getItem('residentIsVila') === 'true';
       if (isVila) {
@@ -1567,10 +1587,12 @@ export default function ResidentDashboard() {
           showToast('Sua mensagem foi enviada com sucesso para o Administrador da Vila!', 'success');
           setSupportSubject('');
           setSupportBody('');
+          fetchMyMailbox();
         } else {
           showToast('Erro ao enviar mensagem.', 'error');
         }
       } else {
+        const token = localStorage.getItem('cd_token');
         const res = await fetch(`${API}/api/properties/${propId}/mailbox`, {
           method: 'POST',
           headers: { 
@@ -1587,6 +1609,7 @@ export default function ResidentDashboard() {
           showToast('Mensagem enviada com sucesso para a administração!', 'success');
           setSupportSubject('');
           setSupportBody('');
+          fetchMyMailbox();
         } else {
           showToast('Erro ao enviar mensagem.', 'error');
         }
@@ -2540,7 +2563,7 @@ export default function ResidentDashboard() {
                         id: 'support',
                         label: 'Suporte/Admin',
                         icon: 'mail',
-                        onClick: () => setShowSupportModal(true)
+                        onClick: () => { setShowSupportModal(true); fetchMyMailbox(); }
                       });
                     }
 
@@ -2897,6 +2920,35 @@ export default function ResidentDashboard() {
                           {supportSending ? 'Enviando...' : 'Enviar Mensagem'}
                         </button>
                       </form>
+
+                      {/* Histórico de Mensagens / Respostas (Embedded) */}
+                      <div style={{ marginTop: '24px', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+                        <h5 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', marginBottom: '12px' }}>Histórico de Mensagens</h5>
+                        {myMailboxMessages.length === 0 ? (
+                          <p style={{ fontSize: '12px', color: '#94A3B8', textAlign: 'center', margin: 0 }}>Nenhuma mensagem enviada anteriormente.</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+                            {myMailboxMessages.map(msg => (
+                              <div key={msg.id} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '10px', color: '#94A3B8' }}>
+                                  <span style={{ fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: msg.status === 'resolved' ? '#DEF7EC' : '#FEF3C7', color: msg.status === 'resolved' ? '#03543F' : '#92400E' }}>
+                                    {msg.status === 'resolved' ? 'RESOLVIDO' : 'PENDENTE'}
+                                  </span>
+                                  <span>{new Date(msg.createdAt).toLocaleDateString('pt-BR')}</span>
+                                </div>
+                                <h6 style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B', margin: '0 0 4px' }}>{msg.subject}</h6>
+                                <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 8px', lineHeight: 1.4 }}>{msg.body}</p>
+                                {msg.response && (
+                                  <div style={{ background: '#EFF6FF', borderLeft: '3px solid #3B82F6', padding: '8px', borderRadius: '4px', marginTop: '6px' }}>
+                                    <p style={{ fontSize: '11px', fontWeight: 700, color: '#1E3A8A', margin: '0 0 2px' }}>Resposta da Administração:</p>
+                                    <p style={{ fontSize: '11px', color: '#1E40AF', margin: 0, lineHeight: 1.4 }}>{msg.response}</p>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -4530,6 +4582,35 @@ export default function ResidentDashboard() {
                   {supportSending ? 'Enviando...' : 'Enviar Mensagem'}
                 </button>
               </form>
+
+              {/* Histórico de Mensagens / Respostas (Modal) */}
+              <div style={{ marginTop: '24px', borderTop: '1px solid #E2E8F0', paddingTop: '16px', width: '100%' }}>
+                <h5 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', marginBottom: '12px', textAlign: 'left' }}>Histórico de Mensagens</h5>
+                {myMailboxMessages.length === 0 ? (
+                  <p style={{ fontSize: '12px', color: '#94A3B8', textAlign: 'center', margin: 0 }}>Nenhuma mensagem enviada anteriormente.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px', textAlign: 'left' }}>
+                    {myMailboxMessages.map(msg => (
+                      <div key={msg.id} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '10px', color: '#94A3B8' }}>
+                          <span style={{ fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: msg.status === 'resolved' ? '#DEF7EC' : '#FEF3C7', color: msg.status === 'resolved' ? '#03543F' : '#92400E' }}>
+                            {msg.status === 'resolved' ? 'RESOLVIDO' : 'PENDENTE'}
+                          </span>
+                          <span>{new Date(msg.createdAt).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                        <h6 style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B', margin: '0 0 4px' }}>{msg.subject}</h6>
+                        <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 8px', lineHeight: 1.4 }}>{msg.body}</p>
+                        {msg.response && (
+                          <div style={{ background: '#EFF6FF', borderLeft: '3px solid #3B82F6', padding: '8px', borderRadius: '4px', marginTop: '6px' }}>
+                            <p style={{ fontSize: '11px', fontWeight: 700, color: '#1E3A8A', margin: '0 0 2px' }}>Resposta da Administração:</p>
+                            <p style={{ fontSize: '11px', color: '#1E40AF', margin: 0, lineHeight: 1.4 }}>{msg.response}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
